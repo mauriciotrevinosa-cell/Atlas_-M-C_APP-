@@ -1,154 +1,80 @@
-# 🤖 ARIA - Atlas Reasoning & Intelligence Assistant
+# 🌌 Atlas (M&C APP)
 
-**Version:** 5.0.0  
-**Status:** In Development  
-**License:** Proprietary (M&C)
-
----
-
-## 🎯 What is ARIA?
-
-ARIA is the most advanced AI assistant for quantitative finance and trading. Built with recursive memory, multi-agent architecture, and voice capabilities.
-
-## ✨ Features
-
-### Core Capabilities
-- 💬 **Advanced Chat** - Powered by Claude Sonnet 4
-- 🎤 **Voice Assistant** - Basic (FREE) & Advanced (Premium)
-- 🧠 **Recursive Memory** - Infinite context via vector DB
-- 🤖 **Multi-Agent System** - Specialized agents working together
-
-### Intelligence
-- 🔮 **Proactive Suggestions** - Anticipates your needs
-- 📚 **Learning from You** - Adapts to your style
-- 😊 **Emotional Intelligence** - Understands context and tone
-- 📝 **Conversation Summarizer** - Meeting notes & key points
-
-### Tools
-- 🌐 **Web Search** - Real-time information
-- 🎨 **Image Generation** - DALL-E & Gemini
-- 💻 **Code Interpreter** - Execute Python code
-- 📊 **Backtesting** - Automated strategy testing
-- 📈 **Portfolio Tracking** - Monitor your positions
-
-### Integrations
-- 💬 **Telegram/Discord** - Use ARIA anywhere
-- 📓 **Jupyter** - Generate analysis notebooks
-- 📄 **Document Analysis** - Read PDFs/earnings reports
-- 🔔 **Sentiment Analysis** - News & social media
+**System:** Quantitative Trading & Intelligence Platform  
+**Version:** Alpha (In Development)  
+**Developers:** M&C  
 
 ---
 
-## 🚀 Quick Start
-```python
-from aria import ARIA
+## 🚀 About Atlas
 
-# Create ARIA instance
-aria = ARIA()
+Atlas is a comprehensive ecosystem designed for **quantitative finance, algorithmic trading, and data-driven intelligence**. 
+It combines high-frequency data processing, advanced mathematical modelling, and autonomous AI agents to create a next-generation trading platform.
 
-# Chat
-response = aria.ask("What's the latest news on AAPL?")
-print(response)
+### 🏛️ Core Pillars
 
-# Voice mode
-aria.voice_mode()  # Start speaking with ARIA
+1.  **Atlas Data Layer:** 
+    - High-performance data ingestion (Stocks, Crypto, Forex).
+    - Unified storage and normalization.
+2.  **Quantum Field (Lab):**
+    - Experimental environment for strategy development.
+    - Advanced mathematics and backtesting.
+3.  **ARIA (Assistant):**
+    - **A**tlas **R**easoning & **I**ntelligence **A**ssistant.
+    - The autonomous interface that connects you to the data.
 
-# With memory
-aria = ARIA(recursive=True)
-aria.ask("Remember: I prefer tech stocks")
-# ... days later ...
-aria.ask("Recommend me something")
-# ARIA remembers your preference
+---
+
+## 🤖 ARIA: The Intelligence Layer
+
+ARIA is the voice and brain of Atlas. It is not just a chatbot, but a fully integrated agent capable of:
+*   **Recursive Memory:** Remembering context across sessions.
+*   **Tool Execution:** Fetching data, running code, and managing files.
+*   **Multi-Modal Interaction:** Text and Voice (Basic & Advanced).
+*   **Autonomous Analysis:** Proactive market insights.
+
+> **Note:** ARIA is located in `python/src/atlas/assistants/aria/`
+
+---
+
+## 🛠️ Project Structure
+
+```
+Atlas_(M&C_APP)/
+├── python/
+│   └── src/
+│       └── atlas/
+│           ├── data/          # Data Layer (Ingestion, Storage)
+│           ├── lab/           # Quantum Field (Experiments)
+│           └── assistants/
+│               └── aria/      # ARIA Agent Source Code
+├── Project_Governance/        # Roadmap, Plans, Keys
+├── ui_web/                    # Future Web Interface
+└── tests/                     # System Verification
 ```
 
 ---
 
-## 📦 Installation
-```bash
-pip install aria-assistant
+## ⚡ Quick Start
+
+### 1. Run ARIA
+Interact with the assistant immediately:
+```powershell
+python run_aria.py
 ```
 
-**Requirements:**
-- Python 3.10+
-- Anthropic API key
-- (Optional) OpenAI API key for advanced features
-- (Optional) ElevenLabs API key for premium voice
+### 2. Check Governance
+See where the project is heading:
+- [Master Plan](Project_Governance/ATLAS_MASTER_PLAN.md)
+- [Roadmap](Project_Governance/ROADMAP.md)
 
 ---
 
-## 🔑 API Keys
+## 🔐 Privacy & Security
 
-Create `.env` file:
-```env
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-proj-...      # Optional
-ELEVENLABS_API_KEY=...          # Optional
-```
+- **100% Local First:** Atlas is designed to run locally using Ollama.
+- **Optional Cloud:** Integrations (ElevenLabs, OpenAI) are optional and configurable via `NEEDED_KEYS.md`.
 
 ---
 
-## 📚 Documentation
-
-- [Architecture](docs/ARCHITECTURE.md)
-- [API Reference](docs/API_REFERENCE.md)
-- [System Prompt](docs/SYSTEM_PROMPT.md)
-- [Tool Development](docs/TOOL_DEVELOPMENT.md)
-
----
-
-## 🎓 Examples
-
-See [examples/](examples/) directory for:
-- Basic chat
-- Voice assistant
-- Code interpreter
-- Multi-agent system
-- Integration with trading systems
-
----
-
-## 🏗️ Architecture
-```
-ARIA v5.0
-├─ Core (Chat + Multi-Agent)
-├─ Tools (Web, Code, Images)
-├─ Voice (Basic + Advanced)
-├─ Memory (Recursive + Vector DB)
-├─ Intelligence (Learning + Emotional)
-└─ Integrations (Telegram, Discord, etc.)
-```
-
----
-
-## 🤝 Integration with Atlas
-
-ARIA is designed to work seamlessly with Atlas trading system:
-```python
-from atlas.lab.aria_integration import create_atlas_aria
-
-aria = create_atlas_aria()
-aria.ask("Analyze AAPL and suggest entry point")
-# ARIA uses Atlas data layer and backtesting engine
-```
-
----
-
-## 📝 License
-
-Copyright (c) 2026 M&C. All rights reserved.
-
-This is proprietary software. Unauthorized copying, distribution, or modification is prohibited.
-
----
-
-## 🔥 What Makes ARIA Special?
-
-1. **Recursive Memory** - Never forgets important information
-2. **Multi-Agent** - Team of specialized agents
-3. **Proactive** - Suggests before you ask
-4. **Multi-Modal** - Text, voice, images, code
-5. **Self-Improving** - Learns from every interaction
-
----
-
-**Built with ❤️ by M&C**
+**© 2026 M&C - Building the Future of Trading**
