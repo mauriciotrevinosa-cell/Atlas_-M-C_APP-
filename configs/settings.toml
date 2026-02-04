@@ -1,0 +1,33 @@
+# ATLAS GLOBAL CONFIGURATION
+# v1.0
+
+[global]
+environment = "development" # development | production
+debug_mode = true
+project_name = "Atlas"
+version = "5.0.0"
+
+[paths]
+data_dir = "data"
+cache_dir = "data/cache"
+logs_dir = "logs"
+artifacts_dir = "brain/artifacts"
+
+[data_layer]
+default_provider = "yahoo"
+enable_cache = true
+cache_expiry_hours = 24
+
+[aria]
+model = "llama3.1:8b"
+temperature = 0.7
+max_tokens = 2000
+tool_choice = "auto"
+
+[quantum]
+default_backend = "simulate"
+shots = 1024
+
+[system]
+log_level = "INFO"
+max_workers = 4

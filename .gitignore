@@ -1,0 +1,81 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+*.private.toml
+
+# Logs
+logs/
+*.log
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Memory/Cache
+*.db
+*.sqlite
+*.sqlite3
+chroma_data/
+vector_db/
+cache/
+
+# Audio files (voice recordings)
+*.wav
+*.mp3
+temp_*.wav
+temp_*.mp3
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Build
+*.egg-info/
+dist/
+build/
+
+# Personal
+scratch/
+experiments/
+personal_notes/

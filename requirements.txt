@@ -1,0 +1,9 @@
+ollama
+yfinance
+pandas
+pytest
+flake8
+mypy
+Requests
+qiskit>=1.0.0
+qiskit-ibm-runtime>=0.20.0

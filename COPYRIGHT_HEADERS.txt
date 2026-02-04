@@ -1,0 +1,94 @@
+
+# ============================================================================
+# PYTHON HEADER (.py files)
+# ============================================================================
+
+"""
+Copyright (c) 2026 M&C. All Rights Reserved.
+
+PROPRIETARY AND CONFIDENTIAL
+
+This file is part of Project Atlas, a proprietary quantitative intelligence 
+system developed by M&C. Unauthorized copying, distribution, modification, 
+or use of this file, via any medium, is strictly prohibited.
+
+For licensing inquiries: [your.email@mc-company.com]
+"""
+
+
+# ============================================================================
+# TYPESCRIPT/JAVASCRIPT HEADER (.ts, .tsx, .js files)
+# ============================================================================
+
+/**
+ * Copyright (c) 2026 M&C. All Rights Reserved.
+ * 
+ * PROPRIETARY AND CONFIDENTIAL
+ * 
+ * This file is part of Project Atlas, a proprietary quantitative intelligence 
+ * system developed by M&C. Unauthorized copying, distribution, modification, 
+ * or use of this file, via any medium, is strictly prohibited.
+ * 
+ * For licensing inquiries: [your.email@mc-company.com]
+ */
+
+
+# ============================================================================
+# C++ HEADER (.cpp, .h, .hpp files)
+# ============================================================================
+
+/*
+ * Copyright (c) 2026 M&C. All Rights Reserved.
+ * 
+ * PROPRIETARY AND CONFIDENTIAL
+ * 
+ * This file is part of Project Atlas, a proprietary quantitative intelligence 
+ * system developed by M&C. Unauthorized copying, distribution, modification, 
+ * or use of this file, via any medium, is strictly prohibited.
+ * 
+ * For licensing inquiries: [your.email@mc-company.com]
+ */
+
+
+# ============================================================================
+# MARKDOWN HEADER (.md files) - Optional
+# ============================================================================
+
+<!--
+Copyright (c) 2026 M&C. All Rights Reserved.
+
+PROPRIETARY AND CONFIDENTIAL
+
+This document is part of Project Atlas. Unauthorized use is prohibited.
+-->
+
+
+# ============================================================================
+# USAGE INSTRUCTIONS
+# ============================================================================
+
+# 1. Para archivos importantes (engines, core logic):
+#    → Copia el header completo al inicio del archivo
+
+# 2. Para archivos experimentales (lab/):
+#    → Opcional, pero recomendado
+
+# 3. Para configs y scripts simples:
+#    → Opcional
+
+# 4. Actualiza el año cada enero:
+#    Copyright (c) 2026-2027 M&C. All Rights Reserved.
+
+
+# ============================================================================
+# ABBREVIATED HEADER (para archivos muy cortos)
+# ============================================================================
+
+# Python version corta:
+# Copyright (c) 2026 M&C. All Rights Reserved. PROPRIETARY.
+
+// TypeScript version corta:
+// Copyright (c) 2026 M&C. All Rights Reserved. PROPRIETARY.
+
+/* C++ version corta */
+/* Copyright (c) 2026 M&C. All Rights Reserved. PROPRIETARY. */

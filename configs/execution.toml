@@ -1,0 +1,24 @@
+# Execution Engine Configuration
+
+[brokers]
+default = "paper"
+
+[brokers.paper]
+initial_capital = 100000.0
+commission_rate = 0.001
+
+[brokers.alpaca]
+enabled = false
+api_key = "YOUR_KEY"
+secret_key = "YOUR_SECRET"
+base_url = "https://paper-api.alpaca.markets"
+
+[brokers.ibkr]
+enabled = false
+host = "127.0.0.1"
+port = 7497
+client_id = 1
+
+[risk]
+max_order_value = 10000.0
+max_daily_loss = 500.0
