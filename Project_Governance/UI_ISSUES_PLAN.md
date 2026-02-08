@@ -35,3 +35,16 @@
 1.  Modify `index.html` to add the Positions table to Scenario Mode.
 2.  Modify `scenario.py` to include `positions` in the `ScenarioState` returned to frontend.
 3.  Modify `scenario.js` to render this positions table on every step.
+
+## Resolution (2026-02-08)
+### 1. Finance Module
+- **Fixed**: Updated `index.html` `switchView` to trigger `updatePortfolio()` and correctly highlight navigation.
+- **Fixed**: Removed aggressive `click` listener in `finance.js`.
+
+### 2. Scenario Mode
+- **Feature Added**: Added "Active Positions" table to the Practice view in `index.html`.
+- **Backend**: Updated `ScenarioState` in `scenario.py` to include `positions`.
+- **Frontend**: Updated `scenario.js` to render the positions table dynamically.
+
+### 3. Git
+- **Synced**: Changes pushed to remote repository.

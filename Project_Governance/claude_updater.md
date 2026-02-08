@@ -258,3 +258,14 @@ The structure is complete, but many files are **empty placeholders** (0 bytes).
     *   Created `run_atlas.py`: Single-script solution (checks Ollama + starts Server + opens Browser).
     *   Created `START_ATLAS.bat`: One-click launcher.
     *   **Result:** System now runs with just Python and a Browser. No Node/NPM required for runtime.
+
+### 18. Desktop App Refinements (UI/UX & Features)
+*   **Goal:** Polish the user experience and enable multi-asset scenarios.
+*   **Actions:**
+    *   **Finance Module**: Fixed navigation bug where clicking "Finance" did nothing.
+    *   **Scenario Mode**:
+         *   Backend: Updated `ScenarioSession` to track full `positions` (multi-asset).
+         *   Frontend: Added "Active Positions" table to the Practice view.
+         *   Frontend: Implemented real-time updates for the positions table.
+    *   **Documentation**: Created `Project_Governance/UI_ISSUES_PLAN.md` to track these specific fixes.
+    *   **Version Control**: synced local changes to `origin/main`.
