@@ -440,6 +440,13 @@ Referencia completa: `docs/02_ARCHITECTURE.md`
 - FASE 1.5 (Tools Básicos) marcada como completa
 - Documentado primer éxito end-to-end con datos reales
 
+### 2026-02-05 (v1.2 - Phase 4 Engine Start)
+- Inicio oficial de **FASE 4: Motores de Trading**
+- Implementación de `BaseEngine` (ABC) y `EngineRegistry`
+- Primer motor `Rule-Based` operativo (`SMACrossover`)
+- Verificación exitosa de generación de señales
+- Roadmap actualizado: ML Engines como siguiente paso prioritario
+
 **Próximos Updates Esperados:**
 - Resultado de auditoría ChatGPT sobre tool calling implementation
 - Implementación de más tools (create_file, web_search, execute_code)

@@ -31,13 +31,15 @@
     - [ ] Universe Management.
 - [ ] **Phase 1.2: Derivatives Data**
     - [ ] CoinGlass/Hyperliquid Connectors.
+    - [ ] CoinGlass/Hyperliquid Connectors.
     - [ ] Liquidation Heatmaps.
-
-### 🔮 FUTURE (ROADMAP)
-- [ ] **Phase 2:** Factor Library (20+ indicators).
-- [ ] **Phase 3:** Strategy Framework.
+- [ ] **Phase 4: Trading Engines** (Brain)
+    - [x] Base Architecture (Registry + ABC).
+    - [x] Rule-Based Engine (SMA).
+    - [ ] ML Engines (LSTM/XGBoost).
 - [ ] **Phase 4:** Backtesting Engine (Qlib style).
 - [ ] **Phase 9:** Multi-Brain Orchestration (Router).
+- [ ] **Phase 14:** Web UI (Derivatives Dashboard).
 - [ ] **Phase 14:** Web UI (Derivatives Dashboard).
 
 ---
