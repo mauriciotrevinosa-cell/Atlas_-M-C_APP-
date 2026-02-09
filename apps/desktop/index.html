@@ -329,8 +329,8 @@
           <!-- 3D Lab Sidebar -->
           <div class="scenario-card side">
             <h3>3D Visualization Lab</h3>
-            <p style="font-size:12px; color:#888; margin-bottom:15px;">Generate high-performance renders of market
-              microstructure.</p>
+            <p style="font-size:12px; color:#888; margin-bottom:15px;">Generate real-time 3D surfaces based on your
+              portfolio.</p>
 
             <div style="display:flex; flex-direction:column; gap:10px;">
               <button class="btn secondary" onclick="generate3D('vol_surface')">🌋 Volatility Surface</button>
@@ -345,8 +345,40 @@
         <!-- Render Output Area -->
         <div id="3d-output-container" style="margin-top:20px; display:none;">
           <div class="scenario-card" style="text-align:center;">
-            <h3>Render Output</h3>
-            <img id="3d-image-result" src="" style="max-width:100%; border-radius:4px; margin-top:10px;">
+            <h3>3D Render Output</h3>
+            <div id="three-output" style="width:100%; height:360px; border-radius:6px; overflow:hidden;"></div>
+          </div>
+        </div>
+
+        <div class="scenario-grid" style="margin-top:20px;">
+          <div class="scenario-card main">
+            <h3>Create Portfolio</h3>
+            <p style="font-size:12px; color:#888; margin-bottom:15px;">Add positions to build your portfolio and power
+              the 3D models.</p>
+            <form id="portfolio-form" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px;">
+              <input id="portfolio-ticker" type="text" placeholder="Ticker (e.g. NVDA)" required>
+              <input id="portfolio-qty" type="number" placeholder="Qty" min="1" step="1" required>
+              <input id="portfolio-avg" type="number" placeholder="Avg Price" min="0" step="0.01" required>
+              <input id="portfolio-current" type="number" placeholder="Current Price" min="0" step="0.01" required>
+              <button class="btn primary" type="submit" style="grid-column:1 / -1;">Add Position</button>
+            </form>
+          </div>
+          <div class="scenario-card side">
+            <h3>3D Simulation Lab</h3>
+            <p style="font-size:12px; color:#888; margin-bottom:15px;">Run a day-by-day simulation that evolves the 3D
+              model based on your decisions.</p>
+            <label style="font-size:11px; color:#aaa;">Decision</label>
+            <select id="sim-decision" style="margin:8px 0 12px; width:100%;">
+              <option value="hold">Hold</option>
+              <option value="risk_on">Risk On</option>
+              <option value="risk_off">Risk Off</option>
+              <option value="hedge">Hedge</option>
+            </select>
+            <div style="display:flex; gap:10px;">
+              <button class="btn secondary" id="sim-start-btn" type="button">Start Sim</button>
+              <button class="btn secondary" id="sim-next-btn" type="button" disabled>Next Day</button>
+            </div>
+            <div id="sim-status" style="margin-top:12px; font-size:11px; color:#aaa;">Simulation idle.</div>
           </div>
         </div>
       </div>
@@ -392,6 +424,7 @@
     <script src="app.js"></script>
     <script src="scenario.js"></script>
     <script src="analysis.js"></script>
+    <script src="https://unpkg.com/three@0.159.0/build/three.min.js"></script>
     <script src="finance.js"></script> <!-- New Script -->
     <script>
       // View Switcher Logic
