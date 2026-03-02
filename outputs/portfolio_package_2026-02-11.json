@@ -1,0 +1,169 @@
+{
+  "schema": "atlas.portfolio.package.v1",
+  "as_of": "2026-02-11",
+  "total_equity": 2894.36,
+  "positions": [
+    {
+      "symbol": "AAPL",
+      "qty": 0.4367,
+      "avg_price": 228.82,
+      "current_price": 275.83
+    },
+    {
+      "symbol": "AMZN",
+      "qty": 0.42792,
+      "avg_price": 233.33,
+      "current_price": 204.31
+    },
+    {
+      "symbol": "AVGO",
+      "qty": 0.33014,
+      "avg_price": 302.44,
+      "current_price": 343.09
+    },
+    {
+      "symbol": "AXP",
+      "qty": 0.29993,
+      "avg_price": 332.83,
+      "current_price": 354.54
+    },
+    {
+      "symbol": "BAC",
+      "qty": 1.96116,
+      "avg_price": 50.9,
+      "current_price": 53.88
+    },
+    {
+      "symbol": "CCEP",
+      "qty": 1.14126,
+      "avg_price": 87.47,
+      "current_price": 97.67
+    },
+    {
+      "symbol": "CRWD",
+      "qty": 0.21006,
+      "avg_price": 475.34,
+      "current_price": 415.79
+    },
+    {
+      "symbol": "GOOGL",
+      "qty": 0.3306,
+      "avg_price": 301.78,
+      "current_price": 310.9
+    },
+    {
+      "symbol": "HD",
+      "qty": 0.26518,
+      "avg_price": 376.45,
+      "current_price": 390.67
+    },
+    {
+      "symbol": "HP",
+      "qty": 3.46786,
+      "avg_price": 28.79,
+      "current_price": 34.41
+    },
+    {
+      "symbol": "IEUR",
+      "qty": 1.49825,
+      "avg_price": 66.69,
+      "current_price": 75.85
+    },
+    {
+      "symbol": "MA",
+      "qty": 0.17714,
+      "avg_price": 563.55,
+      "current_price": 538
+    },
+    {
+      "symbol": "MCD",
+      "qty": 0.32636,
+      "avg_price": 305.89,
+      "current_price": 322.67
+    },
+    {
+      "symbol": "MSCI",
+      "qty": 0.17103,
+      "avg_price": 583.32,
+      "current_price": 513.56
+    },
+    {
+      "symbol": "MSFT",
+      "qty": 0.22309,
+      "avg_price": 447.48,
+      "current_price": 404.75
+    },
+    {
+      "symbol": "NKE",
+      "qty": 1.45245,
+      "avg_price": 68.73,
+      "current_price": 62.48
+    },
+    {
+      "symbol": "NVDA",
+      "qty": 0.62514,
+      "avg_price": 159.69,
+      "current_price": 190.36
+    },
+    {
+      "symbol": "PANW",
+      "qty": 0.51768,
+      "avg_price": 192.88,
+      "current_price": 165.25
+    },
+    {
+      "symbol": "PEP",
+      "qty": 0.69104,
+      "avg_price": 144.46,
+      "current_price": 169.33
+    },
+    {
+      "symbol": "PG",
+      "qty": 0.65661,
+      "avg_price": 152.04,
+      "current_price": 159.84
+    },
+    {
+      "symbol": "SBUX",
+      "qty": 1.04586,
+      "avg_price": 95.45,
+      "current_price": 99.05
+    },
+    {
+      "symbol": "SPY",
+      "qty": 0.32882,
+      "avg_price": 612.72,
+      "current_price": 692.49
+    },
+    {
+      "symbol": "TEM",
+      "qty": 1.43675,
+      "avg_price": 69.5,
+      "current_price": 53.54
+    },
+    {
+      "symbol": "TSLA",
+      "qty": 0.25901,
+      "avg_price": 385.38,
+      "current_price": 428.52
+    },
+    {
+      "symbol": "VOO",
+      "qty": 0.16566,
+      "avg_price": 602.59,
+      "current_price": 636.87
+    },
+    {
+      "symbol": "VST",
+      "qty": 0.57098,
+      "avg_price": 174.87,
+      "current_price": 160.34
+    },
+    {
+      "symbol": "VTI",
+      "qty": 0.32419,
+      "avg_price": 308.05,
+      "current_price": 341.71
+    }
+  ]
+}

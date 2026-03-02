@@ -1,0 +1,74 @@
+"""
+Data Layer - Public API
+
+Provides simple access to market data.
+
+Copyright © 2026 M&C. All Rights Reserved.
+"""
+
+import yfinance as yf
+import pandas as pd
+from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+
+def get_data(symbol: str, start: str, end: str, use_cache: bool = False) -> pd.DataFrame:
+    """
+    Get OHLCV data for a symbol
+    
+    Args:
+        symbol: Ticker symbol (e.g., "AAPL")
+        start: Start date "YYYY-MM-DD"
+        end: End date "YYYY-MM-DD"
+        use_cache: Whether to use cache (not implemented yet)
+    
+    Returns:
+        DataFrame with OHLCV data
+    
+    Raises:
+        ValueError: If no data found
+        RuntimeError: If download fails
+    
+    Example:
+        >>> data = get_data("AAPL", "2024-01-01", "2024-12-31")
+        >>> print(data.head())
+                       Open   High    Low  Close     Volume
+        2024-01-02  187.15  188.44  185.19  185.64  82488300
+    """
+    logger.info(f"Fetching data for {symbol} from {start} to {end}")
+    
+    try:
+        # Download data from Yahoo Finance
+        ticker = yf.Ticker(symbol)
+        data = ticker.history(start=start, end=end)
+        
+        if data.empty:
+            raise ValueError(f"No data found for {symbol} between {start} and {end}")
+        
+        # Standardize column names (Yahoo uses capital first letter)
+        data = data.rename(columns={
+            'Open': 'Open',
+            'High': 'High',
+            'Low': 'Low',
+            'Close': 'Close',
+            'Volume': 'Volume'
+        })
+        
+        # Select only OHLCV columns
+        data = data[['Open', 'High', 'Low', 'Close', 'Volume']]
+        
+        logger.info(f"Successfully fetched {len(data)} bars for {symbol}")
+        
+        return data
+        
+    except ValueError as e:
+        logger.error(f"Validation error: {str(e)}")
+        raise
+        
+    except Exception as e:
+        logger.error(f"Error fetching data for {symbol}: {str(e)}")
+        raise RuntimeError(f"Failed to fetch data: {str(e)}")
+
+
+__all__ = ['get_data']

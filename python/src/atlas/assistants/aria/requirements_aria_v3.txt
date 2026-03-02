@@ -32,3 +32,13 @@ textblob>=0.17.0
 python-telegram-bot>=20.0
 discord.py>=2.3.0
 notion-client>=2.0.0
+twilio>=6.0.0
+flask>=2.0.0
+
+# Multi-Device Server
+fastapi>=0.100.0
+uvicorn>=0.20.0
+websockets>=10.0
+
+# Windows Service
+pywin32>=300

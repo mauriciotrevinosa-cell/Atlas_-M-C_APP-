@@ -18,6 +18,14 @@ sys.path.insert(0, str(project_root / "python" / "src"))
 
 from atlas.assistants.aria.core.chat import ARIA
 from atlas.assistants.aria.tools.quantum_compute import QuantumComputeTool
+from atlas.assistants.aria.tools.get_data import GetDataTool
+from atlas.assistants.aria.tools.web_search import WebSearchTool
+from atlas.assistants.aria.tools.create_file import CreateFileTool
+from atlas.assistants.aria.tools.execute_code import ExecuteCodeTool
+from atlas.assistants.aria.tools.get_market_state import GetMarketStateTool
+from atlas.assistants.aria.tools.analyze_risk import AnalyzeRiskTool
+from atlas.assistants.aria.tools.run_backtest import RunBacktestTool
+from atlas.assistants.aria.tools.explain_signal import ExplainSignalTool
 
 class ARIATerminal:
     """
@@ -131,8 +139,19 @@ Modelo: {self.aria.model}
         print("🔄 Inicializando ARIA (Project Manager Mode)...\\n")
         try:
             self.aria = ARIA(model="llama3.1:8b")
+            
+            # Register Core Tools
+            self.aria.register_tool(GetDataTool())
+            self.aria.register_tool(WebSearchTool())
+            self.aria.register_tool(CreateFileTool())
+            self.aria.register_tool(ExecuteCodeTool())
+            self.aria.register_tool(GetMarketStateTool())
             self.aria.register_tool(QuantumComputeTool())
-            print("✅ ARIA lista\n")
+            self.aria.register_tool(AnalyzeRiskTool())
+            self.aria.register_tool(RunBacktestTool())
+            self.aria.register_tool(ExplainSignalTool())
+            
+            print("✅ ARIA lista (9 tools cargadas)\n")
             print("🤖 ¡Hola! Soy ARIA. ¿En qué puedo ayudarte hoy?\\n")
         except Exception as e:
             print(f"❌ Error inicializando ARIA: {e}")

@@ -76,6 +76,21 @@ class ARIA:
         # Print welcome banner
         self.print_banner()
 
+    @staticmethod
+    def _safe_print(message: str) -> None:
+        """Print safely across Windows console encodings."""
+        try:
+            print(message)
+        except UnicodeEncodeError:
+            fallback = message.encode("ascii", errors="replace").decode("ascii")
+            print(fallback)
+        except Exception:
+            # Logging should never break runtime behavior.
+            try:
+                print(str(message))
+            except Exception:
+                pass
+
     def print_banner(self):
         """Print welcome banner"""
         banner = """
@@ -99,19 +114,20 @@ Sistema: 100% Local (sin APIs comerciales)
 Modelo: llama3.1:8b (puede cambiar a qwen/deepseek según tarea)
 Estado: Listo para asistir
 """
-        print(banner)
+        self._safe_print(banner)
     
     def _verify_connection(self):
         """Verify connection to Ollama"""
         try:
             ollama.list()
-            print(f"✅ Connected to Ollama ({self.host})")
-            print(f"📦 Using model: {self.model}")
         except Exception as e:
             raise ConnectionError(
                 f"Failed to connect to Ollama at {self.host}. "
                 f"Make sure Ollama is running.\nError: {e}"
             )
+
+        self._safe_print(f"✅ Connected to Ollama ({self.host})")
+        self._safe_print(f"📦 Using model: {self.model}")
     
     def register_tool(self, tool):
         """
@@ -133,7 +149,7 @@ Estado: Listo para asistir
         }
         self.tool_schemas.append(tool_schema)
         
-        print(f"🔧 Registered tool: {tool.name}")
+        self._safe_print(f"🔧 Registered tool: {tool.name}")
     
     def ask(self, 
             user_message: str,
@@ -162,6 +178,30 @@ Estado: Listo para asistir
                 "role": "user",
                 "content": user_message
             })
+
+            # Check for self-description commands (Fast Path)
+            triggers = ["who are you", "what are you", "describe yourself", "/intro", "/info"]
+            if any(trigger in user_message.lower() for trigger in triggers):
+                description = (
+                    "🤖 **I am ARIA (Atlas Reasoning & Intelligence Assistant).**\n\n"
+                    "I am a refined, 100% local AI designed to be your autonomous co-pilot. "
+                    "Unlike standard chatbots, I run entirely on your machine using Ollama, ensuring total privacy.\n\n"
+                    "**My Key Capabilities:**\n"
+                    "- 🧠 **Reasoning:** I use advanced models (Llama 3, Deepseek) to solve complex problems.\n"
+                    "- 🛠️ **Tools:** I can access your files, search the web, and manage your schedule (ClickUp/Notion).\n"
+                    "- 👁️ **Vision:** I can see and analyze images you share.\n"
+                    "- 🗣️ **Voice:** I can speak and listen via my Voice Terminal.\n"
+                    "- 🔌 **Integration:** I connect with WhatsApp, Discord, and your local apps.\n\n"
+                    "I am built to be precise, helpful, and secure. How can I assist you today?"
+                )
+                
+                # Add to history
+                self.history.append({
+                    "role": "assistant",
+                    "content": description
+                })
+                
+                return description
             
             # Prepare messages for Ollama
             messages = [
@@ -262,7 +302,7 @@ Estado: Listo para asistir
                     }
                 else:
                     # Execute tool with validated params
-                    print(f"🔧 Executing: {tool_name}({validated_params})")
+                    self._safe_print(f"🔧 Executing: {tool_name}({validated_params})")
                     result = tool.execute(**validated_params)
                     self.stats["tools_called"] += 1
             
@@ -332,7 +372,7 @@ Estado: Listo para asistir
     def reset(self):
         """Reset conversation history"""
         self.history = []
-        print("🔄 Conversation history cleared")
+        self._safe_print("🔄 Conversation history cleared")
     
     def get_stats(self) -> Dict:
         """Get usage statistics"""
@@ -359,7 +399,7 @@ Estado: Listo para asistir
                 "stats": self.get_stats()
             }, f, indent=2)
         
-        print(f"💾 Conversation exported to {filepath}")
+        self._safe_print(f"💾 Conversation exported to {filepath}")
 
 
 # Convenience function

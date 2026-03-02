@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from aria.tools.base import Tool
-from aria.tools.data_providers import YahooProvider, AlpacaProvider
+from atlas.data_layer import DataManager
 from typing import Any, Dict, Optional
 import pandas as pd
 
@@ -77,6 +77,13 @@ class GetDataTool(Tool):
         )
         
         self.add_parameter(
+            "timeframe",
+            "string",
+            "Timeframe (e.g. '1y', 'ytd', 'max'). Overrides start/end date.",
+            required=False
+        )
+        
+        self.add_parameter(
             "interval",
             "string",
             "Data interval: 1d, 1h, 1m (default: 1d)",
@@ -84,19 +91,9 @@ class GetDataTool(Tool):
             default="1d"
         )
         
-        # Initialize providers
-        self.yahoo = YahooProvider()
-        
-        # Try to initialize Alpaca (optional)
-        try:
-            self.alpaca = AlpacaProvider()
-            self.has_alpaca = True
-            print("✅ Alpaca provider initialized (real-time data available)")
-        except Exception as e:
-            self.alpaca = None
-            self.has_alpaca = False
-            print(f"⚠️ Alpaca not available: {e}")
-            print("   Using Yahoo Finance only (15min delay)")
+        # Initialize Data Manager
+        self.dm = DataManager()
+        print("✅ DataManager initialized for ARIA tool")
     
     def execute(
         self,
@@ -104,20 +101,11 @@ class GetDataTool(Tool):
         mode: str,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        timeframe: Optional[str] = None,
         interval: str = "1d"
     ) -> Any:
         """
         Execute the get_data tool
-        
-        Args:
-            symbol: Ticker symbol
-            mode: 'historical' or 'realtime'
-            start_date: Start date (for historical)
-            end_date: End date (for historical)
-            interval: Data interval
-            
-        Returns:
-            DataFrame for historical, Dict for realtime
         """
         # Validate parameters
         self.validate_parameters(
@@ -129,7 +117,7 @@ class GetDataTool(Tool):
         
         try:
             if mode == "historical":
-                return self._get_historical(symbol, start_date, end_date, interval)
+                return self._get_historical(symbol, start_date, end_date, timeframe, interval)
             elif mode == "realtime":
                 return self._get_realtime(symbol)
             else:
@@ -145,42 +133,37 @@ class GetDataTool(Tool):
     def _get_historical(
         self,
         symbol: str,
-        start_date: str,
-        end_date: str,
+        start_date: Optional[str],
+        end_date: Optional[str],
+        timeframe: Optional[str],
         interval: str
     ) -> pd.DataFrame:
-        """Get historical data (always uses Yahoo - reliable for historical)"""
+        """Get historical data via DataManager"""
         
-        if not start_date or not end_date:
-            raise ValueError("start_date and end_date required for historical mode")
+        if not start_date and not timeframe:
+             # Default to 1 year if nothing specified
+             timeframe = "1y"
         
-        print(f"📊 Fetching historical data for {symbol} ({start_date} to {end_date})")
+        print(f"📊 Fetching historical data for {symbol} (TF: {timeframe} | Dates: {start_date}-{end_date})")
         
-        # Use Yahoo for historical (reliable and free)
-        data = self.yahoo.get_historical(symbol, start_date, end_date, interval)
+        # Use DataManager
+        data = self.dm.get_historical(
+            symbol=symbol, 
+            start_date=start_date, 
+            end_date=end_date, 
+            timeframe=timeframe,
+            interval=interval
+        )
         
-        print(f"✅ Got {len(data)} data points")
+        print(f"✅ Got {len(data)} bars")
         
         return data
     
     def _get_realtime(self, symbol: str) -> Dict:
-        """Get real-time quote (tries Alpaca first, falls back to Yahoo)"""
-        
+        """Get real-time quote via DataManager"""
         print(f"🔴 Fetching real-time quote for {symbol}")
-        
-        # Try Alpaca first (true real-time)
-        if self.has_alpaca:
-            try:
-                quote = self.alpaca.get_latest_quote(symbol)
-                print(f"✅ Got real-time quote from Alpaca")
-                return quote
-            except Exception as e:
-                print(f"⚠️ Alpaca failed: {e}, falling back to Yahoo")
-        
-        # Fall back to Yahoo (15min delay)
-        quote = self.yahoo.get_latest_quote(symbol)
-        print(f"✅ Got quote from Yahoo (15min delay)")
-        
+        quote = self.dm.get_quote(symbol)
+        print(f"✅ Quote received: {quote['price']}")
         return quote
 
 

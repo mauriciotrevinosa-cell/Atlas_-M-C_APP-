@@ -37,14 +37,15 @@ function initAnalysisChart() {
         },
         timeScale: {
             borderColor: '#cccccc',
+            timeVisible: true,
         },
     });
 
     analysisCandleSeries = analysisChart.addCandlestickSeries({
-        upColor: '#26a69a',
+        upColor:   '#26a69a',
         downColor: '#ef5350',
         borderVisible: false,
-        wickUpColor: '#26a69a',
+        wickUpColor:   '#26a69a',
         wickDownColor: '#ef5350',
     });
 

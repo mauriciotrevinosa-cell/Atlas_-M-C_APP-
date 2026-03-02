@@ -40,7 +40,7 @@ ARIA is the voice and brain of Atlas. It is not just a chatbot, but a fully inte
 ## 🛠️ Project Structure
 
 ```
-Atlas_(M&C_APP)/
+Atlas/
 ├── python/
 │   └── src/
 │       └── atlas/

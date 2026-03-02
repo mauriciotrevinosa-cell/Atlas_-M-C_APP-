@@ -30,7 +30,16 @@ class ReadFileTool:
         Args:
             base_dir: Base directory for file reading
         """
-        self.base_dir = Path(base_dir)
+        self.base_dir = Path(base_dir).resolve()
+
+    def _resolve_path(self, filepath: str) -> Path:
+        """
+        Resolve and validate a path against the configured base directory.
+        """
+        resolved = (self.base_dir / filepath).resolve()
+        if not resolved.is_relative_to(self.base_dir):
+            raise ValueError(f"Path escapes base directory: {filepath}")
+        return resolved
     
     def execute(self,
                 filepath: str,
@@ -48,12 +57,31 @@ class ReadFileTool:
             Dict with file content
         """
         try:
-            full_path = self.base_dir / filepath
+            full_path = self._resolve_path(filepath)
             
             if not full_path.exists():
                 return {
                     "success": False,
                     "error": f"File not found: {full_path}"
+                }
+
+            if full_path.is_dir():
+                entries = []
+                for item in sorted(full_path.iterdir()):
+                    entries.append(
+                        {
+                            "name": item.name,
+                            "path": str(item.relative_to(self.base_dir)),
+                            "type": "directory" if item.is_dir() else "file",
+                            "size": item.stat().st_size if item.is_file() else None,
+                        }
+                    )
+                return {
+                    "success": True,
+                    "filepath": str(full_path),
+                    "is_directory": True,
+                    "entries": entries,
+                    "count": len(entries),
                 }
             
             # Check if file is too large
@@ -68,14 +96,15 @@ class ReadFileTool:
             # Read file
             if max_lines:
                 lines = []
+                truncated = False
                 with open(full_path, 'r', encoding=encoding) as f:
                     for i, line in enumerate(f):
                         if i >= max_lines:
+                            truncated = True
                             break
                         lines.append(line.rstrip('\n'))
                 
                 content = '\n'.join(lines)
-                truncated = True
             else:
                 content = full_path.read_text(encoding=encoding)
                 truncated = False
@@ -93,6 +122,12 @@ class ReadFileTool:
             return {
                 "success": False,
                 "error": f"Cannot decode file with encoding: {encoding}. File might be binary."
+            }
+        
+        except ValueError as e:
+            return {
+                "success": False,
+                "error": str(e)
             }
         
         except Exception as e:
@@ -150,12 +185,18 @@ class ReadFileTool:
             Dict with file list
         """
         try:
-            dir_path = self.base_dir / directory
+            dir_path = self._resolve_path(directory)
             
             if not dir_path.exists():
                 return {
                     "success": False,
                     "error": f"Directory not found: {dir_path}"
+                }
+            
+            if not dir_path.is_dir():
+                return {
+                    "success": False,
+                    "error": f"Path is not a directory: {dir_path}"
                 }
             
             if recursive:
@@ -179,6 +220,12 @@ class ReadFileTool:
                 "pattern": pattern,
                 "files": file_list,
                 "count": len(file_list)
+            }
+        
+        except ValueError as e:
+            return {
+                "success": False,
+                "error": str(e)
             }
         
         except Exception as e:

@@ -4,7 +4,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Atlas OS</title>
+  <title>Atlas — Quantitative Trading Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
 </head>
@@ -29,17 +31,17 @@
 
       <!-- Stats Row -->
       <div class="overview-grid">
-        <div class="stat-card">
-          <div class="stat-label">Pending</div>
-          <div class="stat-value orange">12</div>
+        <div class="stat-card" onclick="switchView('decision')" style="cursor:pointer;">
+          <div class="stat-label" id="dash-stat-label-1">Signals</div>
+          <div class="stat-value orange" id="dash-stat-val-1">—</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Wallet</div>
-          <div class="stat-value">$4.2k</div>
+          <div class="stat-label" id="dash-stat-label-2">Online</div>
+          <div class="stat-value" id="dash-stat-val-2">—</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Team</div>
-          <div class="stat-value">8</div>
+          <div class="stat-label" id="dash-stat-label-3">Engines</div>
+          <div class="stat-value" id="dash-stat-val-3">5</div>
         </div>
       </div>
 
@@ -63,15 +65,37 @@
         </div>
       </div>
 
-      <!-- Modules Header -->
-      <div class="module-header-row">
-        <div class="modules-title">Modules</div>
-        <a href="#" class="library-link">Library</a>
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <button class="quick-action-btn" onclick="switchView('chat')">💬 ARIA Chat</button>
+        <button class="quick-action-btn" onclick="switchView('derivatives')">⚡ Options</button>
+        <button class="quick-action-btn" onclick="switchView('decision')">🎯 Decisions</button>
+        <button class="quick-action-btn" onclick="switchView('vizlab')">🔬 Viz Lab</button>
+        <button class="quick-action-btn" onclick="switchView('analysis')">📈 Analysis</button>
+        <button class="quick-action-btn" onclick="switchView('trader')">⚡ ARIA Trader</button>
       </div>
+
+      <!-- Modules Header -->
+      <div class="section-header-with-line"><span>Modules</span></div>
 
       <!-- Modules Grid -->
       <div class="modules-grid">
-        <!-- Finance Module -->
+        <!-- Real Estate Module -->
+        <div class="module-card" onclick="switchView('realestate')">
+          <div class="module-icon analysis">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 21h18" />
+              <path d="M5 21V7l7-4 7 4v14" />
+              <path d="M9 21v-6h6v6" />
+            </svg>
+          </div>
+          <div>
+            <div class="module-title">Real Estate</div>
+            <div class="module-subtitle">M&C Development</div>
+          </div>
+        </div>
+
+        <!-- M&C Project Module -->
         <div class="module-card" onclick="switchView('finance')">
           <div class="module-icon finance">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -81,8 +105,8 @@
           </div>
           <div class="notification-dot"></div>
           <div>
-            <div class="module-title">Finance</div>
-            <div class="module-subtitle">Portfolio & 3D Lab</div>
+            <div class="module-title">M&C Projects</div>
+            <div class="module-subtitle">Simulate & Render Lab</div>
           </div>
         </div>
 
@@ -127,24 +151,199 @@
             <div class="module-subtitle">Live Market Data</div>
           </div>
         </div>
+
+        <!-- Viz Lab Module -->
+        <div class="module-card vizlab-card" onclick="switchView('vizlab')">
+          <div class="module-icon vizlab">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <circle cx="12" cy="12" r="7" stroke-dasharray="3 2"/>
+              <line x1="12" y1="2" x2="12" y2="5"/>
+              <line x1="12" y1="19" x2="12" y2="22"/>
+              <line x1="2" y1="12" x2="5" y2="12"/>
+              <line x1="19" y1="12" x2="22" y2="12"/>
+            </svg>
+          </div>
+          <div class="notification-dot vizlab-pulse"></div>
+          <div>
+            <div class="module-title">Viz Lab</div>
+            <div class="module-subtitle">29 Live Physics Renders</div>
+          </div>
+        </div>
+
+        <!-- Derivatives Module -->
+        <div class="module-card derivatives-card" onclick="switchView('derivatives')">
+          <div class="notification-dot deriv-pulse"></div>
+          <div class="module-icon analysis" style="background:linear-gradient(135deg,#1e0a30,#0a0a30);border-color:#7c3aed;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/>
+              <path d="M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <div class="module-title">Derivatives</div>
+          <div class="module-sub">Options, Greeks &amp; Signals</div>
+        </div>
+
+        <!-- Decision Center Module -->
+        <div class="module-card decision-card" onclick="switchView('decision')">
+          <div class="notification-dot decision-pulse"></div>
+          <div class="module-icon finance" style="background:linear-gradient(135deg,#0a1a10,#052010);border-color:#10b981;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+              <path d="M9 11l3 3L22 4"/>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+          </div>
+          <div class="module-title">Decision Center</div>
+          <div class="module-sub">Trade Approval &amp; Sizing</div>
+        </div>
+
+        <!-- ARIA Trader Module -->
+        <div class="module-card" onclick="switchView('trader')" style="background:linear-gradient(135deg,#0d1020,#0a0e1a); border-color:rgba(52,152,219,0.3);">
+          <div class="notification-dot" style="background:#3498db;"></div>
+          <div class="module-icon" style="background:linear-gradient(135deg,#0a1020,#061228); border:1px solid rgba(52,152,219,0.4);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#3498db">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          </div>
+          <div class="module-title" style="color:#e8f4fc;">ARIA Trader</div>
+          <div class="module-sub" style="color:#3498db;">Composite Score Engine</div>
+        </div>
+
+        <!-- Info Module -->
+        <div class="module-card" onclick="switchView('info')">
+          <div class="module-icon terminal" style="background:linear-gradient(135deg,#1a1030,#0a0a20);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <div>
+            <div class="module-title">Info</div>
+            <div class="module-subtitle">Module Documentation</div>
+          </div>
+        </div>
+
       </div>
 
     </div>
 
+    <!-- View: M&C Real Estate Development -->
+    <div id="view-realestate" class="view-section">
+      <div class="section-header-row">
+        <div class="section-header">M&C Real Estate Development</div>
+        <button class="btn link-btn" type="button" onclick="switchView('dashboard')">Home</button>
+      </div>
+
+      <div class="scenario-card realestate-hero">
+        <div class="realestate-hero-head">
+          <div>
+            <h3 id="re-project-name">Bonampak / KIN Towers</h3>
+            <p id="re-project-meta" class="realestate-muted">Loading project inputs...</p>
+          </div>
+          <div id="re-currency-badge" class="realestate-badge">MXN Base</div>
+        </div>
+
+        <div class="realestate-kpi-grid">
+          <div class="realestate-kpi">
+            <div class="label">Site After Setbacks</div>
+            <div class="value" id="re-site-after">-</div>
+          </div>
+          <div class="realestate-kpi">
+            <div class="label">Sellable Area</div>
+            <div class="value" id="re-sellable-area">-</div>
+          </div>
+          <div class="realestate-kpi">
+            <div class="label">Required Parking</div>
+            <div class="value" id="re-required-parking">-</div>
+          </div>
+          <div class="realestate-kpi">
+            <div class="label">Land Price Estimate</div>
+            <div class="value" id="re-land-price">-</div>
+          </div>
+          <div class="realestate-kpi">
+            <div class="label">Construction + FF&E</div>
+            <div class="value" id="re-construction-plus-ffee">-</div>
+          </div>
+          <div class="realestate-kpi">
+            <div class="label">Total Project (Acquisition)</div>
+            <div class="value" id="re-total-acquisition">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scenario-grid realestate-grid-two">
+        <div class="scenario-card">
+          <h3>Zoning + Program</h3>
+          <div class="realestate-list" id="re-zoning-list"></div>
+        </div>
+        <div class="scenario-card">
+          <h3>Cost Stack</h3>
+          <div class="realestate-list" id="re-cost-list"></div>
+        </div>
+      </div>
+
+      <div class="scenario-grid realestate-grid-two realestate-bottom-grid">
+        <div class="scenario-card">
+          <h3>Sales Inputs</h3>
+          <div class="realestate-list" id="re-sales-list"></div>
+          <div id="re-sales-pending" class="realestate-pending"></div>
+        </div>
+        <div class="scenario-card">
+          <h3>Simulation Assumptions</h3>
+          <div class="realestate-list" id="re-simulation-list"></div>
+        </div>
+      </div>
+
+      <div class="scenario-card realestate-launch">
+        <h3>Quick Launch</h3>
+        <div class="realestate-launch-buttons">
+          <button class="btn secondary" type="button" onclick="switchView('practice')">Scenario Mode</button>
+          <button class="btn secondary" type="button" onclick="switchView('finance')">Project Workspace</button>
+          <button class="btn secondary" type="button" onclick="switchView('analysis')">Market Inputs</button>
+          <button class="btn primary" type="button" onclick="openRealEstateRender('vol_surface')">Render Vol Surface</button>
+          <button class="btn primary" type="button" onclick="openRealEstateRender('correlation')">Render Correlation</button>
+          <button class="btn primary" type="button" onclick="openRealEstateSimulation()">Run Simulation</button>
+        </div>
+        <div id="re-launch-status" class="realestate-launch-status"></div>
+      </div>
+
+      <div id="re-3d-output-container" class="scenario-card" style="margin-top:12px; display:block;">
+        <h3>Real Estate Render Output</h3>
+        <div id="re-three-output"
+          style="width:100%; height:400px; border-radius:6px; overflow:hidden; position:relative; cursor:grab; background:#0b0f1a; border:1px solid #1f2a44;"></div>
+        <div id="re-3d-legend"
+          style="display:none; padding:8px 12px; font-size:10px; color:#778; text-align:left; border-top:1px solid #1f2a44; margin-top:8px;">
+        </div>
+        <div id="re-correlation-panel"
+          style="display:none; border-top:1px solid #1f2a44; margin-top:8px; padding:10px; text-align:left;">
+          <div style="font-size:11px; color:#9ab; margin-bottom:8px;">Portfolio Correlation Matrix</div>
+          <canvas id="re-correlation-canvas" width="640" height="320"
+            style="width:100%; height:320px; background:#0f1523; border:1px solid #1f2a44; border-radius:6px;"></canvas>
+        </div>
+        <div id="re-3d-render-status" style="margin-top:8px; font-size:11px; color:#aaa;">Ready to render.</div>
+      </div>
+    </div>
+
     <!-- View 3: Practice (Scenario Mode) -->
     <div id="view-practice" class="view-section">
-      <div class="section-header">Scenario Practice (Historical Simulation)</div>
+      <div class="section-header-row">
+        <div class="section-header">Scenario Practice (Historical Simulation)</div>
+        <button class="btn link-btn" type="button" onclick="switchView('dashboard')">Home</button>
+      </div>
 
       <div class="scenario-controls">
         <input type="text" id="sim-ticker" placeholder="Ticker" value="SPY"
           style="padding:10px; width:80px; border-radius:8px; border:1px solid #555; background:#222; color:white;">
         <button id="start-scenario-btn" class="btn primary">Start Sim</button>
-        <button id="auto-play-btn" class="btn secondary" disabled>▶ Auto Play</button>
-        <button id="next-step-btn" class="btn secondary" disabled>Next Day ▶</button>
+        <button id="restart-scenario-btn" class="btn secondary" disabled>Restart</button>
+        <button id="auto-play-btn" class="btn secondary" disabled>&#9654; Auto Play</button>
+        <button id="next-step-btn" class="btn secondary" disabled>Next Day &#9654;</button>
         <span id="scenario-status">Ready</span>
       </div>
 
-      <div class="scenario-grid">
+      <div class="scenario-grid" style="align-items:start;">
         <!-- Main: Chart -->
         <div class="scenario-card main" style="display:flex; flex-direction:column;">
 
@@ -175,7 +374,7 @@
 
           <!-- TradingView Chart Container -->
           <div id="scen-chart-container"
-            style="flex:1; background:#fff; border-radius:4px; min-height:400px; position:relative; margin-bottom: 20px;">
+            style="flex:1; background:var(--bg-surface); border-radius:4px; min-height:400px; position:relative; margin-bottom: 20px;">
           </div>
 
           <!-- Scenario Positions Table -->
@@ -197,8 +396,27 @@
             </table>
           </div>
 
-          <!-- Sidebar: Logs & News -->
-          <div class="scenario-card side" style="display:flex; flex-direction:column; gap:15px;">
+          <!-- Decision Analytics -->
+          <div
+            style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-top:12px;">
+            <div class="scenario-card" style="padding:10px; border-top:1px solid #333;">
+              <h4 style="margin:0 0 8px 0; font-size:12px; color:#888;">Backtest + Monte Carlo</h4>
+              <canvas id="scen-mc-canvas" width="620" height="220"
+                style="width:100%; height:220px; background:#101828; border:1px solid #22304a; border-radius:6px;"></canvas>
+              <div id="scen-mc-stats" style="margin-top:8px; font-size:11px; color:#9ab;">Waiting for data...</div>
+            </div>
+            <div class="scenario-card" style="padding:10px; border-top:1px solid #333;">
+              <h4 style="margin:0 0 8px 0; font-size:12px; color:#888;">Decision Factors</h4>
+              <canvas id="scen-decision-canvas" width="620" height="220"
+                style="width:100%; height:220px; background:#101828; border:1px solid #22304a; border-radius:6px;"></canvas>
+              <div id="scen-decision-breakdown" style="margin-top:8px; font-size:11px; color:#9ab;">Waiting for first
+                decision...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar: Logs & News -->
+        <div class="scenario-card side" style="display:flex; flex-direction:column; gap:15px;">
 
             <!-- AI Logic -->
             <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
@@ -217,213 +435,665 @@
               </div>
             </div>
 
-          </div>
         </div>
       </div>
 
-      <!-- View 4: Analysis (Live Data) -->
-      <div id="view-analysis" class="view-section">
+      <div class="section-header" style="margin-top:360px;">Artifact Simulation Lab</div>
+      <div class="scenario-card" style="margin-top:24px; gap:14px;">
+        <div class="scenario-controls" style="margin-bottom:0; flex-wrap:wrap;">
+          <select id="desktop-sim-mode"
+            style="padding:10px; border-radius:8px; border:1px solid #555; background:#222; color:white;">
+            <option value="stock">Stock Simulation</option>
+            <option value="portfolio">Portfolio Simulation</option>
+          </select>
+          <input type="text" id="desktop-sim-ticker" value="SPY" placeholder="Ticker"
+            style="padding:10px; width:100px; border-radius:8px; border:1px solid #555; background:#222; color:white;">
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#999;">
+            <input type="checkbox" id="desktop-sim-use-portfolio" checked>
+            Use local portfolio
+          </label>
+          <input type="number" id="desktop-sim-interval" min="1" max="10" value="1"
+            style="padding:10px; width:84px; border-radius:8px; border:1px solid #555; background:#222; color:white;">
+          <button id="desktop-sim-start-btn" class="btn primary" type="button">Start Sim</button>
+          <button id="desktop-sim-stop-btn" class="btn secondary" type="button">Stop</button>
+          <button id="desktop-sim-apply-btn" class="btn secondary" type="button">Apply Config</button>
+          <span id="desktop-sim-status" style="font-size:12px; color:#888;">Idle</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns:240px 1fr; gap:24px; min-height:420px;">
+          <div style="border:1px solid #333; border-radius:10px; padding:16px; background:#111;">
+            <div
+              style="font-size:11px; color:#999; text-transform:uppercase; margin-bottom:12px; font-weight:600; letter-spacing:0.5px;">
+              Module Visibility</div>
+            <div id="desktop-sim-module-toggles" style="display:flex; flex-direction:column; gap:10px;"></div>
+            <div style="font-size:11px; color:#777; margin-top:16px; line-height:1.4;">Closing panels hides UI only.
+              Modules keep running.</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:20px;">
+            <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px;">
+              <div class="stat-box">
+                <div class="label">Runner</div>
+                <div class="value" id="desktop-sim-runner">STOPPED</div>
+              </div>
+              <div class="stat-box">
+                <div class="label">Tick</div>
+                <div class="value" id="desktop-sim-tick">0</div>
+              </div>
+              <div class="stat-box">
+                <div class="label">Artifacts</div>
+                <div class="value" id="desktop-sim-artifacts">0</div>
+              </div>
+              <div class="stat-box">
+                <div class="label">Errors</div>
+                <div class="value" id="desktop-sim-errors">0</div>
+              </div>
+            </div>
+
+            <div style="border:1px solid #333; border-radius:10px; padding:16px; background:#0f1523;">
+              <div style="font-size:11px; color:#9ab; margin-bottom:10px; font-weight:600;">Global Timeline</div>
+              <svg id="desktop-sim-timeline" width="100%" height="140"
+                style="display:block; background:#0b101d; border-radius:8px;"></svg>
+            </div>
+
+            <div style="border:1px solid #333; border-radius:10px; padding:16px; background:#0f1523;">
+              <div style="font-size:11px; color:#9ab; margin-bottom:10px; font-weight:600;">Recent Alerts</div>
+              <div id="desktop-sim-alerts" style="max-height:120px; overflow:auto; font-size:12px; color:#ccc;"></div>
+            </div>
+
+            <div id="desktop-sim-module-panels" style="display:flex; flex-direction:column; gap:20px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View 4: Analysis (Live Data) -->
+    <div id="view-analysis" class="view-section">
+      <div class="section-header-row">
         <div class="section-header">Live Market Analysis</div>
+        <button class="btn link-btn" type="button" onclick="switchView('dashboard')">Home</button>
+      </div>
 
-        <!-- Controls -->
-        <div class="scenario-controls">
-          <input type="text" id="analysis-ticker" placeholder="Ticker (e.g. SPY)" value="SPY"
-            style="padding:10px; border-radius:8px; border:1px solid #ccc; width:120px; font-weight:bold;">
-          <button id="analysis-load-btn" class="btn primary">Load Data</button>
-          <div style="flex:1;"></div>
-          <div class="stat-box" style="padding:5px 15px;">
-            <div class="label">Current Price</div>
-            <div class="value" id="analysis-price">Loading...</div>
+      <!-- Controls -->
+      <div class="scenario-controls">
+        <input type="text" id="analysis-ticker" placeholder="Ticker (e.g. SPY)" value="SPY"
+          style="padding:10px; border-radius:8px; border:1px solid var(--bdr-soft); width:120px; font-weight:bold;">
+        <button id="analysis-load-btn" class="btn primary">Load Data</button>
+        <div style="flex:1;"></div>
+        <div class="stat-box" style="padding:5px 15px;">
+          <div class="label">Current Price</div>
+          <div class="value" id="analysis-price">Loading...</div>
+        </div>
+      </div>
+
+      <div class="scenario-grid">
+        <!-- Main: Live Chart -->
+        <div class="scenario-card main">
+          <div id="analysis-chart-container"
+            style="width:100%; height:100%; min-height:500px; background:var(--bg-surface); border-radius:4px;"></div>
+        </div>
+
+        <!-- Sidebar: Live News & Order -->
+        <div class="scenario-card side">
+          <h3>Live News Feed</h3>
+          <div class="reasoning-log" id="analysis-news-list"
+            style="background:var(--bg-surface); color:var(--txt-primary); border:1px solid var(--bdr-subtle);">
+            <div class="log-entry" style="color:var(--txt-muted); border-bottom:1px solid var(--bdr-faint);">Connecting to feed...</div>
+          </div>
+
+          <h3 style="margin-top:20px;">Quick Trade</h3>
+          <div style="display:flex; gap:10px;">
+            <button class="btn" style="background:#2ecc71; color:white; flex:1;">BUY</button>
+            <button class="btn" style="background:#e74c3c; color:white; flex:1;">SELL</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View 2: Chat (ARIA Terminal) -->
+    <div id="view-chat" class="view-section">
+      <div class="section-header-row">
+        <div class="section-header">Terminal</div>
+        <button class="btn link-btn" type="button" onclick="switchView('dashboard')">Home</button>
+      </div>
+
+      <!-- ARIA Provider Toolbar -->
+      <div id="aria-toolbar">
+        <span style="font-family:var(--ff-mono);font-size:9px;color:var(--txt-muted);text-transform:uppercase;letter-spacing:.1em;">Model</span>
+        <div id="aria-provider-pills"><!-- populated by JS --></div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+          <span id="aria-latency-badge"></span>
+          <span id="aria-status-dot" title="ARIA status"></span>
+        </div>
+      </div>
+
+      <div class="chat-wrapper">
+        <!-- Status for connectivity -->
+        <div id="status"
+          style="font-size: 11px; color: var(--text-secondary); text-align: center; margin-bottom: 10px; display: none;">
+          <small id="status-text">Disconnected</small>
+          <div id="status-dot" style="display:inline-block; width:6px; height:6px; background:red; border-radius:50%;">
           </div>
         </div>
 
-        <div class="scenario-grid">
-          <!-- Main: Live Chart -->
-          <div class="scenario-card main">
-            <div id="analysis-chart-container"
-              style="width:100%; height:100%; min-height:500px; background:#fff; border-radius:4px;"></div>
+        <div class="chat-container" id="chat">
+          <div class="message assistant">
+            Hello, Administrator. All Atlas systems are online. How can I assist you today?
           </div>
+        </div>
 
-          <!-- Sidebar: Live News & Order -->
-          <div class="scenario-card side">
-            <h3>Live News Feed</h3>
-            <div class="reasoning-log" id="analysis-news-list"
-              style="background:#fff; color:#333; border:1px solid #eee;">
-              <div class="log-entry" style="color:#666; border-bottom:1px solid #eee;">Connecting to feed...</div>
-            </div>
+        <!-- Slash-command hint bar -->
+        <div id="slash-hints" style="display:none;">
+          <span style="color:var(--orange);font-weight:600;">Slash Commands:</span>
+          <span class="slash-hint" onclick="_selectSlash('/models')"><code>/models</code> list local</span> ·
+          <span class="slash-hint" onclick="_selectSlash('/model ')"><code>/model &lt;name&gt;</code> switch</span> ·
+          <span class="slash-hint" onclick="_selectSlash('/audit')"><code>/audit</code> history</span> ·
+          <span class="slash-hint" onclick="_selectSlash('/debug ')"><code>/debug &lt;topic&gt;</code></span> ·
+          <span class="slash-hint" onclick="_selectSlash('/review ')"><code>/review &lt;ticker&gt;</code></span> ·
+          <span class="slash-hint" onclick="_selectSlash('/help')"><code>/help</code></span>
+        </div>
 
-            <h3 style="margin-top:20px;">Quick Trade</h3>
-            <div style="display:flex; gap:10px;">
-              <button class="btn" style="background:#2ecc71; color:white; flex:1;">BUY</button>
-              <button class="btn" style="background:#e74c3c; color:white; flex:1;">SELL</button>
-            </div>
+        <div class="input-area">
+          <input type="text" id="input" placeholder="Ask ARIA anything… or type / for commands" autocomplete="off">
+          <button id="voice-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- View 5: M&C Project Simulation -->
+    <div id="view-finance" class="view-section">
+      <div class="section-header-row">
+        <div class="section-header">M&C Project Simulation & Render</div>
+        <button class="btn link-btn" type="button" onclick="switchView('dashboard')">Home</button>
+      </div>
+
+      <div class="scenario-grid" style="grid-template-columns:1fr; height:auto; align-items:start;">
+        <!-- Portfolio Overview -->
+        <div class="scenario-card main">
+          <h3 style="display:flex; justify-content:space-between;">
+            Assets
+            <span class="value" id="total-equity" style="color:var(--accent-color);">$10,000.00</span>
+          </h3>
+
+          <div
+            style="margin-top:20px; border:1px solid #333; border-radius:10px; max-height:420px; overflow-y:auto; overflow-x:hidden;">
+            <table style="width:100%; text-align:left; border-collapse:collapse; color:#ccc;">
+              <thead
+                style="border-bottom:1px solid #333; color:#888; font-size:11px; text-transform:uppercase; position:sticky; top:0; background:var(--card-bg); z-index:2;">
+                <tr>
+                  <th style="padding:10px;">Ticker</th>
+                  <th style="padding:10px;">Shares</th>
+                  <th style="padding:10px;">Avg Cost</th>
+                  <th style="padding:10px;">Current</th>
+                  <th style="padding:10px;">Mkt Value</th>
+                  <th style="padding:10px;">P&L</th>
+                </tr>
+              </thead>
+              <tbody id="portfolio-table-body">
+                <!-- Dynamic Rows -->
+                <tr>
+                  <td colspan="6" style="padding:20px; text-align:center; color:#555;">No active positions</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      <!-- View 2: Chat (ARIA Terminal) -->
-      <div id="view-chat" class="view-section">
-        <div class="chat-wrapper">
-          <!-- Status for connectivity -->
-          <div id="status"
-            style="font-size: 11px; color: var(--text-secondary); text-align: center; margin-bottom: 10px; display: none;">
-            <small id="status-text">Disconnected</small>
-            <div id="status-dot"
-              style="display:inline-block; width:6px; height:6px; background:red; border-radius:50%;">
-            </div>
+      <div class="section-header" style="margin-top:22px;">Project Render Workspace</div>
+
+      <div class="scenario-grid" style="height:auto; align-items:start;">
+        <div class="scenario-card side">
+          <h3>Project Visualization Lab</h3>
+          <p style="font-size:12px; color:#888; margin-bottom:15px;">Generate real-time project renders from your
+            simulation inputs.</p>
+
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <button class="btn secondary" onclick="generate3D('vol_surface')">Volatility Surface</button>
+            <button class="btn secondary" onclick="generate3D('correlation')">Correlation Mountain</button>
+            <button class="btn secondary" onclick="generate3D('risk')">Risk Landscape</button>
           </div>
 
-          <div class="chat-container" id="chat">
-            <div class="message assistant">
-              Hello, Administrator. All Atlas systems are online. How can I assist you today?
-            </div>
-          </div>
+          <div id="3d-render-status" style="margin-top:15px; font-size:11px; color:#aaa;">Ready to render project.</div>
+        </div>
 
-          <div class="input-area">
-            <input type="text" id="input" placeholder="Type a command..." autocomplete="off">
-            <button id="voice-btn">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                <line x1="12" y1="19" x2="12" y2="23"></line>
-                <line x1="8" y1="23" x2="16" y2="23"></line>
-              </svg>
-            </button>
+        <div id="3d-output-container" class="scenario-card"
+          style="text-align:center; background:#0b0f1a; border:1px solid #1f2a44; display:block;">
+          <h3 style="color:#667; margin-bottom:10px;">Project Render Output</h3>
+          <div id="three-output"
+            style="width:100%; height:400px; border-radius:6px; overflow:hidden; position:relative; cursor:grab;"></div>
+          <div id="3d-legend"
+            style="display:none; padding:8px 12px; font-size:10px; color:#778; text-align:left; border-top:1px solid #1f2a44; margin-top:8px;">
+          </div>
+          <div id="correlation-panel"
+            style="display:none; border-top:1px solid #1f2a44; margin-top:8px; padding:10px; text-align:left;">
+            <div style="font-size:11px; color:#9ab; margin-bottom:8px;">Portfolio Correlation Matrix</div>
+            <canvas id="correlation-canvas" width="640" height="320"
+              style="width:100%; height:320px; background:#0f1523; border:1px solid #1f2a44; border-radius:6px;"></canvas>
           </div>
         </div>
       </div>
 
-      <!-- View 5: Finance & Portfolio -->
-      <div id="view-finance" class="view-section">
-        <div class="section-header">Portfolio & Research Lab</div>
-
-        <div class="scenario-grid">
-          <!-- Portfolio Overview -->
-          <div class="scenario-card main">
-            <h3 style="display:flex; justify-content:space-between;">
-              Assets
-              <span class="value" id="total-equity" style="color:var(--accent-color);">$10,000.00</span>
-            </h3>
-
-            <div style="margin-top:20px;">
-              <table style="width:100%; text-align:left; border-collapse:collapse; color:#ccc;">
-                <thead style="border-bottom:1px solid #333; color:#888; font-size:12px; text-transform:uppercase;">
-                  <tr>
-                    <th style="padding:10px;">Ticker</th>
-                    <th style="padding:10px;">Qty</th>
-                    <th style="padding:10px;">Avg Price</th>
-                    <th style="padding:10px;">Current</th>
-                    <th style="padding:10px;">P&L</th>
-                  </tr>
-                </thead>
-                <tbody id="portfolio-table-body">
-                  <!-- Dynamic Rows -->
-                  <tr>
-                    <td colspan="5" style="padding:20px; text-align:center; color:#555;">No active positions</td>
-                  </tr>
-                </tbody>
-              </table>
+      <div class="scenario-grid" style="margin-top:20px; height:auto; align-items:start;">
+        <div class="scenario-card main">
+          <h3>Simulation Inputs</h3>
+          <p style="font-size:12px; color:#888; margin-bottom:15px;">Add positions to build a scenario and power the
+            project render models.</p>
+          <form id="portfolio-form" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <input id="portfolio-ticker" type="text" placeholder="Ticker (e.g. NVDA)" required
+              style="text-transform:uppercase; grid-column:1 / -1;">
+            <input id="portfolio-qty" type="number" step="any" min="0.0001" placeholder="Qty (shares)"
+              style="font-size:13px;">
+            <input id="portfolio-avg" type="number" step="any" min="0.01" placeholder="Avg Price ($)"
+              style="font-size:13px;">
+            <button class="btn primary" type="submit" style="grid-column:1 / -1;">Add Position</button>
+          </form>
+          <div id="portfolio-error" style="display:none; color:#e74c3c; font-size:12px; margin-top:8px;"></div>
+          <div style="margin-top:16px; padding-top:12px; border-top:1px solid #222;">
+            <label style="font-size:11px; color:#aaa;">Import Portfolio Package (JSON)</label>
+            <div style="display:flex; gap:8px; margin-top:6px;">
+              <input id="portfolio-upload" type="file" accept="application/json">
+              <button class="btn secondary" id="portfolio-upload-btn" type="button">Upload</button>
             </div>
-          </div>
-
-          <!-- 3D Lab Sidebar -->
-          <div class="scenario-card side">
-            <h3>3D Visualization Lab</h3>
-            <p style="font-size:12px; color:#888; margin-bottom:15px;">Generate high-performance renders of market
-              microstructure.</p>
-
-            <div style="display:flex; flex-direction:column; gap:10px;">
-              <button class="btn secondary" onclick="generate3D('vol_surface')">🌋 Volatility Surface</button>
-              <button class="btn secondary" onclick="generate3D('correlation')">⛰️ Correlation Mt.</button>
-              <button class="btn secondary" onclick="generate3D('risk')">🌊 Risk Landscape</button>
-            </div>
-
-            <div id="3d-render-status" style="margin-top:15px; font-size:11px; color:#aaa;">Ready to render.</div>
+            <div id="portfolio-upload-status" style="margin-top:6px; font-size:11px; color:#aaa;"></div>
           </div>
         </div>
-
-        <!-- Render Output Area -->
-        <div id="3d-output-container" style="margin-top:20px; display:none;">
-          <div class="scenario-card" style="text-align:center;">
-            <h3>Render Output</h3>
-            <img id="3d-image-result" src="" style="max-width:100%; border-radius:4px; margin-top:10px;">
+        <div class="scenario-card side">
+          <h3>Project Simulation Lab</h3>
+          <p style="font-size:12px; color:#888; margin-bottom:15px;">Run a day-by-day simulation that evolves the
+            project render model based on your decisions.</p>
+          <label style="font-size:11px; color:#aaa;">Decision</label>
+          <select id="sim-decision" style="margin:8px 0 12px; width:100%;">
+            <option value="hold">Hold</option>
+            <option value="risk_on">Risk On</option>
+            <option value="risk_off">Risk Off</option>
+            <option value="hedge">Hedge</option>
+          </select>
+          <div style="display:flex; gap:10px;">
+            <button class="btn secondary" id="sim-start-btn" type="button">Start Sim</button>
+            <button class="btn secondary" id="sim-next-btn" type="button" disabled>Next Day</button>
+            <button class="btn secondary" id="sim-auto-btn" type="button" disabled>Auto Sim</button>
+            <button class="btn secondary" id="sim-restart-btn" type="button">Restart</button>
           </div>
+          <div id="sim-status" style="margin-top:12px; font-size:11px; color:#aaa;">Simulation idle.</div>
+        </div>
+      </div>
+
+    <!-- ===== MULTI-STRATEGY ANALYSIS PANEL ===== -->
+    <div class="section-header" style="margin-top:24px;">Multi-Strategy Signal Analysis</div>
+
+    <div class="scenario-grid" style="margin-top:10px; height:auto; align-items:start;">
+
+      <!-- Input + Controls -->
+      <div class="scenario-card side">
+        <h3>Strategy Scanner</h3>
+        <p style="font-size:12px; color:#888; margin-bottom:14px;">Run all 5 rule-based engines on any ticker and get a weighted consensus signal.</p>
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+          <input id="strat-ticker" type="text" placeholder="Ticker (e.g. AAPL)" value="AAPL"
+            style="flex:1; text-transform:uppercase; font-size:13px;" />
+          <select id="strat-period" style="font-size:12px; width:80px;">
+            <option value="3mo">3 mo</option>
+            <option value="6mo" selected>6 mo</option>
+            <option value="1y">1 yr</option>
+          </select>
+        </div>
+        <button class="btn primary" id="strat-run-btn" type="button" onclick="runStrategyAnalysis()">Analyze</button>
+        <div id="strat-status" style="margin-top:10px; font-size:11px; color:#aaa;"></div>
+
+        <!-- Consensus box -->
+        <div id="strat-consensus" style="display:none; margin-top:16px; padding:14px; border-radius:8px; border:1px solid #333; background:#0d1020; text-align:center;">
+          <div style="font-size:11px; color:#778; margin-bottom:4px; letter-spacing:1px; text-transform:uppercase;">Consensus</div>
+          <div id="strat-action" style="font-size:26px; font-weight:700; font-family:monospace; letter-spacing:2px;"></div>
+          <div id="strat-conf-bar-wrap" style="margin:10px 0 4px; height:6px; border-radius:3px; background:#1a2030; overflow:hidden;">
+            <div id="strat-conf-bar" style="height:100%; border-radius:3px; transition:width 0.5s;"></div>
+          </div>
+          <div id="strat-conf-label" style="font-size:11px; color:#aaa;"></div>
+          <div id="strat-reason" style="font-size:11px; color:#667; margin-top:8px; font-style:italic;"></div>
+        </div>
+      </div>
+
+      <!-- Per-engine breakdown -->
+      <div class="scenario-card main" id="strat-engines-card" style="display:none;">
+        <h3 style="margin-bottom:16px;">Engine Breakdown</h3>
+        <div id="strat-ticker-meta" style="font-size:11px; color:#667; margin-bottom:12px;"></div>
+        <div id="strat-engine-rows" style="display:flex; flex-direction:column; gap:10px;"></div>
+
+        <!-- Backtest mini -->
+        <div style="margin-top:20px; padding-top:14px; border-top:1px solid #222;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <span style="font-size:12px; color:#aaa;">Quick Backtest (walk-forward)</span>
+            <button class="btn secondary" style="font-size:11px; padding:4px 10px;" onclick="runStrategyBacktest()">Run</button>
+          </div>
+          <div id="strat-bt-result" style="font-size:11px; color:#aaa;"></div>
+          <canvas id="strat-equity-chart" width="400" height="100"
+            style="display:none; width:100%; margin-top:8px; border-radius:4px; background:#0b0f1a;"></canvas>
         </div>
       </div>
 
     </div>
 
-    <!-- Bottom Navigation -->
-    <div class="bottom-nav">
-      <!-- Home Icon -->
-      <div class="nav-item active" onclick="switchView('dashboard')" id="nav-home">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-        </svg>
+    <!-- ===== CORRELATION PORTFOLIO PANEL ===== -->
+    <div class="section-header" style="margin-top:24px;">Correlation Intelligence</div>
+
+    <div class="scenario-grid" style="margin-top:10px; height:auto; align-items:start; grid-template-columns:1fr 1fr 1fr;">
+
+      <!-- Market Structure -->
+      <div class="scenario-card side">
+        <h3>Market Structure</h3>
+        <p style="font-size:12px; color:#888; margin-bottom:12px;">Rolling correlation regime + diversification score across a basket.</p>
+        <input id="struct-tickers" type="text" placeholder="Comma-separated tickers"
+          value="SPY,QQQ,IWM,GLD,TLT,HYG,EEM,XLF" style="font-size:12px; margin-bottom:10px;" />
+        <button class="btn primary" type="button" onclick="runStructureAnalysis()">Analyze Structure</button>
+        <div id="struct-result" style="margin-top:14px; font-size:12px; color:#aaa;"></div>
       </div>
 
-      <!-- Finance Icon (Wallet) -->
-      <div class="nav-item" onclick="switchView('finance')" id="nav-finance">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z">
-          </path>
-        </svg>
+      <!-- Asset Clustering -->
+      <div class="scenario-card side">
+        <h3>Asset Clustering</h3>
+        <p style="font-size:12px; color:#888; margin-bottom:12px;">Group assets by return similarity (Ward hierarchical).</p>
+        <input id="cluster-tickers" type="text" placeholder="Comma-separated tickers"
+          value="AAPL,MSFT,GOOG,AMZN,NVDA,META,JPM,GS,GLD,TLT" style="font-size:12px; margin-bottom:6px;" />
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+          <input id="cluster-n" type="number" min="2" max="8" value="4" placeholder="Clusters"
+            style="width:70px; font-size:12px;" />
+          <button class="btn primary" type="button" style="flex:1;" onclick="runClusterAnalysis()">Cluster</button>
+        </div>
+        <div id="cluster-result" style="font-size:12px; color:#aaa;"></div>
       </div>
 
-      <!-- Practice Icon (Gamepad/Play) -->
-      <div class="nav-item" onclick="switchView('practice')" id="nav-practice">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
-          <polygon points="10 8 16 12 10 16 10 8"></polygon>
-          <path
-            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z">
-          </path>
-        </svg>
+      <!-- Pairs Trading -->
+      <div class="scenario-card side">
+        <h3>Pairs Trading</h3>
+        <p style="font-size:12px; color:#888; margin-bottom:12px;">Find cointegrated pairs + current z-score signals.</p>
+        <input id="pairs-tickers" type="text" placeholder="Comma-separated tickers"
+          value="AAPL,MSFT,GOOG,AMZN,META,NVDA" style="font-size:12px; margin-bottom:10px;" />
+        <button class="btn primary" type="button" onclick="runPairsAnalysis()">Find Pairs</button>
+        <div id="pairs-result" style="margin-top:10px; font-size:12px; color:#aaa;"></div>
       </div>
 
-      <!-- User Icon -->
-      <div class="nav-item" onclick="switchView('chat')" id="nav-chat">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"></path>
-        </svg>
-      </div>
     </div>
 
-    <script src="app.js"></script>
-    <script src="scenario.js"></script>
-    <script src="analysis.js"></script>
-    <script src="finance.js"></script> <!-- New Script -->
-    <script>
-      // View Switcher Logic
-      function switchView(viewName) {
-        // Toggle Views
-        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-        const target = document.getElementById('view-' + viewName);
-        if (target) target.classList.add('active');
+  </div>
 
-        // Update Nav
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  <!-- ===== VIEW: VIZ LAB ===== -->
+  <div id="view-vizlab" class="view-section">
+    <div class="section-header-row">
+      <div class="section-header">Viz Lab</div>
+      <button class="btn link-btn" type="button" onclick="switchView('dashboard')">Home</button>
+    </div>
+    <div class="vizlab-subtitle">38 visualizations — <span style="color:#2ecc71;">25 live algorithm renders</span> · <span style="color:#9b59b6;">13 decorative sims</span> — WebGL · Canvas · Three.js</div>
+    <div class="vizlab-grid" id="vizlab-grid">
+      <!-- Cards injected by viz_lab.js -->
+    </div>
+  </div>
 
-        const navMap = {
-          'dashboard': 'nav-home',
-          'finance': 'nav-finance',
-          'practice': 'nav-practice',
-          'chat': 'nav-chat',
-          'analysis': null // No specific nav item, maybe keep previous?
-        };
+  <!-- ===== VIEW: ARIA TRADER ===== -->
+  <div id="view-trader" class="view-section"></div>
 
-        const navId = navMap[viewName];
-        if (navId && document.getElementById(navId)) {
-          document.getElementById(navId).classList.add('active');
-        }
+  <!-- ===== VIEW: DERIVATIVES ===== -->
+  <div id="view-derivatives" class="view-section"></div>
 
-        // Trigger Logic
-        if (viewName === 'finance' && typeof updatePortfolio === 'function') {
-          updatePortfolio();
-        }
+  <!-- ===== VIEW: DECISION ===== -->
+  <div id="view-decision" class="view-section"></div>
+
+  <!-- ===== VIEW: MMO — Mau's Market Ontology ===== -->
+  <div id="view-mmo" class="view-section"></div>
+
+  <!-- ===== VIEW: INFO ===== -->
+  <div id="view-info" class="view-section">
+    <div class="info-header-bar">
+      <div class="info-title-row">
+        <div>
+          <div class="info-title">ℹ Atlas Info</div>
+          <div class="info-subtitle">Every module — what it does, where data comes from, how it measures</div>
+        </div>
+        <span id="info-result-count" style="font-size:11px;color:#445;font-family:monospace;"></span>
+      </div>
+
+      <!-- Search -->
+      <div class="info-search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          id="info-search"
+          type="text"
+          placeholder="Search by name, tag, method…"
+          oninput="InfoModule.setQuery(this.value)"
+          autocomplete="off"
+        />
+      </div>
+
+      <!-- Category Tabs -->
+      <div id="info-cat-tabs"></div>
+    </div>
+
+    <!-- Cards Grid -->
+    <div id="info-cards-grid"></div>
+  </div>
+
+  <!-- ===== VIZ OVERLAY (fullscreen canvas) ===== -->
+  <div id="viz-overlay" style="display:none; position:fixed; inset:0; z-index:9999; background:#060610; flex-direction:column;">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#0a0a18; border-bottom:1px solid #1a1a3a; flex-shrink:0; position:relative; z-index:10;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="color:#4488ff; font-size:13px; font-family:monospace;">⚛ Atlas Viz Lab</span>
+        <span id="viz-overlay-title" style="color:#fff; font-size:14px; font-weight:600; font-family:monospace;"></span>
+        <span id="viz-regime-label" style="font-size:11px; font-family:monospace; color:#00ff88;"></span>
+      </div>
+      <button onclick="VizLab.close()" style="background:#1a1a3a; border:1px solid #334; color:#fff; font-size:12px; padding:5px 14px; border-radius:6px; cursor:pointer; font-family:monospace;">✕ Close</button>
+    </div>
+    <div id="viz-canvas-container" style="flex:1; position:relative; overflow:hidden;">
+      <div id="viz-three-mount" style="position:absolute; inset:0;"></div>
+      <canvas id="viz-canvas" style="position:absolute; inset:0; width:100%; height:100%;"></canvas>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <div class="bottom-nav">
+    <!-- Home Icon -->
+    <div class="nav-item active" onclick="switchView('dashboard')" id="nav-home">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+      </svg>
+    </div>
+
+    <!-- Finance Icon (Wallet) -->
+    <div class="nav-item" onclick="switchView('finance')" id="nav-finance">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z">
+        </path>
+      </svg>
+    </div>
+
+    <!-- Practice Icon (Gamepad/Play) -->
+    <div class="nav-item" onclick="switchView('practice')" id="nav-practice">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+        <polygon points="10 8 16 12 10 16 10 8"></polygon>
+        <path
+          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z">
+        </path>
+      </svg>
+    </div>
+
+    <!-- User Icon -->
+    <div class="nav-item" onclick="switchView('chat')" id="nav-chat">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"></path>
+      </svg>
+    </div>
+
+    <!-- Viz Lab Icon (atom/eye) -->
+    <div class="nav-item" onclick="switchView('vizlab')" id="nav-vizlab">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="2" fill="currentColor"/>
+        <ellipse cx="12" cy="12" rx="10" ry="4"/>
+        <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/>
+        <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/>
+      </svg>
+    </div>
+
+    <!-- Derivatives Icon (layers) -->
+    <div class="nav-item" onclick="switchView('derivatives')" id="nav-derivatives">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+
+    <!-- Decision Icon (checkmark in box) -->
+    <div class="nav-item" onclick="switchView('decision')" id="nav-decision">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 11l3 3L22 4"/>
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>
+    </div>
+
+    <!-- ARIA Trader Icon (lightning / bolt) -->
+    <div class="nav-item" onclick="switchView('trader')" id="nav-trader">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+
+    <!-- MMO — Mau's Market Ontology (ψ wave icon) -->
+    <div class="nav-item" onclick="switchView('mmo')" id="nav-mmo">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M2 12 Q5 5 8 12 Q11 19 14 12 Q17 5 20 12 Q22 8 23 8" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="14" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+
+    <!-- Info Icon (question mark / book) -->
+    <div class="nav-item" onclick="switchView('info')" id="nav-info">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    </div>
+  </div>
+
+  </div>
+
+  <script src="app.js"></script>
+  <script src="scenario.js?v=2026.02.11-v2"></script>
+  <script src="analysis.js"></script>
+  <script src="https://unpkg.com/three@0.159.0/build/three.min.js"></script>
+  <script src="finance.js?v=2026.02.18-v10"></script> <!-- Portfolio + 3D -->
+  <script src="sim_dashboard.js?v=2026.02.18-v1"></script>
+  <script src="real_estate.js?v=2026.02.18-v4"></script>
+  <script src="viz_lab.js?v=2026.02.27-v3"></script>  <!-- Viz Lab — 29 live renders -->
+  <script src="strategy.js?v=2026.02.27-v1"></script>  <!-- Multi-Strategy + Correlation UI -->
+  <script src="info.js?v=2026.02.27-v1"></script>      <!-- Info Module Documentation -->
+  <script src="derivatives.js?v=2026.02.27-v1"></script> <!-- Derivatives + Black-Scholes + Signal Composer -->
+  <script src="decision.js?v=2026.02.27-v1"></script>    <!-- Decision Center + Approval Workflow -->
+  <script src="trader.js?v=2026.03.01-v1"></script>      <!-- ARIA Trader — Composite Score Engine -->
+  <script src="mmo.js?v=2026.03.01-v1"></script>          <!-- MMO — Mau's Market Ontology -->
+  <script>
+    // View Switcher Logic
+    function switchView(viewName) {
+      // Toggle Views
+      document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+      const target = document.getElementById('view-' + viewName);
+      if (target) target.classList.add('active');
+
+      // Update Nav
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+      const navMap = {
+        'dashboard': 'nav-home',
+        'finance': 'nav-finance',
+        'realestate': 'nav-finance',
+        'practice': 'nav-practice',
+        'chat': 'nav-chat',
+        'analysis': null,
+        'vizlab': 'nav-vizlab',
+        'info': 'nav-info',
+        'derivatives': 'nav-derivatives',
+        'decision': 'nav-decision',
+      };
+
+      const navId = navMap[viewName];
+      if (navId && document.getElementById(navId)) {
+        document.getElementById(navId).classList.add('active');
       }
-    </script>
+
+      // Trigger Logic
+      if (viewName === 'finance' && typeof updatePortfolio === 'function') {
+        updatePortfolio();
+      }
+      if (viewName === 'realestate' && typeof renderRealEstateDevelopment === 'function') {
+        renderRealEstateDevelopment();
+      }
+      if (viewName === 'vizlab' && typeof VizLab !== 'undefined') {
+        _initVizLabCards();
+      }
+      if (viewName === 'info' && typeof InfoModule !== 'undefined') {
+        InfoModule.init();
+      }
+      if (viewName === 'derivatives' && typeof DerivativesModule !== 'undefined') {
+        DerivativesModule.init();
+      }
+      if (viewName === 'decision' && typeof DecisionModule !== 'undefined') {
+        DecisionModule.init();
+      }
+    }
+
+    // Build Viz Lab card grid — two sections: Algo vs Decorative
+    function _initVizLabCards() {
+      const grid = document.getElementById('vizlab-grid');
+      if (!grid || grid.dataset.built) return;
+      grid.dataset.built = '1';
+
+      if (typeof VizLab === 'undefined') {
+        grid.innerHTML = '<p style="color:#666;font-family:monospace;padding:20px;">Viz Lab loading...</p>';
+        return;
+      }
+
+      const meta = VizLab.getMeta();
+      const algoEntries = Object.entries(meta).filter(([,v]) => v.cat === 'algo');
+      const artEntries  = Object.entries(meta).filter(([,v]) => v.cat === 'art');
+
+      function makeCard(key, info) {
+        const card = document.createElement('div');
+        card.className = 'vizlab-viz-card' + (info.cat === 'art' ? ' vizlab-art-card' : '');
+        const apiBadge = info.api
+          ? `<div class="vizlab-api-badge" title="Connected to: ${info.api}">⚡ LIVE</div>`
+          : `<div class="vizlab-art-badge">🎨 SIM</div>`;
+        card.innerHTML = `
+          <div class="vizlab-viz-icon">${info.icon}</div>
+          ${apiBadge}
+          <div class="vizlab-viz-label">${info.label}</div>
+          <div class="vizlab-viz-desc">${info.desc}</div>
+          <button class="btn primary vizlab-launch-btn" onclick="VizLab.launch('${key}')">Launch →</button>
+        `;
+        grid.appendChild(card);
+      }
+
+      // Section header helper
+      function makeHeader(title, subtitle, color) {
+        const h = document.createElement('div');
+        h.className = 'vizlab-section-header';
+        h.style.cssText = `grid-column:1/-1; display:flex; align-items:baseline; gap:10px; padding:12px 4px 6px; border-bottom:1px solid ${color}33; margin-bottom:4px;`;
+        h.innerHTML = `<span style="font-size:14px;font-weight:700;color:${color};font-family:monospace;">${title}</span><span style="font-size:11px;color:#556;font-family:monospace;">${subtitle}</span>`;
+        grid.appendChild(h);
+      }
+
+      makeHeader('⚡ Algorithm Visualizations', `${algoEntries.length} renders connected to live Atlas APIs`, '#2ecc71');
+      algoEntries.forEach(([k, v]) => makeCard(k, v));
+
+      makeHeader('🎨 Decorative Sims', `${artEntries.length} mathematical art renders — no live data`, '#9b59b6');
+      artEntries.forEach(([k, v]) => makeCard(k, v));
+    }
+  </script>
 </body>
 
 </html>
-```
