@@ -6,6 +6,7 @@ Launcher script for the browser-based Atlas environment.
 
 from __future__ import annotations
 
+import argparse
 import os
 import socket
 import subprocess
@@ -21,6 +22,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_ROOT / "python" / "src"))
 
 from atlas.assistants.aria import ARIA
+from atlas.assistants.aria.tools import register_phase1_tools
 from atlas.assistants.aria.tools.create_file import CreateFileTool
 from atlas.assistants.aria.tools.execute_code import ExecuteCodeTool
 from atlas.assistants.aria.tools.read_file import ReadFileTool
@@ -137,6 +139,15 @@ def _register_browser_tools(aria: ARIA, root: Path) -> int:
     return registered
 
 
+def _register_phase1_workflow_tools(aria: ARIA) -> list[str]:
+    """Register official Atlas Phase 1 workflow tools for browser mode."""
+    try:
+        return register_phase1_tools(aria)
+    except Exception as exc:
+        _safe_print(f"   -> Warning: failed to register Phase 1 tools: {exc}")
+        return []
+
+
 def _env_enabled(name: str, default: str = "0") -> bool:
     value = os.getenv(name, default).strip().lower()
     return value in {"1", "true", "yes", "on"}
@@ -209,8 +220,72 @@ def _open_browser_delayed(port: int) -> None:
     webbrowser.open(f"http://localhost:{port}")
 
 
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Atlas launcher")
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Run the official Phase 1 market-finance demo workflow and exit.",
+    )
+    parser.add_argument("--symbols", nargs="+", default=["AAPL", "MSFT", "SPY"])
+    parser.add_argument("--start-date", default=None)
+    parser.add_argument("--end-date", default=None)
+    parser.add_argument("--interval", default="1d")
+    parser.add_argument("--n-paths", type=int, default=1500)
+    parser.add_argument("--horizon-days", type=int, default=252)
+    parser.add_argument("--loss-threshold", type=float, default=0.05)
+    parser.add_argument("--confidence", type=float, default=0.95)
+    parser.add_argument("--run-id", default=None)
+    return parser.parse_args()
+
+
+def _run_phase1_demo(args: argparse.Namespace) -> int:
+    from datetime import date, timedelta
+
+    from atlas.market_finance.pipeline import Phase1Workflow
+
+    today = date.today()
+    start_date = args.start_date or (today - timedelta(days=365)).isoformat()
+    end_date = args.end_date or today.isoformat()
+
+    workflow = Phase1Workflow(output_root=str(PROJECT_ROOT / "outputs" / "runs"))
+    summary = workflow.run(
+        symbols=args.symbols,
+        start_date=start_date,
+        end_date=end_date,
+        interval=args.interval,
+        n_paths=args.n_paths,
+        horizon_days=args.horizon_days,
+        loss_threshold=args.loss_threshold,
+        confidence=args.confidence,
+        run_id=args.run_id,
+    )
+
+    _safe_print("=" * 60)
+    _safe_print("ATLAS PHASE 1 DEMO COMPLETED")
+    _safe_print("=" * 60)
+    _safe_print(f"Run ID: {summary.run_id}")
+    _safe_print(f"Run Dir: {summary.run_dir}")
+    _safe_print(f"Manifest: {summary.manifest_path}")
+    _safe_print(f"Portfolio VaR: {summary.key_metrics.get('portfolio_var'):.6f}")
+    _safe_print(f"Portfolio CVaR: {summary.key_metrics.get('portfolio_cvar'):.6f}")
+    _safe_print(
+        "P(loss > threshold): "
+        f"{summary.key_metrics.get('probability_loss_gt_threshold'):.6f}"
+    )
+    return 0
+
+
 def main() -> None:
     _configure_stdout_utf8()
+    args = _parse_args()
+
+    if args.demo:
+        try:
+            _run_phase1_demo(args)
+        except Exception as exc:
+            _safe_print(f"ERROR: Demo failed: {exc}")
+        return
 
     _safe_print("=" * 60)
     _safe_print("ATLAS SYSTEM LAUNCHER")
@@ -271,6 +346,18 @@ def main() -> None:
         else:
             registered_tools = 0
             _safe_print("   -> Tool calling disabled for fast browser chat (ATLAS_ENABLE_ARIA_TOOLS=1 to enable).")
+
+        if _env_enabled("ATLAS_ENABLE_PHASE1_TOOLS", "1"):
+            phase1_tools = _register_phase1_workflow_tools(aria)
+            if phase1_tools:
+                _safe_print(
+                    "   -> Phase 1 workflow tools active: "
+                    + ", ".join(phase1_tools)
+                )
+            else:
+                _safe_print("   -> Phase 1 workflow tools were requested but none were registered.")
+        else:
+            _safe_print("   -> Phase 1 workflow tools disabled (ATLAS_ENABLE_PHASE1_TOOLS=0).")
 
         if _env_enabled("ATLAS_ENABLE_GOV_CONTEXT", "0"):
             governance_context = _build_governance_prompt_context(PROJECT_ROOT)
