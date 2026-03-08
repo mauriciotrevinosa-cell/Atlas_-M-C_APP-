@@ -10,6 +10,10 @@
  *   GET /api/correlation/structure?tickers=...
  *   GET /api/correlation/cluster?tickers=...&n_clusters=4
  *   GET /api/correlation/pairs?tickers=...
+ *   GET /api/analytics/summary/{ticker}
+ *   GET /api/analytics/correlation?tickers=...
+ *   POST /api/risk/portfolio/assess
+ *   POST /api/montecarlo/portfolio/simulate
  *
  * Copyright (c) 2026 M&C. All rights reserved.
  */
@@ -36,11 +40,12 @@ function _confColor(conf) {
 
 // ── API fetch helper ──────────────────────────────────────────────────────────
 
-async function _apiFetch(path, timeoutMs = 30000) {
+async function _apiFetch(path, timeoutMs = 30000, options = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const res = await fetch(path, { signal: ctrl.signal });
+    const fetchOptions = { ...options, signal: ctrl.signal };
+    const res = await fetch(path, fetchOptions);
     clearTimeout(timer);
     if (!res.ok) {
       const txt = await res.text();
@@ -86,6 +91,8 @@ async function runStrategyAnalysis() {
   document.getElementById("strat-engines-card").style.display = "none";
   document.getElementById("strat-bt-result").textContent = "";
   document.getElementById("strat-equity-chart").style.display = "none";
+  const _diagReset = document.getElementById("strat-diagnostics");
+  if (_diagReset) _diagReset.style.display = "none";
 
   try {
     const data = await _apiFetch(`/api/strategy/analyze/${ticker}?period=${period}`, 40000);
@@ -172,6 +179,44 @@ function _renderStrategyResult(data) {
     `;
     rowsEl.appendChild(row);
   });
+
+  // ── Indicator Diagnostics (new: from /api/strategy/analyze diagnostics) ────
+  const diag = data.diagnostics;
+  if (diag) {
+    const diagEl = document.getElementById("strat-diagnostics");
+    if (diagEl) {
+      const rsiColor  = diag.rsi_zone === 'oversold'   ? '#00e676'
+                      : diag.rsi_zone === 'overbought'  ? '#ef5350' : '#9e9e9e';
+      const macdColor = diag.macd_bias === 'bullish'   ? '#00e676'
+                      : diag.macd_bias === 'bearish'    ? '#ef5350' : '#9e9e9e';
+      const smaColor  = diag.sma_bias  === 'bullish'   ? '#00e676'
+                      : diag.sma_bias  === 'bearish'    ? '#ef5350' : '#9e9e9e';
+
+      diagEl.style.display = 'flex';
+      diagEl.innerHTML = `
+        <div style="flex:1; text-align:center;">
+          <div style="font-size:10px; color:#556; text-transform:uppercase; letter-spacing:.8px; margin-bottom:3px;">RSI-14</div>
+          <div style="font-size:16px; font-weight:700; color:${rsiColor}; font-family:monospace;">${diag.rsi_14 ?? '—'}</div>
+          <div style="font-size:10px; color:${rsiColor};">${diag.rsi_zone ?? ''}</div>
+        </div>
+        <div style="flex:1; text-align:center; border-left:1px solid #1e2030; border-right:1px solid #1e2030;">
+          <div style="font-size:10px; color:#556; text-transform:uppercase; letter-spacing:.8px; margin-bottom:3px;">MACD</div>
+          <div style="font-size:16px; font-weight:700; color:${macdColor}; font-family:monospace;">${diag.macd ?? '—'}</div>
+          <div style="font-size:10px; color:${macdColor};">${diag.macd_bias ?? ''} · hist ${diag.macd_hist ?? '—'}</div>
+        </div>
+        <div style="flex:1; text-align:center; border-right:1px solid #1e2030;">
+          <div style="font-size:10px; color:#556; text-transform:uppercase; letter-spacing:.8px; margin-bottom:3px;">SMA Spread</div>
+          <div style="font-size:16px; font-weight:700; color:${smaColor}; font-family:monospace;">${diag.sma_spread_pct != null ? diag.sma_spread_pct + '%' : '—'}</div>
+          <div style="font-size:10px; color:${smaColor};">${diag.sma_bias ?? ''}</div>
+        </div>
+        <div style="flex:1; text-align:center;">
+          <div style="font-size:10px; color:#556; text-transform:uppercase; letter-spacing:.8px; margin-bottom:3px;">ATR%</div>
+          <div style="font-size:16px; font-weight:700; color:#607d8b; font-family:monospace;">${diag.atr_pct != null ? diag.atr_pct + '%' : '—'}</div>
+          <div style="font-size:10px; color:#546e7a;">volatility</div>
+        </div>
+      `;
+    }
+  }
 }
 
 // ── Backtest ──────────────────────────────────────────────────────────────────
@@ -410,3 +455,297 @@ async function runPairsAnalysis() {
     resultEl.textContent = `Error: ${err.message}`;
   }
 }
+
+// -- Portfolio Intelligence (Recovered Modules) --------------------------------
+
+function _normalizeTickers(raw, fallback = ["AAPL", "MSFT", "SPY"]) {
+  const txt = (raw || "").trim();
+  const parts = (txt ? txt : fallback.join(",")).split(",");
+  const out = [];
+  const seen = new Set();
+  parts.forEach((p) => {
+    const t = (p || "").trim().toUpperCase();
+    if (!t || seen.has(t)) return;
+    seen.add(t);
+    out.push(t);
+  });
+  return out.slice(0, 20);
+}
+
+function _fmtPct(value, digits = 2) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "n/a";
+  return `${value.toFixed(digits)}%`;
+}
+
+function _fmtNum(value, digits = 3) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "n/a";
+  return value.toFixed(digits);
+}
+
+function _drawPortIntelMonteCarlo(canvas, p05, p50, p95) {
+  if (!canvas || !Array.isArray(p05) || !Array.isArray(p50) || !Array.isArray(p95)) return;
+  const n = Math.min(p05.length, p50.length, p95.length);
+  if (n < 2) return;
+
+  canvas.style.display = "block";
+  const ctx = canvas.getContext("2d");
+  const W = Math.max(560, Math.floor(canvas.getBoundingClientRect().width || 760));
+  const H = 220;
+  canvas.width = W;
+  canvas.height = H;
+
+  const all = [...p05, ...p50, ...p95].filter((v) => Number.isFinite(v));
+  const minV = Math.min(...all);
+  const maxV = Math.max(...all);
+  const range = maxV - minV || 1;
+
+  const xAt = (i) => (i / (n - 1)) * (W - 20) + 10;
+  const yAt = (v) => H - ((v - minV) / range) * (H - 30) - 12;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#0b0f1a";
+  ctx.fillRect(0, 0, W, H);
+
+  const bandGrad = ctx.createLinearGradient(0, 0, 0, H);
+  bandGrad.addColorStop(0, "rgba(68,136,255,0.24)");
+  bandGrad.addColorStop(1, "rgba(68,136,255,0.04)");
+
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const x = xAt(i);
+    const y = yAt(p95[i]);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  for (let i = n - 1; i >= 0; i--) {
+    const x = xAt(i);
+    const y = yAt(p05[i]);
+    ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = bandGrad;
+  ctx.fill();
+
+  const drawLine = (arr, color, width = 1.6) => {
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const x = xAt(i);
+      const y = yAt(arr[i]);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.stroke();
+  };
+
+  drawLine(p05, "#667799", 1.1);
+  drawLine(p95, "#667799", 1.1);
+  drawLine(p50, "#00e676", 1.8);
+
+  ctx.fillStyle = "#7f8fa6";
+  ctx.font = "11px monospace";
+  ctx.fillText("P05", 12, yAt(p05[0]) - 4);
+  ctx.fillText("P50", 12, yAt(p50[0]) - 4);
+  ctx.fillText("P95", 12, yAt(p95[0]) - 4);
+}
+
+function _renderPortIntelSummary(summaryData, corrData) {
+  const summaryEl = document.getElementById("portintel-summary");
+  if (!summaryEl) return;
+
+  if (!summaryData || !corrData) {
+    summaryEl.innerHTML = '<span style="color:#ef5350;">Summary data unavailable.</span>';
+    return;
+  }
+
+  const topPairs = (corrData.top_pairs || [])
+    .slice(0, 4)
+    .map((p) => `${p.pair} <span style="color:#aaa;">${_fmtNum(p.correlation, 2)}</span>`)
+    .join(" &nbsp; ");
+
+  const priceChange = summaryData?.price?.change_pct;
+  const priceColor = typeof priceChange === "number" ? (priceChange >= 0 ? "#00e676" : "#ef5350") : "#aaa";
+
+  summaryEl.innerHTML = `
+    <div style="margin-bottom:6px;">
+      <span style="color:#ccc; font-weight:700;">${summaryData.ticker}</span>
+      &nbsp;Â·&nbsp;
+      Last <span style="color:#aaa;">$${_fmtNum(summaryData?.price?.last, 2)}</span>
+      &nbsp;Â·&nbsp;
+      Change <span style="color:${priceColor};">${_fmtPct(priceChange, 2)}</span>
+      &nbsp;Â·&nbsp;
+      Vol <span style="color:#aaa;">${_fmtNum(summaryData?.volatility?.historical_annualized, 3)}</span>
+    </div>
+    <div style="margin-bottom:6px; color:#9ab;">
+      Sharpe <span style="color:${_confColor(Math.min(1, Math.max(0, (summaryData?.risk?.sharpe || 0) / 2)))};">
+      ${_fmtNum(summaryData?.risk?.sharpe, 2)}</span>
+      &nbsp;Â·&nbsp; Sortino <span style="color:#aaa;">${_fmtNum(summaryData?.risk?.sortino, 2)}</span>
+      &nbsp;Â·&nbsp; Calmar <span style="color:#aaa;">${_fmtNum(summaryData?.risk?.calmar, 2)}</span>
+    </div>
+    <div style="font-size:11px; color:#667;">
+      Correlation top pairs: ${topPairs || "n/a"}
+    </div>
+  `;
+}
+
+function _renderPortIntelRisk(riskData) {
+  const riskEl = document.getElementById("portintel-risk");
+  if (!riskEl) return;
+
+  if (!riskData || !riskData.risk) {
+    riskEl.innerHTML = '<span style="color:#ef5350;">Risk data unavailable.</span>';
+    return;
+  }
+
+  const risk = riskData.risk;
+  const stress = risk.stress_scenarios || {};
+  const stressPairs = Object.entries(stress)
+    .slice(0, 4)
+    .map(([k, v]) => `${k}: <span style="color:#aaa;">${_fmtPct(v * 100, 2)}</span>`)
+    .join(" &nbsp; ");
+
+  riskEl.innerHTML = `
+    <div style="margin-bottom:6px;">
+      VaR95 <span style="color:#ffea00;">${_fmtPct((risk.portfolio_var_95 || 0) * 100, 2)}</span>
+      &nbsp;Â·&nbsp; CVaR95 <span style="color:#ff9100;">${_fmtPct((risk.portfolio_cvar_95 || 0) * 100, 2)}</span>
+      &nbsp;Â·&nbsp; VaR99 <span style="color:#ef5350;">${_fmtPct((risk.portfolio_var_99 || 0) * 100, 2)}</span>
+    </div>
+    <div style="margin-bottom:6px; color:#9ab;">
+      Max DD <span style="color:#ef5350;">${_fmtPct((risk.max_drawdown || 0) * 100, 2)}</span>
+      &nbsp;Â·&nbsp; Sharpe <span style="color:#aaa;">${_fmtNum(risk.sharpe, 2)}</span>
+      &nbsp;Â·&nbsp; Sortino <span style="color:#aaa;">${_fmtNum(risk.sortino, 2)}</span>
+    </div>
+    <div style="font-size:11px; color:#667;">
+      Stress: ${stressPairs || "n/a"}
+    </div>
+  `;
+}
+
+function _renderPortIntelMonteCarlo(mcData) {
+  const mcEl = document.getElementById("portintel-mc");
+  const canvas = document.getElementById("portintel-mc-canvas");
+  if (!mcEl) return;
+
+  if (!mcData || !mcData.terminal_distribution) {
+    mcEl.innerHTML = '<span style="color:#ef5350;">Monte Carlo data unavailable.</span>';
+    if (canvas) canvas.style.display = "none";
+    return;
+  }
+
+  const td = mcData.terminal_distribution;
+  const rm = mcData.risk_metrics || {};
+  mcEl.innerHTML = `
+    <div style="margin-bottom:6px;">
+      Expected Return <span style="color:${(td.expected_return || 0) >= 0 ? "#00e676" : "#ef5350"};">
+      ${_fmtPct((td.expected_return || 0) * 100, 2)}</span>
+      &nbsp;Â·&nbsp; Prob(loss) <span style="color:#ff9100;">${_fmtPct((td.probability_of_loss || 0) * 100, 2)}</span>
+      &nbsp;Â·&nbsp; Median FV <span style="color:#aaa;">${_fmtNum(td.median_final_value, 3)}</span>
+    </div>
+    <div style="font-size:11px; color:#667;">
+      MC VaR95 <span style="color:#ffea00;">${_fmtPct((rm.var_95 || 0) * 100, 2)}</span>
+      &nbsp;Â·&nbsp; MC CVaR95 <span style="color:#ff9100;">${_fmtPct((rm.cvar_95 || 0) * 100, 2)}</span>
+      &nbsp;Â·&nbsp; Median MaxDD <span style="color:#ef5350;">${_fmtPct((rm.max_drawdown_median || 0) * 100, 2)}</span>
+    </div>
+  `;
+
+  const p = mcData.percentile_paths || {};
+  _drawPortIntelMonteCarlo(canvas, p.p05 || [], p.p50 || [], p.p95 || []);
+}
+
+async function runPortfolioIntelligence() {
+  const statusEl = document.getElementById("portintel-status");
+  const runBtn = document.getElementById("portintel-run-btn");
+
+  const tickersRaw = document.getElementById("portintel-tickers")?.value || "AAPL,MSFT,SPY";
+  const period = document.getElementById("portintel-period")?.value || "1y";
+  const method = document.getElementById("portintel-method")?.value || "log";
+  const nPathsRaw = parseInt(document.getElementById("portintel-paths")?.value || "1200", 10);
+  const horizonRaw = parseInt(document.getElementById("portintel-horizon")?.value || "252", 10);
+
+  const tickers = _normalizeTickers(tickersRaw);
+  if (tickers.length < 2) {
+    if (statusEl) statusEl.textContent = "Need at least 2 tickers.";
+    return;
+  }
+
+  const nPaths = Math.max(200, Math.min(20000, Number.isFinite(nPathsRaw) ? nPathsRaw : 1200));
+  const horizon = Math.max(20, Math.min(756, Number.isFinite(horizonRaw) ? horizonRaw : 252));
+
+  if (statusEl) statusEl.textContent = "Running analytics + risk + Monte Carlo...";
+  if (runBtn) runBtn.disabled = true;
+
+  const first = tickers[0];
+  const correlationUrl = `/api/analytics/correlation?tickers=${encodeURIComponent(tickers.join(","))}&period=${encodeURIComponent(period)}&return_method=${encodeURIComponent(method)}`;
+  const summaryUrl = `/api/analytics/summary/${encodeURIComponent(first)}?period=${encodeURIComponent(period)}`;
+
+  const riskBody = {
+    tickers,
+    period,
+    return_method: method,
+    confidence: 0.95,
+    risk_free_rate: 0.04,
+    horizon_days: 1,
+    run_stress: true,
+  };
+  const mcBody = {
+    tickers,
+    period,
+    return_method: method,
+    n_paths: nPaths,
+    horizon_days: horizon,
+    seed: 7,
+  };
+
+  try {
+    const [summaryRes, corrRes, riskRes, mcRes] = await Promise.allSettled([
+      _apiFetch(summaryUrl, 40000),
+      _apiFetch(correlationUrl, 50000),
+      _apiFetch(
+        "/api/risk/portfolio/assess",
+        60000,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(riskBody),
+        },
+      ),
+      _apiFetch(
+        "/api/montecarlo/portfolio/simulate",
+        90000,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(mcBody),
+        },
+      ),
+    ]);
+
+    const summaryData = summaryRes.status === "fulfilled" ? summaryRes.value : null;
+    const corrData = corrRes.status === "fulfilled" ? corrRes.value : null;
+    const riskData = riskRes.status === "fulfilled" ? riskRes.value : null;
+    const mcData = mcRes.status === "fulfilled" ? mcRes.value : null;
+
+    _renderPortIntelSummary(summaryData, corrData);
+    _renderPortIntelRisk(riskData);
+    _renderPortIntelMonteCarlo(mcData);
+
+    const failed = [summaryRes, corrRes, riskRes, mcRes].filter((r) => r.status !== "fulfilled").length;
+    if (statusEl) {
+      if (failed === 0) {
+        statusEl.textContent = `Portfolio intelligence updated for ${tickers.join(", ")}.`;
+        statusEl.style.color = "#4caf50";
+      } else {
+        statusEl.textContent = `Partial update (${4 - failed}/4). Some endpoints failed.`;
+        statusEl.style.color = "#ff9100";
+      }
+    }
+  } catch (err) {
+    if (statusEl) {
+      statusEl.textContent = `Portfolio intelligence error: ${err.message}`;
+      statusEl.style.color = "#ef5350";
+    }
+  } finally {
+    if (runBtn) runBtn.disabled = false;
+  }
+}
+
+window.runPortfolioIntelligence = runPortfolioIntelligence;

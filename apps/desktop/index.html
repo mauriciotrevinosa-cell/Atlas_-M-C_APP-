@@ -73,6 +73,30 @@
         <button class="quick-action-btn" onclick="switchView('vizlab')">🔬 Viz Lab</button>
         <button class="quick-action-btn" onclick="switchView('analysis')">📈 Analysis</button>
         <button class="quick-action-btn" onclick="switchView('trader')">⚡ ARIA Trader</button>
+        <button class="quick-action-btn" onclick="switchView('playroom')">🧪 Playroom</button>
+        <button class="quick-action-btn" onclick="switchView('indicators')">📊 Indicators</button>
+        <button class="quick-action-btn" onclick="switchView('paper')">📋 Paper Trading</button>
+        <button class="quick-action-btn" onclick="switchView('mmo')">⟨ψ⟩ Quantum MMO</button>
+        <button class="quick-action-btn" onclick="switchView('thought')">🧩 Thought Map</button>
+        <button class="quick-action-btn" onclick="switchView('rl')">🧠 RL Lab</button>
+        <button class="quick-action-btn" onclick="switchView('agents')">🤖 AI Agents</button>
+      </div>
+
+      <div id="command-center-shell" class="command-center-shell state-degraded">
+        <div class="cc-topline">
+          <strong>Atlas Command Center</strong>
+          <span id="cc-pulse-status">DEGRADED</span>
+          <span id="cc-last-updated">Waiting for telemetry...</span>
+        </div>
+        <div class="cc-grid">
+          <div class="cc-item"><span class="k">API Routes</span><span class="v" id="cc-api-routes">-</span></div>
+          <div class="cc-item"><span class="k">UI Views</span><span class="v" id="cc-ui-views">-</span></div>
+          <div class="cc-item"><span class="k">Docs</span><span class="v" id="cc-docs-count">-</span></div>
+          <div class="cc-item"><span class="k">Runs</span><span class="v" id="cc-runs-count">-</span></div>
+          <div class="cc-item"><span class="k">Active Model</span><span class="v" id="cc-active-model">-</span></div>
+          <div class="cc-item"><span class="k">Core Folders</span><span class="v" id="cc-core-folders">-</span></div>
+        </div>
+        <div class="cc-footnote" id="cc-footnote">Latest run: none</div>
       </div>
 
       <!-- Modules Header -->
@@ -156,12 +180,12 @@
         <div class="module-card vizlab-card" onclick="switchView('vizlab')">
           <div class="module-icon vizlab">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"/>
-              <circle cx="12" cy="12" r="7" stroke-dasharray="3 2"/>
-              <line x1="12" y1="2" x2="12" y2="5"/>
-              <line x1="12" y1="19" x2="12" y2="22"/>
-              <line x1="2" y1="12" x2="5" y2="12"/>
-              <line x1="19" y1="12" x2="22" y2="12"/>
+              <circle cx="12" cy="12" r="3" />
+              <circle cx="12" cy="12" r="7" stroke-dasharray="3 2" />
+              <line x1="12" y1="2" x2="12" y2="5" />
+              <line x1="12" y1="19" x2="12" y2="22" />
+              <line x1="2" y1="12" x2="5" y2="12" />
+              <line x1="19" y1="12" x2="22" y2="12" />
             </svg>
           </div>
           <div class="notification-dot vizlab-pulse"></div>
@@ -174,11 +198,12 @@
         <!-- Derivatives Module -->
         <div class="module-card derivatives-card" onclick="switchView('derivatives')">
           <div class="notification-dot deriv-pulse"></div>
-          <div class="module-icon analysis" style="background:linear-gradient(135deg,#1e0a30,#0a0a30);border-color:#7c3aed;">
+          <div class="module-icon analysis"
+            style="background:linear-gradient(135deg,#1e0a30,#0a0a30);border-color:#7c3aed;">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path d="M2 17l10 5 10-5"/>
-              <path d="M2 12l10 5 10-5"/>
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
             </svg>
           </div>
           <div class="module-title">Derivatives</div>
@@ -188,10 +213,11 @@
         <!-- Decision Center Module -->
         <div class="module-card decision-card" onclick="switchView('decision')">
           <div class="notification-dot decision-pulse"></div>
-          <div class="module-icon finance" style="background:linear-gradient(135deg,#0a1a10,#052010);border-color:#10b981;">
+          <div class="module-icon finance"
+            style="background:linear-gradient(135deg,#0a1a10,#052010);border-color:#10b981;">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
-              <path d="M9 11l3 3L22 4"/>
-              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              <path d="M9 11l3 3L22 4" />
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
             </svg>
           </div>
           <div class="module-title">Decision Center</div>
@@ -199,24 +225,137 @@
         </div>
 
         <!-- ARIA Trader Module -->
-        <div class="module-card" onclick="switchView('trader')" style="background:linear-gradient(135deg,#0d1020,#0a0e1a); border-color:rgba(52,152,219,0.3);">
+        <div class="module-card" onclick="switchView('trader')"
+          style="background:linear-gradient(135deg,#0d1020,#0a0e1a); border-color:rgba(52,152,219,0.3);">
           <div class="notification-dot" style="background:#3498db;"></div>
-          <div class="module-icon" style="background:linear-gradient(135deg,#0a1020,#061228); border:1px solid rgba(52,152,219,0.4);">
+          <div class="module-icon"
+            style="background:linear-gradient(135deg,#0a1020,#061228); border:1px solid rgba(52,152,219,0.4);">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="#3498db">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
             </svg>
           </div>
           <div class="module-title" style="color:#e8f4fc;">ARIA Trader</div>
           <div class="module-sub" style="color:#3498db;">Composite Score Engine</div>
         </div>
 
+        <!-- Playroom -->
+        <div class="module-card" onclick="switchView('playroom')"
+          style="background:linear-gradient(135deg,#101018,#080810); border-color:rgba(241,196,15,0.28);">
+          <div class="module-icon"
+            style="background:linear-gradient(135deg,#181820,#101018); border:1px solid rgba(241,196,15,0.36);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f1c40f" stroke-width="1.6">
+              <rect x="4" y="4" width="16" height="16" rx="2" />
+              <path d="M9 9h6v6H9z" />
+              <path d="M12 2v2M12 20v2M2 12h2M20 12h2" />
+            </svg>
+          </div>
+          <div class="module-title" style="color:#fbf6dd;">Playroom</div>
+          <div class="module-sub" style="color:#f1c40f;">Experimental Sandbox</div>
+        </div>
+
+        <!-- MMO -->
+        <div class="module-card" onclick="switchView('mmo')"
+          style="background:linear-gradient(135deg,#0a0520,#05030f);border-color:rgba(124,63,228,0.35);">
+          <div class="module-icon"
+            style="background:linear-gradient(135deg,#0f0530,#08021a);border:1px solid rgba(124,63,228,0.45);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#bd93f9" stroke-width="1.5">
+              <path d="M2 12 Q5 5 8 12 Q11 19 14 12 Q17 5 20 12 Q22 8 23 8" stroke-linecap="round"
+                stroke-linejoin="round" />
+              <circle cx="14" cy="12" r="1.5" fill="#bd93f9" stroke="none" />
+            </svg>
+          </div>
+          <div class="module-title" style="color:#e8e0ff;">Quantum Market</div>
+          <div class="module-sub" style="color:#bd93f9;">Mau's Market Ontology</div>
+        </div>
+
+        <!-- Paper Trading -->
+        <div class="module-card" onclick="switchView('paper')"
+          style="background:linear-gradient(135deg,#050f10,#020a08);border-color:rgba(0,255,136,0.25);">
+          <div class="module-icon"
+            style="background:linear-gradient(135deg,#041210,#020a08);border:1px solid rgba(0,255,136,0.35);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="1.5">
+              <rect x="5" y="2" width="14" height="20" rx="2" />
+              <line x1="9" y1="7" x2="15" y2="7" />
+              <line x1="9" y1="11" x2="15" y2="11" />
+              <line x1="9" y1="15" x2="13" y2="15" />
+            </svg>
+          </div>
+          <div class="module-title" style="color:#e0fff0;">Paper Trading</div>
+          <div class="module-sub" style="color:#00ff88;">$100K Sim Account</div>
+        </div>
+
+        <!-- Indicator Lab -->
+        <div class="module-card" onclick="switchView('indicators')"
+          style="background:linear-gradient(135deg,#060610,#030310);border-color:rgba(77,166,255,0.25);">
+          <div class="module-icon"
+            style="background:linear-gradient(135deg,#060815,#030510);border:1px solid rgba(77,166,255,0.35);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4da6ff" stroke-width="1.5">
+              <path d="M3 3v18h18" />
+              <path d="M7 16l4-4 4 4 4-8" />
+            </svg>
+          </div>
+          <div class="module-title" style="color:#e0f0ff;">Indicator Lab</div>
+          <div class="module-sub" style="color:#4da6ff;">Visual TA Terminal</div>
+        </div>
+
+        <!-- RL Lab -->
+        <div class="module-card" onclick="switchView('rl')"
+          style="background:linear-gradient(135deg,#061018,#03080f);border-color:rgba(77,200,255,0.25);">
+          <div class="module-icon"
+            style="background:linear-gradient(135deg,#041220,#020a15);border:1px solid rgba(77,200,255,0.35);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4dc8ff" stroke-width="1.5">
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+            </svg>
+          </div>
+          <div class="module-title" style="color:#d0f4ff;">RL Lab</div>
+          <div class="module-sub" style="color:#4dc8ff;">Agent Training Sandbox</div>
+        </div>
+
+        <!-- Thought Map -->
+        <div class="module-card" onclick="switchView('thought')"
+          style="background:linear-gradient(135deg,#0f0f12,#08090c);border-color:rgba(243,156,18,0.3);">
+          <div class="module-icon"
+            style="background:linear-gradient(135deg,#14161a,#0c0d11);border:1px solid rgba(243,156,18,0.35);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f39c12" stroke-width="1.7">
+              <circle cx="6" cy="12" r="2" />
+              <circle cx="12" cy="6" r="2" />
+              <circle cx="18" cy="12" r="2" />
+              <circle cx="12" cy="18" r="2" />
+              <path d="M8 11l2.5-3" />
+              <path d="M13.5 7.5l3 3" />
+              <path d="M16 13l-2.5 3" />
+              <path d="M10.5 16.5l-3-3" />
+            </svg>
+          </div>
+          <div class="module-title" style="color:#f6e9d4;">Thought Map</div>
+          <div class="module-sub" style="color:#f39c12;">Module Registry + Connectivity</div>
+        </div>
+
+        <!-- AI Agents -->
+        <div class="module-card" onclick="switchView('agents')"
+          style="background:linear-gradient(135deg,#080f18,#030810);border-color:rgba(120,80,255,0.28);">
+          <div class="module-icon"
+            style="background:linear-gradient(135deg,#0a0820,#050310);border:1px solid rgba(120,80,255,0.4);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7850ff" stroke-width="1.5">
+              <rect x="3" y="11" width="18" height="10" rx="2"/>
+              <circle cx="12" cy="5" r="2"/>
+              <path d="M12 7v4"/>
+              <path d="M8 15h.01M12 15h.01M16 15h.01"/>
+            </svg>
+          </div>
+          <div class="module-title" style="color:#e8e0ff;">AI Agents</div>
+          <div class="module-sub" style="color:#7850ff;">Planner · Reviewer · Docs</div>
+        </div>
+
         <!-- Info Module -->
         <div class="module-card" onclick="switchView('info')">
           <div class="module-icon terminal" style="background:linear-gradient(135deg,#1a1030,#0a0a20);">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
           <div>
@@ -302,8 +441,10 @@
           <button class="btn secondary" type="button" onclick="switchView('practice')">Scenario Mode</button>
           <button class="btn secondary" type="button" onclick="switchView('finance')">Project Workspace</button>
           <button class="btn secondary" type="button" onclick="switchView('analysis')">Market Inputs</button>
-          <button class="btn primary" type="button" onclick="openRealEstateRender('vol_surface')">Render Vol Surface</button>
-          <button class="btn primary" type="button" onclick="openRealEstateRender('correlation')">Render Correlation</button>
+          <button class="btn primary" type="button" onclick="openRealEstateRender('vol_surface')">Render Vol
+            Surface</button>
+          <button class="btn primary" type="button" onclick="openRealEstateRender('correlation')">Render
+            Correlation</button>
           <button class="btn primary" type="button" onclick="openRealEstateSimulation()">Run Simulation</button>
         </div>
         <div id="re-launch-status" class="realestate-launch-status"></div>
@@ -312,7 +453,8 @@
       <div id="re-3d-output-container" class="scenario-card" style="margin-top:12px; display:block;">
         <h3>Real Estate Render Output</h3>
         <div id="re-three-output"
-          style="width:100%; height:400px; border-radius:6px; overflow:hidden; position:relative; cursor:grab; background:#0b0f1a; border:1px solid #1f2a44;"></div>
+          style="width:100%; height:400px; border-radius:6px; overflow:hidden; position:relative; cursor:grab; background:#0b0f1a; border:1px solid #1f2a44;">
+        </div>
         <div id="re-3d-legend"
           style="display:none; padding:8px 12px; font-size:10px; color:#778; text-align:left; border-top:1px solid #1f2a44; margin-top:8px;">
         </div>
@@ -418,22 +560,22 @@
         <!-- Sidebar: Logs & News -->
         <div class="scenario-card side" style="display:flex; flex-direction:column; gap:15px;">
 
-            <!-- AI Logic -->
-            <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
-              <h3>Captain's Log (AI)</h3>
-              <div class="reasoning-log" id="scen-log">
-                <div class="log-entry">Waiting to start...</div>
-              </div>
+          <!-- AI Logic -->
+          <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+            <h3>Captain's Log (AI)</h3>
+            <div class="reasoning-log" id="scen-log">
+              <div class="log-entry">Waiting to start...</div>
             </div>
+          </div>
 
-            <!-- Historical News -->
-            <div
-              style="flex:1; display:flex; flex-direction:column; overflow:hidden; border-top:1px solid #333; padding-top:10px;">
-              <h3>News Vault (Historical)</h3>
-              <div class="reasoning-log" id="scen-news-log" style="background:#111;">
-                <div class="log-entry" style="color:#aaa;">No news loaded.</div>
-              </div>
+          <!-- Historical News -->
+          <div
+            style="flex:1; display:flex; flex-direction:column; overflow:hidden; border-top:1px solid #333; padding-top:10px;">
+            <h3>News Vault (Historical)</h3>
+            <div class="reasoning-log" id="scen-news-log" style="background:#111;">
+              <div class="log-entry" style="color:#aaa;">No news loaded.</div>
             </div>
+          </div>
 
         </div>
       </div>
@@ -537,7 +679,8 @@
           <h3>Live News Feed</h3>
           <div class="reasoning-log" id="analysis-news-list"
             style="background:var(--bg-surface); color:var(--txt-primary); border:1px solid var(--bdr-subtle);">
-            <div class="log-entry" style="color:var(--txt-muted); border-bottom:1px solid var(--bdr-faint);">Connecting to feed...</div>
+            <div class="log-entry" style="color:var(--txt-muted); border-bottom:1px solid var(--bdr-faint);">Connecting
+              to feed...</div>
           </div>
 
           <h3 style="margin-top:20px;">Quick Trade</h3>
@@ -556,9 +699,37 @@
         <button class="btn link-btn" type="button" onclick="switchView('dashboard')">Home</button>
       </div>
 
+      <div id="aria-core-bar"
+        style="display:flex;align-items:center;gap:14px;padding:8px 16px;background:#07070f;border-bottom:1px solid #111128;">
+        <div id="aria-core-mount"
+          style="width:72px;height:72px;border-radius:50%;overflow:hidden;flex-shrink:0;background:#070710;"></div>
+        <div style="flex:1;">
+          <div
+            style="font-size:13px;font-weight:700;font-family:monospace;color:#e8eaf6;letter-spacing:.05em;">ARIA Core</div>
+          <div id="aria-core-state"
+            style="font-size:11px;font-family:monospace;color:#4488ff;margin-top:2px;">IDLE - All systems nominal</div>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;" id="aria-core-metrics">
+            <span
+              style="background:#111128;border:1px solid #1a1a40;padding:2px 8px;border-radius:10px;font-size:10px;font-family:monospace;color:#778;">Swarm:
+              Online</span>
+            <span
+              style="background:#111128;border:1px solid #1a1a40;padding:2px 8px;border-radius:10px;font-size:10px;font-family:monospace;color:#778;">NLP:
+              Ready</span>
+            <span
+              style="background:#111128;border:1px solid #1a1a40;padding:2px 8px;border-radius:10px;font-size:10px;font-family:monospace;color:#778;">Risk:
+              Monitoring</span>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div id="aria-core-status-icon" style="font-size:22px;">AI</div>
+          <div id="aria-core-clock" style="font-size:10px;font-family:monospace;color:#334;margin-top:2px;"></div>
+        </div>
+      </div>
+
       <!-- ARIA Provider Toolbar -->
       <div id="aria-toolbar">
-        <span style="font-family:var(--ff-mono);font-size:9px;color:var(--txt-muted);text-transform:uppercase;letter-spacing:.1em;">Model</span>
+        <span
+          style="font-family:var(--ff-mono);font-size:9px;color:var(--txt-muted);text-transform:uppercase;letter-spacing:.1em;">Model</span>
         <div id="aria-provider-pills"><!-- populated by JS --></div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
           <span id="aria-latency-badge"></span>
@@ -725,278 +896,432 @@
         </div>
       </div>
 
-    <!-- ===== MULTI-STRATEGY ANALYSIS PANEL ===== -->
-    <div class="section-header" style="margin-top:24px;">Multi-Strategy Signal Analysis</div>
+      <!-- ===== MULTI-STRATEGY ANALYSIS PANEL ===== -->
+      <div class="section-header" style="margin-top:24px;">Multi-Strategy Signal Analysis</div>
 
-    <div class="scenario-grid" style="margin-top:10px; height:auto; align-items:start;">
+      <div class="scenario-grid" style="margin-top:10px; height:auto; align-items:start;">
 
-      <!-- Input + Controls -->
-      <div class="scenario-card side">
-        <h3>Strategy Scanner</h3>
-        <p style="font-size:12px; color:#888; margin-bottom:14px;">Run all 5 rule-based engines on any ticker and get a weighted consensus signal.</p>
-        <div style="display:flex; gap:8px; margin-bottom:12px;">
-          <input id="strat-ticker" type="text" placeholder="Ticker (e.g. AAPL)" value="AAPL"
-            style="flex:1; text-transform:uppercase; font-size:13px;" />
-          <select id="strat-period" style="font-size:12px; width:80px;">
-            <option value="3mo">3 mo</option>
-            <option value="6mo" selected>6 mo</option>
-            <option value="1y">1 yr</option>
-          </select>
-        </div>
-        <button class="btn primary" id="strat-run-btn" type="button" onclick="runStrategyAnalysis()">Analyze</button>
-        <div id="strat-status" style="margin-top:10px; font-size:11px; color:#aaa;"></div>
-
-        <!-- Consensus box -->
-        <div id="strat-consensus" style="display:none; margin-top:16px; padding:14px; border-radius:8px; border:1px solid #333; background:#0d1020; text-align:center;">
-          <div style="font-size:11px; color:#778; margin-bottom:4px; letter-spacing:1px; text-transform:uppercase;">Consensus</div>
-          <div id="strat-action" style="font-size:26px; font-weight:700; font-family:monospace; letter-spacing:2px;"></div>
-          <div id="strat-conf-bar-wrap" style="margin:10px 0 4px; height:6px; border-radius:3px; background:#1a2030; overflow:hidden;">
-            <div id="strat-conf-bar" style="height:100%; border-radius:3px; transition:width 0.5s;"></div>
+        <!-- Input + Controls -->
+        <div class="scenario-card side">
+          <h3>Strategy Scanner</h3>
+          <p style="font-size:12px; color:#888; margin-bottom:14px;">Run all 5 rule-based engines on any ticker and get
+            a weighted consensus signal.</p>
+          <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <input id="strat-ticker" type="text" placeholder="Ticker (e.g. AAPL)" value="AAPL"
+              style="flex:1; text-transform:uppercase; font-size:13px;" />
+            <select id="strat-period" style="font-size:12px; width:80px;">
+              <option value="3mo">3 mo</option>
+              <option value="6mo" selected>6 mo</option>
+              <option value="1y">1 yr</option>
+            </select>
           </div>
-          <div id="strat-conf-label" style="font-size:11px; color:#aaa;"></div>
-          <div id="strat-reason" style="font-size:11px; color:#667; margin-top:8px; font-style:italic;"></div>
-        </div>
-      </div>
+          <button class="btn primary" id="strat-run-btn" type="button" onclick="runStrategyAnalysis()">Analyze</button>
+          <div id="strat-status" style="margin-top:10px; font-size:11px; color:#aaa;"></div>
 
-      <!-- Per-engine breakdown -->
-      <div class="scenario-card main" id="strat-engines-card" style="display:none;">
-        <h3 style="margin-bottom:16px;">Engine Breakdown</h3>
-        <div id="strat-ticker-meta" style="font-size:11px; color:#667; margin-bottom:12px;"></div>
-        <div id="strat-engine-rows" style="display:flex; flex-direction:column; gap:10px;"></div>
-
-        <!-- Backtest mini -->
-        <div style="margin-top:20px; padding-top:14px; border-top:1px solid #222;">
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-            <span style="font-size:12px; color:#aaa;">Quick Backtest (walk-forward)</span>
-            <button class="btn secondary" style="font-size:11px; padding:4px 10px;" onclick="runStrategyBacktest()">Run</button>
+          <!-- Consensus box -->
+          <div id="strat-consensus"
+            style="display:none; margin-top:16px; padding:14px; border-radius:8px; border:1px solid #333; background:#0d1020; text-align:center;">
+            <div style="font-size:11px; color:#778; margin-bottom:4px; letter-spacing:1px; text-transform:uppercase;">
+              Consensus</div>
+            <div id="strat-action" style="font-size:26px; font-weight:700; font-family:monospace; letter-spacing:2px;">
+            </div>
+            <div id="strat-conf-bar-wrap"
+              style="margin:10px 0 4px; height:6px; border-radius:3px; background:#1a2030; overflow:hidden;">
+              <div id="strat-conf-bar" style="height:100%; border-radius:3px; transition:width 0.5s;"></div>
+            </div>
+            <div id="strat-conf-label" style="font-size:11px; color:#aaa;"></div>
+            <div id="strat-reason" style="font-size:11px; color:#667; margin-top:8px; font-style:italic;"></div>
           </div>
-          <div id="strat-bt-result" style="font-size:11px; color:#aaa;"></div>
-          <canvas id="strat-equity-chart" width="400" height="100"
-            style="display:none; width:100%; margin-top:8px; border-radius:4px; background:#0b0f1a;"></canvas>
+        </div>
+
+        <!-- Per-engine breakdown -->
+        <div class="scenario-card main" id="strat-engines-card" style="display:none;">
+          <h3 style="margin-bottom:16px;">Engine Breakdown</h3>
+          <div id="strat-ticker-meta" style="font-size:11px; color:#667; margin-bottom:12px;"></div>
+          <div id="strat-engine-rows" style="display:flex; flex-direction:column; gap:10px;"></div>
+
+          <!-- Indicator Diagnostics Row -->
+          <div id="strat-diagnostics" style="
+            display:none; margin-top:14px; padding:10px 0;
+            border-top:1px solid #1e2030; border-bottom:1px solid #1e2030;
+            gap:0;
+          "></div>
+
+          <!-- Backtest mini -->
+          <div style="margin-top:20px; padding-top:14px; border-top:1px solid #222;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+              <span style="font-size:12px; color:#aaa;">Quick Backtest (walk-forward)</span>
+              <button class="btn secondary" style="font-size:11px; padding:4px 10px;"
+                onclick="runStrategyBacktest()">Run</button>
+            </div>
+            <div id="strat-bt-result" style="font-size:11px; color:#aaa;"></div>
+            <canvas id="strat-equity-chart" width="400" height="100"
+              style="display:none; width:100%; margin-top:8px; border-radius:4px; background:#0b0f1a;"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== CORRELATION PORTFOLIO PANEL ===== -->
+      <div class="section-header" style="margin-top:24px;">Correlation Intelligence</div>
+
+      <div class="scenario-grid"
+        style="margin-top:10px; height:auto; align-items:start; grid-template-columns:1fr 1fr 1fr;">
+
+        <!-- Market Structure -->
+        <div class="scenario-card side">
+          <h3>Market Structure</h3>
+          <p style="font-size:12px; color:#888; margin-bottom:12px;">Rolling correlation regime + diversification score
+            across a basket.</p>
+          <input id="struct-tickers" type="text" placeholder="Comma-separated tickers"
+            value="SPY,QQQ,IWM,GLD,TLT,HYG,EEM,XLF" style="font-size:12px; margin-bottom:10px;" />
+          <button class="btn primary" type="button" onclick="runStructureAnalysis()">Analyze Structure</button>
+          <div id="struct-result" style="margin-top:14px; font-size:12px; color:#aaa;"></div>
+        </div>
+
+        <!-- Asset Clustering -->
+        <div class="scenario-card side">
+          <h3>Asset Clustering</h3>
+          <p style="font-size:12px; color:#888; margin-bottom:12px;">Group assets by return similarity (Ward
+            hierarchical).</p>
+          <input id="cluster-tickers" type="text" placeholder="Comma-separated tickers"
+            value="AAPL,MSFT,GOOG,AMZN,NVDA,META,JPM,GS,GLD,TLT" style="font-size:12px; margin-bottom:6px;" />
+          <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <input id="cluster-n" type="number" min="2" max="8" value="4" placeholder="Clusters"
+              style="width:70px; font-size:12px;" />
+            <button class="btn primary" type="button" style="flex:1;" onclick="runClusterAnalysis()">Cluster</button>
+          </div>
+          <div id="cluster-result" style="font-size:12px; color:#aaa;"></div>
+        </div>
+
+        <!-- Pairs Trading -->
+        <div class="scenario-card side">
+          <h3>Pairs Trading</h3>
+          <p style="font-size:12px; color:#888; margin-bottom:12px;">Find cointegrated pairs + current z-score signals.
+          </p>
+          <input id="pairs-tickers" type="text" placeholder="Comma-separated tickers"
+            value="AAPL,MSFT,GOOG,AMZN,META,NVDA" style="font-size:12px; margin-bottom:10px;" />
+          <button class="btn primary" type="button" onclick="runPairsAnalysis()">Find Pairs</button>
+          <div id="pairs-result" style="margin-top:10px; font-size:12px; color:#aaa;"></div>
+        </div>
+
+      </div>
+
+      <!-- ===== PORTFOLIO INTELLIGENCE (RECOVERED MODULES) ===== -->
+      <div class="section-header" style="margin-top:24px;">Portfolio Intelligence (Analytics + Risk + Monte Carlo)</div>
+      <div class="scenario-grid" style="margin-top:10px; height:auto; align-items:start; grid-template-columns:320px 1fr;">
+        <div class="scenario-card side">
+          <h3>Portfolio Scanner</h3>
+          <p style="font-size:12px; color:#888; margin-bottom:12px;">
+            Connected to recovered backend modules: analytics, portfolio risk, and correlated Monte Carlo.
+          </p>
+          <input id="portintel-tickers" type="text" value="AAPL,MSFT,SPY" placeholder="Tickers comma-separated"
+            style="font-size:12px; margin-bottom:8px;" />
+          <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <select id="portintel-period" style="font-size:12px; flex:1;">
+              <option value="6mo">6 mo</option>
+              <option value="1y" selected>1 yr</option>
+              <option value="2y">2 yr</option>
+            </select>
+            <select id="portintel-method" style="font-size:12px; flex:1;">
+              <option value="log" selected>Log Returns</option>
+              <option value="simple">Simple Returns</option>
+            </select>
+          </div>
+          <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <input id="portintel-paths" type="number" min="200" max="20000" value="1200"
+              style="font-size:12px; width:50%;" title="Monte Carlo paths" />
+            <input id="portintel-horizon" type="number" min="20" max="756" value="252"
+              style="font-size:12px; width:50%;" title="Monte Carlo horizon days" />
+          </div>
+          <button class="btn primary" id="portintel-run-btn" type="button" onclick="runPortfolioIntelligence()">Run Portfolio Intelligence</button>
+          <div id="portintel-status" style="margin-top:10px; font-size:11px; color:#888;">Idle</div>
+        </div>
+
+        <div class="scenario-card main">
+          <div id="portintel-summary" style="font-size:12px; color:#aaa; margin-bottom:12px;">
+            Run scanner to load analytics summary and correlation snapshot.
+          </div>
+          <div id="portintel-risk" style="font-size:12px; color:#aaa; margin-bottom:12px;">
+            Risk metrics will appear here (VaR/CVaR, drawdown, Sharpe, stress).
+          </div>
+          <div id="portintel-mc" style="font-size:12px; color:#aaa; margin-bottom:10px;">
+            Monte Carlo distribution metrics will appear here.
+          </div>
+          <canvas id="portintel-mc-canvas" width="760" height="220"
+            style="display:none; width:100%; height:220px; background:#0b0f1a; border:1px solid #22304a; border-radius:6px;"></canvas>
         </div>
       </div>
 
     </div>
 
-    <!-- ===== CORRELATION PORTFOLIO PANEL ===== -->
-    <div class="section-header" style="margin-top:24px;">Correlation Intelligence</div>
-
-    <div class="scenario-grid" style="margin-top:10px; height:auto; align-items:start; grid-template-columns:1fr 1fr 1fr;">
-
-      <!-- Market Structure -->
-      <div class="scenario-card side">
-        <h3>Market Structure</h3>
-        <p style="font-size:12px; color:#888; margin-bottom:12px;">Rolling correlation regime + diversification score across a basket.</p>
-        <input id="struct-tickers" type="text" placeholder="Comma-separated tickers"
-          value="SPY,QQQ,IWM,GLD,TLT,HYG,EEM,XLF" style="font-size:12px; margin-bottom:10px;" />
-        <button class="btn primary" type="button" onclick="runStructureAnalysis()">Analyze Structure</button>
-        <div id="struct-result" style="margin-top:14px; font-size:12px; color:#aaa;"></div>
+    <!-- ===== VIEW: VIZ LAB ===== -->
+    <div id="view-vizlab" class="view-section">
+      <div class="section-header-row">
+        <div class="section-header">Viz Lab</div>
+        <button class="btn link-btn" type="button" onclick="switchView('dashboard')">Home</button>
       </div>
+      <div class="vizlab-subtitle">38 visualizations — <span style="color:#2ecc71;">25 live algorithm renders</span> ·
+        <span style="color:#9b59b6;">13 decorative sims</span> — WebGL · Canvas · Three.js</div>
+      <div class="vizlab-grid" id="vizlab-grid">
+        <!-- Cards injected by viz_lab.js -->
+      </div>
+    </div>
 
-      <!-- Asset Clustering -->
-      <div class="scenario-card side">
-        <h3>Asset Clustering</h3>
-        <p style="font-size:12px; color:#888; margin-bottom:12px;">Group assets by return similarity (Ward hierarchical).</p>
-        <input id="cluster-tickers" type="text" placeholder="Comma-separated tickers"
-          value="AAPL,MSFT,GOOG,AMZN,NVDA,META,JPM,GS,GLD,TLT" style="font-size:12px; margin-bottom:6px;" />
-        <div style="display:flex; gap:8px; margin-bottom:10px;">
-          <input id="cluster-n" type="number" min="2" max="8" value="4" placeholder="Clusters"
-            style="width:70px; font-size:12px;" />
-          <button class="btn primary" type="button" style="flex:1;" onclick="runClusterAnalysis()">Cluster</button>
+    <!-- ===== VIEW: ARIA TRADER ===== -->
+    <div id="view-trader" class="view-section"></div>
+
+    <!-- ===== VIEW: DERIVATIVES ===== -->
+    <div id="view-derivatives" class="view-section"></div>
+
+    <!-- ===== VIEW: DECISION ===== -->
+    <div id="view-decision" class="view-section"></div>
+
+    <!-- ===== VIEW: MMO — Mau's Market Ontology ===== -->
+    <div id="view-mmo" class="view-section"></div>
+
+    <!-- ===== VIEW: PLAYROOM ===== -->
+    <div id="view-playroom" class="view-section">
+      <div class="section-header-row">
+        <div class="section-header">Playroom Sandbox</div>
+        <button class="btn link-btn" type="button" onclick="switchView('dashboard')">Home</button>
+      </div>
+      <div class="scenario-card" style="margin-bottom:12px;">
+        <h3 style="margin:0;">Experimental Engines</h3>
+        <div style="font-size:12px; color:#888;">
+          Launchable prototypes. Nothing is deleted; unfinished modules stay visible here.
         </div>
-        <div id="cluster-result" style="font-size:12px; color:#aaa;"></div>
       </div>
+      <div id="playroom-grid" class="scenario-grid"
+        style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); height:auto; align-items:start;"></div>
+    </div>
 
-      <!-- Pairs Trading -->
-      <div class="scenario-card side">
-        <h3>Pairs Trading</h3>
-        <p style="font-size:12px; color:#888; margin-bottom:12px;">Find cointegrated pairs + current z-score signals.</p>
-        <input id="pairs-tickers" type="text" placeholder="Comma-separated tickers"
-          value="AAPL,MSFT,GOOG,AMZN,META,NVDA" style="font-size:12px; margin-bottom:10px;" />
-        <button class="btn primary" type="button" onclick="runPairsAnalysis()">Find Pairs</button>
-        <div id="pairs-result" style="margin-top:10px; font-size:12px; color:#aaa;"></div>
+    <!-- ===== VIEW: INDICATOR TERMINAL ===== -->
+    <div id="view-indicators" class="view-section"></div>
+
+    <!-- ===== VIEW: PAPER TRADING LAB ===== -->
+    <div id="view-paper" class="view-section"></div>
+
+    <!-- ===== VIEW: RL LAB ===== -->
+    <div id="view-rl" class="view-section"></div>
+
+    <!-- ===== VIEW: THOUGHT MAP ===== -->
+    <div id="view-thought" class="view-section"></div>
+
+    <!-- ===== VIEW: AI AGENTS ===== -->
+    <div id="view-agents" class="view-section">
+      <div class="section-header-row">
+        <div class="section-header">AI Agents</div>
+        <button class="btn link-btn" type="button" onclick="switchView('dashboard')">Home</button>
       </div>
-
-    </div>
-
-  </div>
-
-  <!-- ===== VIEW: VIZ LAB ===== -->
-  <div id="view-vizlab" class="view-section">
-    <div class="section-header-row">
-      <div class="section-header">Viz Lab</div>
-      <button class="btn link-btn" type="button" onclick="switchView('dashboard')">Home</button>
-    </div>
-    <div class="vizlab-subtitle">38 visualizations — <span style="color:#2ecc71;">25 live algorithm renders</span> · <span style="color:#9b59b6;">13 decorative sims</span> — WebGL · Canvas · Three.js</div>
-    <div class="vizlab-grid" id="vizlab-grid">
-      <!-- Cards injected by viz_lab.js -->
-    </div>
-  </div>
-
-  <!-- ===== VIEW: ARIA TRADER ===== -->
-  <div id="view-trader" class="view-section"></div>
-
-  <!-- ===== VIEW: DERIVATIVES ===== -->
-  <div id="view-derivatives" class="view-section"></div>
-
-  <!-- ===== VIEW: DECISION ===== -->
-  <div id="view-decision" class="view-section"></div>
-
-  <!-- ===== VIEW: MMO — Mau's Market Ontology ===== -->
-  <div id="view-mmo" class="view-section"></div>
-
-  <!-- ===== VIEW: INFO ===== -->
-  <div id="view-info" class="view-section">
-    <div class="info-header-bar">
-      <div class="info-title-row">
-        <div>
-          <div class="info-title">ℹ Atlas Info</div>
-          <div class="info-subtitle">Every module — what it does, where data comes from, how it measures</div>
+      <div class="scenario-card" id="agents-fallback-card">
+        <h3 style="margin-top:0;">Agent Workspace</h3>
+        <div style="font-size:12px;color:#888;margin-bottom:10px;">
+          Loading Planner / Reviewer / Docs modules...
         </div>
-        <span id="info-result-count" style="font-size:11px;color:#445;font-family:monospace;"></span>
+        <button class="btn secondary" type="button"
+          onclick="if(window.AtlasAgents && typeof window.AtlasAgents.init==='function'){ window.AtlasAgents.init(); }">
+          Load Agents Panel
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== VIEW: INFO ===== -->
+    <div id="view-info" class="view-section">
+      <div class="info-header-bar">
+        <div class="info-title-row">
+          <div>
+            <div class="info-title">ℹ Atlas Info</div>
+            <div class="info-subtitle">Every module — what it does, where data comes from, how it measures</div>
+          </div>
+          <span id="info-result-count" style="font-size:11px;color:#445;font-family:monospace;"></span>
+        </div>
+
+        <!-- Search -->
+        <div class="info-search-wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input id="info-search" type="text" placeholder="Search by name, tag, method…"
+            oninput="InfoModule.setQuery(this.value)" autocomplete="off" />
+        </div>
+
+        <!-- Category Tabs -->
+        <div id="info-cat-tabs"></div>
       </div>
 
-      <!-- Search -->
-      <div class="info-search-wrap">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      <!-- Cards Grid -->
+      <div id="info-cards-grid"></div>
+    </div>
+
+    <!-- ===== VIZ OVERLAY (fullscreen canvas) ===== -->
+    <div id="viz-overlay"
+      style="display:none; position:fixed; inset:0; z-index:9999; background:#060610; flex-direction:column;">
+      <div
+        style="display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#0a0a18; border-bottom:1px solid #1a1a3a; flex-shrink:0; position:relative; z-index:10;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="color:#4488ff; font-size:13px; font-family:monospace;">⚛ Atlas Viz Lab</span>
+          <span id="viz-overlay-title"
+            style="color:#fff; font-size:14px; font-weight:600; font-family:monospace;"></span>
+          <span id="viz-regime-label" style="font-size:11px; font-family:monospace; color:#00ff88;"></span>
+        </div>
+        <button onclick="VizLab.close()"
+          style="background:#1a1a3a; border:1px solid #334; color:#fff; font-size:12px; padding:5px 14px; border-radius:6px; cursor:pointer; font-family:monospace;">✕
+          Close</button>
+      </div>
+      <div id="viz-canvas-container" style="flex:1; position:relative; overflow:hidden;">
+        <div id="viz-three-mount" style="position:absolute; inset:0;"></div>
+        <canvas id="viz-canvas" style="position:absolute; inset:0; width:100%; height:100%;"></canvas>
+      </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+      <!-- Home Icon -->
+      <div class="nav-item active" onclick="switchView('dashboard')" id="nav-home">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
         </svg>
-        <input
-          id="info-search"
-          type="text"
-          placeholder="Search by name, tag, method…"
-          oninput="InfoModule.setQuery(this.value)"
-          autocomplete="off"
-        />
       </div>
 
-      <!-- Category Tabs -->
-      <div id="info-cat-tabs"></div>
-    </div>
-
-    <!-- Cards Grid -->
-    <div id="info-cards-grid"></div>
-  </div>
-
-  <!-- ===== VIZ OVERLAY (fullscreen canvas) ===== -->
-  <div id="viz-overlay" style="display:none; position:fixed; inset:0; z-index:9999; background:#060610; flex-direction:column;">
-    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#0a0a18; border-bottom:1px solid #1a1a3a; flex-shrink:0; position:relative; z-index:10;">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <span style="color:#4488ff; font-size:13px; font-family:monospace;">⚛ Atlas Viz Lab</span>
-        <span id="viz-overlay-title" style="color:#fff; font-size:14px; font-weight:600; font-family:monospace;"></span>
-        <span id="viz-regime-label" style="font-size:11px; font-family:monospace; color:#00ff88;"></span>
+      <!-- Finance Icon (Wallet) -->
+      <div class="nav-item" onclick="switchView('finance')" id="nav-finance">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z">
+          </path>
+        </svg>
       </div>
-      <button onclick="VizLab.close()" style="background:#1a1a3a; border:1px solid #334; color:#fff; font-size:12px; padding:5px 14px; border-radius:6px; cursor:pointer; font-family:monospace;">✕ Close</button>
+
+      <!-- Practice Icon (Gamepad/Play) -->
+      <div class="nav-item" onclick="switchView('practice')" id="nav-practice">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="10 8 16 12 10 16 10 8"></polygon>
+          <path
+            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z">
+          </path>
+        </svg>
+      </div>
+
+      <!-- User Icon -->
+      <div class="nav-item" onclick="switchView('chat')" id="nav-chat">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"></path>
+        </svg>
+      </div>
+
+      <!-- Viz Lab Icon (atom/eye) -->
+      <div class="nav-item" onclick="switchView('vizlab')" id="nav-vizlab">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="2" fill="currentColor" />
+          <ellipse cx="12" cy="12" rx="10" ry="4" />
+          <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)" />
+          <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)" />
+        </svg>
+      </div>
+
+      <!-- Derivatives Icon (layers) -->
+      <div class="nav-item" onclick="switchView('derivatives')" id="nav-derivatives">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" />
+          <path d="M2 17l10 5 10-5" />
+          <path d="M2 12l10 5 10-5" />
+        </svg>
+      </div>
+
+      <!-- Decision Icon (checkmark in box) -->
+      <div class="nav-item" onclick="switchView('decision')" id="nav-decision">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4" />
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+        </svg>
+      </div>
+
+      <!-- ARIA Trader Icon (lightning / bolt) -->
+      <div class="nav-item" onclick="switchView('trader')" id="nav-trader">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" stroke="none" />
+        </svg>
+      </div>
+
+      <!-- MMO — Mau's Market Ontology (ψ wave icon) -->
+      <div class="nav-item" onclick="switchView('mmo')" id="nav-mmo">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M2 12 Q5 5 8 12 Q11 19 14 12 Q17 5 20 12 Q22 8 23 8" stroke-linecap="round"
+            stroke-linejoin="round" />
+          <circle cx="14" cy="12" r="1.5" fill="currentColor" stroke="none" />
+        </svg>
+      </div>
+
+      <!-- Thought Map Icon -->
+      <div class="nav-item" onclick="switchView('thought')" id="nav-thought">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="6" cy="12" r="1.7" fill="currentColor" stroke="none" />
+          <circle cx="12" cy="6" r="1.7" fill="currentColor" stroke="none" />
+          <circle cx="18" cy="12" r="1.7" fill="currentColor" stroke="none" />
+          <circle cx="12" cy="18" r="1.7" fill="currentColor" stroke="none" />
+          <path d="M7.5 11l3-3" />
+          <path d="M13.5 7.5l3 3" />
+          <path d="M16.5 13l-3 3" />
+          <path d="M10.5 16.5l-3-3" />
+        </svg>
+      </div>
+
+      <!-- Playroom Icon -->
+      <div class="nav-item" onclick="switchView('playroom')" id="nav-playroom">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="4" y="4" width="16" height="16" rx="2" />
+          <path d="M9 9h6v6H9z" />
+        </svg>
+      </div>
+
+      <!-- AI Agents Icon -->
+      <div class="nav-item" onclick="switchView('agents')" id="nav-agents">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+          <rect x="4" y="11" width="16" height="9" rx="2" />
+          <circle cx="12" cy="6" r="2" />
+          <path d="M12 8v3" />
+          <path d="M9 15h.01M12 15h.01M15 15h.01" />
+        </svg>
+      </div>
+
+      <!-- Info Icon (question mark / book) -->
+      <div class="nav-item" onclick="switchView('info')" id="nav-info">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+      </div>
     </div>
-    <div id="viz-canvas-container" style="flex:1; position:relative; overflow:hidden;">
-      <div id="viz-three-mount" style="position:absolute; inset:0;"></div>
-      <canvas id="viz-canvas" style="position:absolute; inset:0; width:100%; height:100%;"></canvas>
-    </div>
+
   </div>
 
-  <!-- Bottom Navigation -->
-  <div class="bottom-nav">
-    <!-- Home Icon -->
-    <div class="nav-item active" onclick="switchView('dashboard')" id="nav-home">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-      </svg>
-    </div>
-
-    <!-- Finance Icon (Wallet) -->
-    <div class="nav-item" onclick="switchView('finance')" id="nav-finance">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
-        <path
-          d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z">
-        </path>
-      </svg>
-    </div>
-
-    <!-- Practice Icon (Gamepad/Play) -->
-    <div class="nav-item" onclick="switchView('practice')" id="nav-practice">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
-        <polygon points="10 8 16 12 10 16 10 8"></polygon>
-        <path
-          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z">
-        </path>
-      </svg>
-    </div>
-
-    <!-- User Icon -->
-    <div class="nav-item" onclick="switchView('chat')" id="nav-chat">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"></path>
-      </svg>
-    </div>
-
-    <!-- Viz Lab Icon (atom/eye) -->
-    <div class="nav-item" onclick="switchView('vizlab')" id="nav-vizlab">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="2" fill="currentColor"/>
-        <ellipse cx="12" cy="12" rx="10" ry="4"/>
-        <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/>
-        <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/>
-      </svg>
-    </div>
-
-    <!-- Derivatives Icon (layers) -->
-    <div class="nav-item" onclick="switchView('derivatives')" id="nav-derivatives">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-        <path d="M2 17l10 5 10-5"/>
-        <path d="M2 12l10 5 10-5"/>
-      </svg>
-    </div>
-
-    <!-- Decision Icon (checkmark in box) -->
-    <div class="nav-item" onclick="switchView('decision')" id="nav-decision">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 11l3 3L22 4"/>
-        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-      </svg>
-    </div>
-
-    <!-- ARIA Trader Icon (lightning / bolt) -->
-    <div class="nav-item" onclick="switchView('trader')" id="nav-trader">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" stroke="none"/>
-      </svg>
-    </div>
-
-    <!-- MMO — Mau's Market Ontology (ψ wave icon) -->
-    <div class="nav-item" onclick="switchView('mmo')" id="nav-mmo">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M2 12 Q5 5 8 12 Q11 19 14 12 Q17 5 20 12 Q22 8 23 8" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="14" cy="12" r="1.5" fill="currentColor" stroke="none"/>
-      </svg>
-    </div>
-
-    <!-- Info Icon (question mark / book) -->
-    <div class="nav-item" onclick="switchView('info')" id="nav-info">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="8" x2="12" y2="12"/>
-        <line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-    </div>
-  </div>
-
-  </div>
-
-  <script src="app.js"></script>
+  <script src="app.js?v=2026.03.08-v2"></script>
   <script src="scenario.js?v=2026.02.11-v2"></script>
   <script src="analysis.js"></script>
   <script src="https://unpkg.com/three@0.159.0/build/three.min.js"></script>
   <script src="finance.js?v=2026.02.18-v10"></script> <!-- Portfolio + 3D -->
   <script src="sim_dashboard.js?v=2026.02.18-v1"></script>
   <script src="real_estate.js?v=2026.02.18-v4"></script>
-  <script src="viz_lab.js?v=2026.02.27-v3"></script>  <!-- Viz Lab — 29 live renders -->
-  <script src="strategy.js?v=2026.02.27-v1"></script>  <!-- Multi-Strategy + Correlation UI -->
-  <script src="info.js?v=2026.02.27-v1"></script>      <!-- Info Module Documentation -->
+  <script src="viz_lab.js?v=2026.02.27-v3"></script> <!-- Viz Lab — 29 live renders -->
+  <script src="strategy.js?v=2026.02.27-v1"></script> <!-- Multi-Strategy + Correlation UI -->
+  <script src="terminal.js"></script>
+  <script src="info.js?v=2026.02.27-v1"></script> <!-- Info Module Documentation -->
   <script src="derivatives.js?v=2026.02.27-v1"></script> <!-- Derivatives + Black-Scholes + Signal Composer -->
-  <script src="decision.js?v=2026.02.27-v1"></script>    <!-- Decision Center + Approval Workflow -->
-  <script src="trader.js?v=2026.03.01-v1"></script>      <!-- ARIA Trader — Composite Score Engine -->
-  <script src="mmo.js?v=2026.03.01-v1"></script>          <!-- MMO — Mau's Market Ontology -->
+  <script src="decision.js?v=2026.02.27-v1"></script> <!-- Decision Center + Approval Workflow -->
+  <script src="trader.js?v=2026.03.01-v1"></script> <!-- ARIA Trader — Composite Score Engine -->
+  <script src="mmo.js?v=2026.03.06-v2"></script> <!-- MMO — Mau's Market Ontology -->
+  <script src="playroom.js?v=2026.03.08-v1"></script> <!-- Playroom -->
+  <script src="playroom_gitcity.js?v=2026.03.08-v1"></script> <!-- Playroom Git City -->
+  <script src="playroom_racing.js?v=2026.03.08-v1"></script> <!-- Playroom Racing -->
+  <script src="indicator_terminal.js?v=2026.03.06-v1"></script> <!-- Indicator Terminal -->
+  <script src="aria_core.js?v=2026.03.06-v1"></script> <!-- ARIA Core -->
+  <script src="paper_trading.js?v=2026.03.06-v1"></script> <!-- Paper Trading -->
+  <script src="rl_lab.js?v=2026.03.07-v1"></script> <!-- RL Lab -->
+  <script src="thought_map.js?v=2026.03.08-v2"></script> <!-- Thought Map -->
+  <script src="agents.js?v=2026.03.08-v3"></script> <!-- AI Agents -->
   <script>
     // View Switcher Logic
     function switchView(viewName) {
@@ -1019,6 +1344,14 @@
         'info': 'nav-info',
         'derivatives': 'nav-derivatives',
         'decision': 'nav-decision',
+        'mmo': 'nav-mmo',
+        'playroom': 'nav-playroom',
+        'trader': 'nav-trader',
+        'indicators': null,
+        'paper': null,
+        'rl': null,
+        'thought': 'nav-thought',
+        'agents': 'nav-agents',
       };
 
       const navId = navMap[viewName];
@@ -1029,6 +1362,10 @@
       // Trigger Logic
       if (viewName === 'finance' && typeof updatePortfolio === 'function') {
         updatePortfolio();
+        if (typeof runPortfolioIntelligence === 'function' && !window._portfolioIntelBooted) {
+          window._portfolioIntelBooted = true;
+          setTimeout(() => runPortfolioIntelligence(), 140);
+        }
       }
       if (viewName === 'realestate' && typeof renderRealEstateDevelopment === 'function') {
         renderRealEstateDevelopment();
@@ -1045,7 +1382,80 @@
       if (viewName === 'decision' && typeof DecisionModule !== 'undefined') {
         DecisionModule.init();
       }
+      if (viewName === 'indicators' && typeof IndicatorTerminal !== 'undefined') {
+        IndicatorTerminal.init();
+      }
+      if (viewName === 'paper' && typeof PaperTrading !== 'undefined') {
+        PaperTrading.init();
+      }
+      if (viewName === 'rl' && typeof RLLab !== 'undefined') {
+        RLLab.init();
+      }
+      if (viewName === 'thought' && typeof AtlasThoughtMap !== 'undefined') {
+        AtlasThoughtMap.init();
+      }
+      if (viewName === 'agents') {
+        if (typeof AtlasAgents !== 'undefined' && AtlasAgents && typeof AtlasAgents.init === 'function') {
+          AtlasAgents.init();
+        } else {
+          setTimeout(() => {
+            if (typeof AtlasAgents !== 'undefined' && AtlasAgents && typeof AtlasAgents.init === 'function') {
+              AtlasAgents.init();
+            }
+          }, 120);
+        }
+      }
+      if (viewName === 'trader' && typeof AriaTrader !== 'undefined') {
+        AriaTrader.init();
+      }
+      if (viewName === 'playroom' && typeof PlayRoom !== 'undefined') {
+        PlayRoom.init();
+      }
+      if (viewName === 'chat' && typeof AriaCore !== 'undefined') {
+        AriaCore.boot('aria-core-mount');
+        _startAriaClock();
+      }
+      if (viewName === 'mmo' && typeof MMO !== 'undefined') {
+        setTimeout(() => {
+          if (!window._mmoInitDone && typeof MMO.analyze === 'function') {
+            MMO.analyze('SPY');
+            window._mmoInitDone = true;
+          }
+        }, 80);
+      }
     }
+
+    function _startAriaClock() {
+      const el = document.getElementById('aria-core-clock');
+      if (!el || el.dataset.started) return;
+      el.dataset.started = '1';
+      const tick = () => {
+        const now = new Date();
+        el.textContent = now.toLocaleTimeString([], { hour12: false });
+      };
+      tick();
+      setInterval(tick, 1000);
+    }
+
+    window._ariaSetCoreState = function (state) {
+      if (typeof AriaCore !== 'undefined' && typeof AriaCore.setState === 'function') {
+        AriaCore.setState(state);
+      }
+      const el = document.getElementById('aria-core-state');
+      const icon = document.getElementById('aria-core-status-icon');
+      if (!el) return;
+      const map = {
+        IDLE: { text: 'IDLE - All systems nominal', colour: '#4488ff', icon: 'AI' },
+        THINKING: { text: 'THINKING - Processing query', colour: '#ffd93d', icon: '...' },
+        SPEAKING: { text: 'SPEAKING - Generating response', colour: '#00e5a0', icon: 'S' },
+        ALERT: { text: 'ALERT - Risk event detected', colour: '#ff4444', icon: '!' },
+        ACTIVE: { text: 'ACTIVE - Signal detected', colour: '#88ff88', icon: '+' },
+      };
+      const cfg = map[state] || map.IDLE;
+      el.textContent = cfg.text;
+      el.style.color = cfg.colour;
+      if (icon) icon.textContent = cfg.icon;
+    };
 
     // Build Viz Lab card grid — two sections: Algo vs Decorative
     function _initVizLabCards() {
@@ -1059,8 +1469,8 @@
       }
 
       const meta = VizLab.getMeta();
-      const algoEntries = Object.entries(meta).filter(([,v]) => v.cat === 'algo');
-      const artEntries  = Object.entries(meta).filter(([,v]) => v.cat === 'art');
+      const algoEntries = Object.entries(meta).filter(([, v]) => v.cat === 'algo');
+      const artEntries = Object.entries(meta).filter(([, v]) => v.cat === 'art');
 
       function makeCard(key, info) {
         const card = document.createElement('div');
