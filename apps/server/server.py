@@ -2884,15 +2884,73 @@ def strategy_analyze(ticker: str, period: str = "6mo"):
         last_close = round(float(hist["Close"].iloc[-1]), 2)
         ret_5d     = round(float((hist["Close"].iloc[-1] / hist["Close"].iloc[-6] - 1) * 100), 2)
 
+        # ── Indicator diagnostics (always computed, shows state even on HOLD) ──
+        closes = hist["Close"]
+        try:
+            # RSI-14
+            delta  = closes.diff()
+            gain   = delta.clip(lower=0).rolling(14).mean()
+            loss   = (-delta.clip(upper=0)).rolling(14).mean()
+            rs     = gain / (loss + 1e-10)
+            rsi_14 = round(float(100 - 100 / (1 + rs.iloc[-1])), 1)
+        except Exception:
+            rsi_14 = None
+
+        try:
+            # MACD histogram
+            ema12 = closes.ewm(span=12, adjust=False).mean()
+            ema26 = closes.ewm(span=26, adjust=False).mean()
+            macd_line = ema12 - ema26
+            signal_l  = macd_line.ewm(span=9, adjust=False).mean()
+            macd_hist_val = round(float(macd_line.iloc[-1] - signal_l.iloc[-1]), 4)
+            macd_val      = round(float(macd_line.iloc[-1]), 4)
+        except Exception:
+            macd_hist_val = None
+            macd_val      = None
+
+        try:
+            # SMA spread: (SMA20 - SMA50) / SMA50 * 100
+            sma20 = closes.rolling(20).mean()
+            sma50 = closes.rolling(50).mean()
+            sma_spread_pct = round(float((sma20.iloc[-1] - sma50.iloc[-1]) / (sma50.iloc[-1] + 1e-10) * 100), 2)
+        except Exception:
+            sma_spread_pct = None
+
+        try:
+            # ATR-14 as % of price
+            hi, lo, cl = hist["High"], hist["Low"], closes
+            tr  = (hi - lo).combine(abs(hi - cl.shift()), max).combine(abs(lo - cl.shift()), max)
+            atr = tr.rolling(14).mean()
+            atr_pct = round(float(atr.iloc[-1] / (last_close + 1e-10) * 100), 2)
+        except Exception:
+            atr_pct = None
+
+        diagnostics = {
+            "rsi_14":        rsi_14,
+            "macd":          macd_val,
+            "macd_hist":     macd_hist_val,
+            "sma_spread_pct": sma_spread_pct,
+            "atr_pct":       atr_pct,
+            "rsi_zone":      ("oversold" if rsi_14 and rsi_14 < 35 else
+                              "overbought" if rsi_14 and rsi_14 > 65 else "neutral"),
+            "macd_bias":     ("bullish" if macd_hist_val and macd_hist_val > 0 else
+                              "bearish" if macd_hist_val and macd_hist_val < 0 else "flat"),
+            "sma_bias":      ("bullish" if sma_spread_pct and sma_spread_pct > 0 else
+                              "bearish" if sma_spread_pct and sma_spread_pct < 0 else "flat"),
+        }
+
         result = {
-            "ticker":     symbol,
-            "period":     period,
-            "last_close": last_close,
-            "return_5d":  ret_5d,
-            "consensus":  consensus,
-            "individual": individual,
-            "bars_used":  len(hist),
-            "synthetic":  bool(is_synthetic),
+            "ticker":      symbol,
+            "period":      period,
+            "last_close":  last_close,
+            "return_5d":   ret_5d,
+            "signal":      consensus["action"],      # top-level shortcut
+            "confidence":  consensus["confidence"],  # top-level shortcut
+            "consensus":   consensus,
+            "individual":  individual,
+            "diagnostics": diagnostics,
+            "bars_used":   len(hist),
+            "synthetic":   bool(is_synthetic),
         }
         result = _json_safe(result)
         _cache_set(cache_key, result, ttl=120)
@@ -4499,11 +4557,16 @@ async def trader_predict(ticker: str, period: str = Query("6mo")):
 
         scorer = CompositeScorer()
         result = scorer.score(symbol, df, info={})
+        _verdict_str = result.verdict or (
+            "BUY"  if result.composite_score > 25  else
+            "SELL" if result.composite_score < -15 else "HOLD"
+        )
         payload = {
             "ticker":          result.ticker,
             "last_close":      result.last_close,
             "composite_score": result.composite_score,
-            "verdict":         result.verdict,
+            "signal":          _verdict_str,   # top-level shortcut (BUY/SELL/HOLD)
+            "verdict":         _verdict_str,
             "confidence":      result.confidence,
             "prediction":      result.to_dict()["prediction"],
             "synthetic":       bool(is_synthetic),
