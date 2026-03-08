@@ -4522,6 +4522,11 @@ async def trader_analyze(ticker: str, period: str = Query("1y")):
 
         scorer = CompositeScorer()
         result = scorer.score(symbol, df, info=info).to_dict()
+        # Add top-level 'signal' key (alias for verdict) for uniform API
+        result["signal"] = result.get("verdict") or (
+            "BUY"  if (result.get("composite_score") or 0) > 25  else
+            "SELL" if (result.get("composite_score") or 0) < -15 else "HOLD"
+        )
         result["synthetic"] = bool(is_synthetic)
         result["source"] = "synthetic_local" if is_synthetic else "yfinance"
         result = _json_safe(result)
