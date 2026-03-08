@@ -35,6 +35,33 @@ except ImportError:
     _REQUESTS_OK = False
 
 
+# In-memory TTL cache for high-traffic API endpoints
+# Prevents repeated yfinance calls for the same ticker within a short window.
+_API_CACHE: Dict[str, tuple] = {}
+
+
+def _cache_get(key: str) -> Any:
+    """Return cached value or None if missing / expired."""
+    entry = _API_CACHE.get(key)
+    if not entry:
+        return None
+    data, expires_at = entry
+    if time.time() > expires_at:
+        _API_CACHE.pop(key, None)
+        return None
+    return data
+
+
+def _cache_set(key: str, data: Any, ttl: int = 300) -> None:
+    """Store value with TTL (seconds). Auto-evicts expired entries when > 400."""
+    _API_CACHE[key] = (data, time.time() + ttl)
+    if len(_API_CACHE) > 400:
+        now = time.time()
+        stale = [k for k, (_, e) in list(_API_CACHE.items()) if now > e]
+        for k in stale:
+            _API_CACHE.pop(k, None)
+
+
 # ==================== MODELS ====================
 
 class Message(BaseModel):
@@ -878,6 +905,75 @@ async def monitor_tick(tickers: str = "AAPL,MSFT,NVDA,BTC-USD,SPY,QQQ"):
     }
 
 
+@app.get("/api/system/verify")
+async def system_verify(ticker: str = "AAPL"):
+    """
+    Full-loop diagnostic: Data -> Signal -> Result.
+    Tests that the complete Atlas pipeline works end-to-end for a given ticker.
+    Returns a structured health report with timing for each stage.
+    """
+    import time as _t
+    report = {"ticker": ticker.upper(), "stages": {}, "ok": True, "ts": datetime.now().isoformat()}
+
+    # Stage 1: Data fetch
+    t0 = _t.time()
+    try:
+        import yfinance as yf
+        hist = await asyncio.to_thread(
+            lambda: yf.Ticker(ticker.upper()).history(period="5d", interval="1d", auto_adjust=True)
+        )
+        if hist is None or hist.empty:
+            raise ValueError("Empty response from yfinance")
+        price = float(hist["Close"].dropna().iloc[-1])
+        report["stages"]["data"] = {"ok": True, "price": round(price, 2), "ms": round((_t.time()-t0)*1000)}
+    except Exception as e:
+        report["stages"]["data"] = {"ok": False, "error": str(e)[:120], "ms": round((_t.time()-t0)*1000)}
+        report["ok"] = False
+
+    # Stage 2: Cache layer
+    t0 = _t.time()
+    try:
+        _cache_set(f"__verify_{ticker}", {"test": True}, ttl=10)
+        hit = _cache_get(f"__verify_{ticker}")
+        report["stages"]["cache"] = {"ok": hit is not None, "ms": round((_t.time()-t0)*1000)}
+        if not hit:
+            report["ok"] = False
+    except Exception as e:
+        report["stages"]["cache"] = {"ok": False, "error": str(e)[:80]}
+        report["ok"] = False
+
+    # Stage 3: Signal engine
+    t0 = _t.time()
+    try:
+        from atlas.trader.composite_scorer import CompositeScorer
+        import yfinance as yf
+        hist2 = await asyncio.to_thread(
+            lambda: yf.Ticker(ticker.upper()).history(period="6mo", interval="1d", auto_adjust=True)
+        )
+        scorer = CompositeScorer()
+        score_result = await asyncio.to_thread(scorer.score, ticker.upper(), hist2)
+        action = getattr(score_result, "action", None) or score_result.get("action", "?") if isinstance(score_result, dict) else str(score_result)[:40]
+        report["stages"]["signal"] = {"ok": True, "action": str(action)[:20], "ms": round((_t.time()-t0)*1000)}
+    except Exception as e:
+        report["stages"]["signal"] = {"ok": False, "error": str(e)[:120], "ms": round((_t.time()-t0)*1000)}
+        report["stages"]["signal"]["warning"] = "signal engine degraded"
+
+    # Stage 4: ARIA health
+    t0 = _t.time()
+    aria_ok = aria_instance is not None
+    report["stages"]["aria"] = {
+        "ok": aria_ok,
+        "model": _aria_active_model,
+        "initialized": aria_ok,
+        "ms": round((_t.time()-t0)*1000),
+    }
+
+    # Summary
+    stages_ok = sum(1 for s in report["stages"].values() if s.get("ok"))
+    report["summary"] = f"{stages_ok}/{len(report["stages"])} stages passing"
+    return report
+
+
 @app.get("/api/system/command_center")
 def command_center_snapshot():
     """Aggregated snapshot for the Atlas dashboard Command Center."""
@@ -1040,6 +1136,14 @@ async def query_aria(request: QueryRequest):
     if not aria_instance and not is_cloud:
         raise HTTPException(status_code=500, detail="ARIA not initialized. Start Ollama or select a cloud model.")
 
+    # Restore session history so ARIA has multi-turn context from previous exchanges.
+    # We load the last 20 messages from SQLite and inject them before the current ask().
+    if aria_instance:
+        prior = db.get_conversation(session_id, limit=20)
+        # Exclude the current user message we just saved (last item) to avoid duplicate
+        history_msgs = [{"role": m["role"], "content": m["content"]} for m in prior[:-1]]
+        aria_instance.history = history_msgs
+
     try:
         response, provider_used, latency_ms = await _ask_with_provider(
             msg, preferred=_aria_active_model
@@ -1074,11 +1178,14 @@ async def query_aria(request: QueryRequest):
 
 @app.get("/conversation/{session_id}")
 def get_conversation(session_id: str, limit: int = 50):
-    """Get conversation history"""
+    """Get conversation history for a session (used by frontend to restore context)."""
     messages = db.get_conversation(session_id, limit)
     return {"session_id": session_id, "messages": messages}
 
 
+@app.post("/api/device/register")
+def register_device(device_id: str, device_name: str = "unknown"):
+    """Register a device for multi-device sync."""
     db.register_device(device_id, device_name)
     return {"status": "registered", "device_id": device_id}
 
@@ -2563,13 +2670,19 @@ def get_scenario_history(session_id: str):
 
 @app.get("/api/quote/{ticker}")
 def get_quote(ticker: str):
-    """Fetch latest price quote + daily change % for one ticker using yfinance."""
+    """Fetch latest price quote + daily change % for one ticker using yfinance. Cached 15 min."""
     try:
         import yfinance as yf
 
         symbol = ticker.strip().upper()
         if not symbol:
             raise HTTPException(status_code=400, detail="Ticker is required")
+
+        # Cache check - 15-minute TTL
+        _ck = f"quote:{symbol}"
+        _hit = _cache_get(_ck)
+        if _hit:
+            return _hit
 
         t = yf.Ticker(symbol)
         hist = t.history(period="5d", interval="1d")
@@ -2585,12 +2698,14 @@ def get_quote(ticker: str):
             prev  = float(closes.iloc[-2])
             change_pct = round((price - prev) / prev * 100, 2) if prev != 0 else 0.0
 
-        return {
+        result = {
             "ticker":     symbol,
             "price":      round(price, 2),
             "change_pct": change_pct,
             "source":     "yfinance",
         }
+        _cache_set(_ck, result, ttl=900)   # 15-min cache
+        return result
     except HTTPException:
         raise
     except Exception as e:
@@ -2600,13 +2715,19 @@ def get_quote(ticker: str):
 @app.get("/api/market_data/{ticker}")
 def get_market_data(ticker: str):
     """
-    Fetch live market data and news for a ticker via yfinance.
+    Fetch live market data and news for a ticker via yfinance. Cached 60 min.
     Returns: Current Price, OHLC Data (for charts), and News.
     """
     try:
         import yfinance as yf
         import pandas as pd
-        
+
+        # Cache check - 60-minute TTL (OHLC history changes slowly)
+        _ck = f"market_data:{ticker.upper().strip()}"
+        _hit = _cache_get(_ck)
+        if _hit:
+            return _hit
+
         # 1. Get Ticker Object
         t = yf.Ticker(ticker)
         
@@ -2643,13 +2764,17 @@ def get_market_data(ticker: str):
                     "timestamp": n.get('providerPublishTime')
                 })
                 
-        return {
+        result = {
             "ticker": ticker.upper(),
             "price": current_price,
             "ohlc": ohlc,
-            "news": formatted_news
+            "news": formatted_news,
         }
-        
+        _cache_set(_ck, result, ttl=3600)  # 60-min cache
+        return result
+
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Market Data Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
