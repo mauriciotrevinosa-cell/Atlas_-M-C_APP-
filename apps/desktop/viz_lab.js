@@ -434,15 +434,36 @@ window.VizLab = (() => {
       });
     }).catch(() => { });
 
+    // ── Star field (generated once) ──────────────────────────────────────
+    const _brainStars = Array.from({ length: 140 }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      r: Math.random() * 1.3 + 0.15,
+      a: Math.random() * 0.5 + 0.05,
+      da: (Math.random() - 0.5) * 0.003
+    }));
+
     let lastPulse = 0, frame = 0;
     function animate() {
       _animFrameId = requestAnimationFrame(animate);
       frame++;
       ctx.clearRect(0, 0, W, H);
 
-      // Background
-      ctx.fillStyle = '#060610';
+      // Background — deep space gradient
+      const bgGrd = ctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.7);
+      bgGrd.addColorStop(0, '#0b0b1e');
+      bgGrd.addColorStop(1, '#040410');
+      ctx.fillStyle = bgGrd;
       ctx.fillRect(0, 0, W, H);
+
+      // Twinkle stars
+      for (const s of _brainStars) {
+        s.a += s.da;
+        if (s.a > 0.55 || s.a < 0.04) s.da *= -1;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(180,210,255,${s.a.toFixed(3)})`;
+        ctx.fill();
+      }
 
       // Force physics
       for (let i = 0; i < MODULES.length; i++) {
@@ -479,14 +500,18 @@ window.VizLab = (() => {
       // Spawn pulses
       if (frame - lastPulse > 18) { spawnPulse(); lastPulse = frame; }
 
-      // Draw edges
+      // Draw edges — gradient from source to target color
       for (const [a, b] of EDGES) {
         const ma = MODULES[idMap[a]], mb = MODULES[idMap[b]];
+        const grd = ctx.createLinearGradient(ma.x, ma.y, mb.x, mb.y);
+        grd.addColorStop(0, ma.color + '35');
+        grd.addColorStop(0.5, 'rgba(120,130,255,0.22)');
+        grd.addColorStop(1, mb.color + '35');
         ctx.beginPath();
         ctx.moveTo(ma.x, ma.y);
         ctx.lineTo(mb.x, mb.y);
-        ctx.strokeStyle = 'rgba(100,100,200,0.18)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = grd;
+        ctx.lineWidth = 1.4;
         ctx.stroke();
       }
 
@@ -506,37 +531,72 @@ window.VizLab = (() => {
         if (p.t >= 1) pulses.splice(i, 1);
       }
 
-      // Draw nodes
+      // Draw nodes — premium multi-layer glow
       for (const m of MODULES) {
-        m.activity = Math.max(0, m.activity - 0.02);
-        const glow = m.size + m.activity * 8;
-        const grd = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, glow * 1.8);
-        grd.addColorStop(0, m.color);
-        grd.addColorStop(0.5, m.color + '88');
+        m.activity = Math.max(0, m.activity - 0.015);
+        const glow = m.size + m.activity * 14;
+        const isAria = m.id === 'aria';
+
+        // Outer corona halo
+        const corona = ctx.createRadialGradient(m.x, m.y, glow * 0.3, m.x, m.y, glow * 3.8);
+        corona.addColorStop(0, m.color + '22');
+        corona.addColorStop(0.5, m.color + '0a');
+        corona.addColorStop(1, 'transparent');
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, glow * 3.8, 0, Math.PI * 2);
+        ctx.fillStyle = corona;
+        ctx.fill();
+
+        // Mid glow
+        const grd = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, glow * 1.9);
+        grd.addColorStop(0, m.color + 'cc');
+        grd.addColorStop(0.45, m.color + '55');
         grd.addColorStop(1, 'transparent');
         ctx.beginPath();
-        ctx.arc(m.x, m.y, glow, 0, Math.PI * 2);
+        ctx.arc(m.x, m.y, glow * 1.9, 0, Math.PI * 2);
         ctx.fillStyle = grd;
         ctx.fill();
 
+        // Dark core
         ctx.beginPath();
         ctx.arc(m.x, m.y, m.size * 0.55, 0, Math.PI * 2);
-        ctx.fillStyle = '#0a0a1a';
+        ctx.fillStyle = '#050512';
         ctx.fill();
+
+        // Outer ring
         ctx.strokeStyle = m.color;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = isAria ? 2.5 : 1.8;
         ctx.stroke();
 
-        ctx.font = `${m.id === 'aria' ? 12 : 9}px monospace`;
+        // ARIA: second inner ring
+        if (isAria) {
+          ctx.beginPath();
+          ctx.arc(m.x, m.y, m.size * 0.35, 0, Math.PI * 2);
+          ctx.strokeStyle = m.color + '70';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
+        // Label with glow
+        ctx.shadowBlur = isAria ? 10 : 5;
+        ctx.shadowColor = m.color;
+        ctx.font = `${isAria ? 'bold 13' : '9'}px monospace`;
         ctx.fillStyle = m.color;
         ctx.textAlign = 'center';
-        ctx.fillText(m.label, m.x, m.y + m.size + 12);
+        ctx.fillText(m.label, m.x, m.y + m.size + 14);
+        ctx.shadowBlur = 0;
       }
 
       // Heartbeat for ARIA node
-      if (frame % 60 === 0) {
+      if (frame % 55 === 0) {
         const ariaNode = MODULES[idMap['aria']];
         ariaNode.activity = 1;
+      }
+
+      // Scanlines overlay (subtle CRT effect)
+      for (let scanY = 0; scanY < H; scanY += 4) {
+        ctx.fillStyle = 'rgba(0,0,0,0.055)';
+        ctx.fillRect(0, scanY, W, 1.5);
       }
     }
     animate();
@@ -612,12 +672,28 @@ window.VizLab = (() => {
       a.pulse = Math.random() * Math.PI * 2;
     });
 
+    // ── Star field (force graph) ─────────────────────────────────────────
+    const _fgStars = Array.from({ length: 100 }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      r: Math.random() * 1.1 + 0.15,
+      a: Math.random() * 0.4 + 0.05,
+      da: (Math.random() - 0.5) * 0.002
+    }));
+
     let frame = 0;
     function animate() {
       _animFrameId = requestAnimationFrame(animate);
       frame++;
-      ctx.fillStyle = 'rgba(6,6,16,0.25)';
+      // Background fade (motion trail)
+      ctx.fillStyle = 'rgba(4,4,14,0.22)';
       ctx.fillRect(0, 0, W, H);
+
+      // Twinkling stars
+      for (const s of _fgStars) {
+        s.a += s.da; if (s.a > 0.42 || s.a < 0.04) s.da *= -1;
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(170,200,255,${s.a.toFixed(3)})`; ctx.fill();
+      }
 
       // Force physics
       for (let i = 0; i < ASSETS.length; i++) {
@@ -646,59 +722,71 @@ window.VizLab = (() => {
         ASSETS[i].y = clamp(ASSETS[i].y + ASSETS[i].vy, 50, H - 50);
       }
 
-      // Draw edges (only high corr)
+      // Draw edges — gradient glow by correlation strength
       for (let i = 0; i < ASSETS.length; i++) {
         for (let j = i + 1; j < ASSETS.length; j++) {
           const corr = getCorr(ASSETS[i].id, ASSETS[j].id);
           if (corr < 0.4) continue;
           const a = ASSETS[i], b = ASSETS[j];
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.strokeStyle = `rgba(100,200,255,${(corr - 0.4) * 0.6})`;
-          ctx.lineWidth = corr * 2;
+          const ea = Math.round((corr - 0.4) * 220).toString(16).padStart(2,'0');
+          const edgeGrd = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+          edgeGrd.addColorStop(0, a.color + ea);
+          edgeGrd.addColorStop(0.5, `rgba(100,210,255,${((corr-0.4)*0.5).toFixed(2)})`);
+          edgeGrd.addColorStop(1, b.color + ea);
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = edgeGrd;
+          ctx.lineWidth = corr > 0.75 ? 2.2 : 1.2;
           ctx.stroke();
         }
       }
 
-      // Draw nodes
+      // Draw nodes — premium multi-layer glow
       for (const a of ASSETS) {
         a.pulse += 0.04;
-        const glow = a.size + Math.sin(a.pulse) * 4;
-        const grd = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, glow * 2);
-        grd.addColorStop(0, a.color + 'cc');
-        grd.addColorStop(0.6, a.color + '44');
+        const glow = a.size + Math.sin(a.pulse) * 5;
+
+        // Outer corona
+        const corona = ctx.createRadialGradient(a.x, a.y, glow * 0.3, a.x, a.y, glow * 3.0);
+        corona.addColorStop(0, a.color + '22');
+        corona.addColorStop(0.6, a.color + '08');
+        corona.addColorStop(1, 'transparent');
+        ctx.beginPath(); ctx.arc(a.x, a.y, glow * 3.0, 0, Math.PI * 2);
+        ctx.fillStyle = corona; ctx.fill();
+
+        // Mid glow
+        const grd = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, glow * 1.8);
+        grd.addColorStop(0, a.color + 'bb');
+        grd.addColorStop(0.5, a.color + '40');
         grd.addColorStop(1, 'transparent');
-        ctx.beginPath();
-        ctx.arc(a.x, a.y, glow * 1.4, 0, Math.PI * 2);
-        ctx.fillStyle = grd;
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(a.x, a.y, glow * 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = grd; ctx.fill();
 
-        ctx.beginPath();
-        ctx.arc(a.x, a.y, glow * 0.6, 0, Math.PI * 2);
-        ctx.fillStyle = a.color + '33';
-        ctx.fill();
-        ctx.strokeStyle = a.color;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+        // Core ring
+        ctx.beginPath(); ctx.arc(a.x, a.y, glow * 0.6, 0, Math.PI * 2);
+        ctx.fillStyle = a.color + '28'; ctx.fill();
+        ctx.strokeStyle = a.color; ctx.lineWidth = 1.8; ctx.stroke();
 
-        ctx.fillStyle = '#fff';
+        // Label
+        ctx.shadowBlur = 5; ctx.shadowColor = a.color;
+        ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 9px monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(a.id, a.x, a.y);
+        ctx.shadowBlur = 0;
       }
 
-      // Legend
+      // Legend — premium with sector color glows
       const sectors = [...new Set(ASSETS.map(a => a.sector))];
       sectors.forEach((s, i) => {
         const col = ASSETS.find(a => a.sector === s).color;
+        ctx.shadowBlur = 4; ctx.shadowColor = col;
         ctx.fillStyle = col;
-        ctx.font = '10px monospace';
+        ctx.font = '9px monospace';
         ctx.textAlign = 'left';
-        ctx.fillText(`â–  ${s}`, 12, 20 + i * 15);
+        ctx.fillText('▪ ' + s, 12, 20 + i * 13);
+        ctx.shadowBlur = 0;
       });
-      ctx.fillStyle = '#555';
+      ctx.fillStyle = '#334455';
       ctx.font = '10px monospace';
       ctx.textAlign = 'left';
       ctx.fillText(_graphLabel, 12, H - 10);
@@ -758,63 +846,144 @@ window.VizLab = (() => {
       _mcLabel = `Monte Carlo GBM  |  Î¼=${d.mu_annual.toFixed(1)}% ann.  |  Ïƒ=${d.sigma_annual.toFixed(1)}% ann.  |  SPY LIVE`;
     }).catch(() => { });
 
+    // ── Star field for MC background ─────────────────────────────────────
+    const _mcStars = Array.from({ length: 80 }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      r: Math.random() * 1.0 + 0.15,
+      a: Math.random() * 0.35 + 0.05,
+      da: (Math.random() - 0.5) * 0.002
+    }));
+
     let drawProgress = 0;
     function animate() {
       _animFrameId = requestAnimationFrame(animate);
-      ctx.fillStyle = 'rgba(6,6,16,0.15)';
-      ctx.fillRect(0, 0, W, H);
 
-      if (paths.length === 0) return;
+      if (paths.length === 0) {
+        ctx.fillStyle = '#060610'; ctx.fillRect(0, 0, W, H); return;
+      }
       drawProgress = Math.min(STEPS, drawProgress + 1.5);
       const end = Math.floor(drawProgress);
-      const xScale = (W - 80) / STEPS;
+      const xScale = (W - 90) / STEPS;
       const yRange = pMax - pMin || 1;
-      const yScale = (H * 0.75) / yRange;
+      const yScale = (H * 0.72) / yRange;
+      const yBase = H * 0.88;
 
+      // Background — deep radial
+      const bgGrd = ctx.createLinearGradient(0, 0, 0, H);
+      bgGrd.addColorStop(0, '#050518');
+      bgGrd.addColorStop(1, '#020210');
+      ctx.fillStyle = bgGrd;
+      ctx.fillRect(0, 0, W, H);
+
+      // Stars
+      for (const s of _mcStars) {
+        s.a += s.da; if (s.a > 0.38 || s.a < 0.04) s.da *= -1;
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(170,195,255,${s.a.toFixed(3)})`; ctx.fill();
+      }
+
+      // Grid lines (horizontal, 8 bands)
+      for (let g = 0; g <= 8; g++) {
+        const gy = yBase - (g / 8) * (H * 0.72);
+        ctx.beginPath();
+        ctx.moveTo(50, gy); ctx.lineTo(W - 40, gy);
+        ctx.strokeStyle = g === 0 ? 'rgba(100,130,200,0.25)' : 'rgba(60,80,150,0.12)';
+        ctx.lineWidth = g === 0 ? 1.5 : 0.8;
+        ctx.setLineDash(g === 0 ? [] : [4, 8]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // ── Draw individual paths ─────────────────────────────────────────
       for (const { path, color } of paths) {
         ctx.beginPath();
         for (let s = 0; s <= end && s < path.length; s++) {
-          const x = 40 + s * xScale;
-          const y = H * 0.9 - (path[s] - pMin) * yScale;
+          const x = 50 + s * xScale;
+          const y = yBase - (path[s] - pMin) * yScale;
           s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
-        ctx.strokeStyle = color + '55';
-        ctx.lineWidth = 0.8;
+        ctx.strokeStyle = color + '44';
+        ctx.lineWidth = 0.75;
         ctx.stroke();
       }
 
-      // Percentile bands at current point
+      // ── Percentile band fill (P5–P95 gradient) ───────────────────────
       const endIdx = Math.min(end, STEPS);
       const pricesNow = paths.map(p => p.path[Math.min(endIdx, p.path.length - 1)]).sort((a, b) => a - b);
-      const N = pricesNow.length;
-      const p5 = pricesNow[Math.floor(N * 0.05)];
-      const p95 = pricesNow[Math.floor(N * 0.95)];
-      const p50 = pricesNow[Math.floor(N * 0.5)];
-      const ex = 40 + end * xScale;
+      const PN = pricesNow.length;
+      const p5  = pricesNow[Math.floor(PN * 0.05)];
+      const p95 = pricesNow[Math.floor(PN * 0.95)];
+      const p25 = pricesNow[Math.floor(PN * 0.25)];
+      const p75 = pricesNow[Math.floor(PN * 0.75)];
+      const p50 = pricesNow[Math.floor(PN * 0.5)];
+      const ex  = 50 + end * xScale;
 
+      // Track percentile paths across all steps for band fill
+      const y5  = yBase - (p5  - pMin) * yScale;
+      const y95 = yBase - (p95 - pMin) * yScale;
+      const y25 = yBase - (p25 - pMin) * yScale;
+      const y75 = yBase - (p75 - pMin) * yScale;
+      const y50 = yBase - (p50 - pMin) * yScale;
+
+      // P5–P95 band (wide, faint)
+      const bandGrd = ctx.createLinearGradient(0, y95, 0, y5);
+      bandGrd.addColorStop(0, 'rgba(46,204,113,0.06)');
+      bandGrd.addColorStop(0.5, 'rgba(241,196,15,0.08)');
+      bandGrd.addColorStop(1, 'rgba(231,76,60,0.06)');
+      ctx.fillStyle = bandGrd;
+      ctx.fillRect(50, y95, ex - 50, y5 - y95);
+
+      // P25–P75 inner band (tighter, slightly more opaque)
+      const midGrd = ctx.createLinearGradient(0, y75, 0, y25);
+      midGrd.addColorStop(0, 'rgba(46,204,113,0.10)');
+      midGrd.addColorStop(1, 'rgba(231,76,60,0.10)');
+      ctx.fillStyle = midGrd;
+      ctx.fillRect(50, y75, ex - 50, y25 - y75);
+
+      // ── Median (P50) — thick glowing gold line ────────────────────────
       ctx.save();
-      ctx.strokeStyle = '#ffffff66';
-      ctx.setLineDash([4, 4]);
-      ctx.lineWidth = 1;
-      const y50 = H * 0.9 - (p50 - pMin) * yScale;
-      ctx.beginPath(); ctx.moveTo(40, y50); ctx.lineTo(ex, y50); ctx.stroke();
+      ctx.shadowBlur = 10; ctx.shadowColor = '#ffcc00';
+      ctx.beginPath();
+      // Walk each step for P50 from start
+      for (let s = 0; s <= end; s++) {
+        const vals = paths.map(p => p.path[Math.min(s, p.path.length - 1)]).sort((a, b) => a - b);
+        const med = vals[Math.floor(vals.length * 0.5)];
+        const x = 50 + s * xScale;
+        const y = yBase - (med - pMin) * yScale;
+        s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = '#ffcc00';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
       ctx.restore();
 
-      // Labels
-      ctx.fillStyle = '#00ff88';
-      ctx.font = '11px monospace';
-      ctx.textAlign = 'right';
-      ctx.fillText(`P95: ${p95.toFixed(1)}`, ex + 35, H * 0.9 - (p95 - pMin) * yScale);
-      ctx.fillStyle = '#ffaa00';
-      ctx.fillText(`P50: ${p50.toFixed(1)}`, ex + 35, y50);
-      ctx.fillStyle = '#ff4444';
-      ctx.fillText(`P05: ${p5.toFixed(1)}`, ex + 35, H * 0.9 - (p5 - pMin) * yScale);
+      // ── Percentile labels ─────────────────────────────────────────────
+      const lx = ex + 6;
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'left';
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = '#00ff88'; ctx.fillStyle = '#00ff88';
+      ctx.fillText(`P95 ${p95.toFixed(1)}`, lx, y95 + 4);
+      ctx.shadowColor = '#ffcc00'; ctx.fillStyle = '#ffcc00';
+      ctx.fillText(`P50 ${p50.toFixed(1)}`, lx, y50 + 4);
+      ctx.shadowColor = '#ff4444'; ctx.fillStyle = '#ff4444';
+      ctx.fillText(`P05 ${p5.toFixed(1)}`, lx, y5 + 4);
+      ctx.shadowBlur = 0;
 
-      // Title
-      ctx.fillStyle = '#aaa';
-      ctx.font = '12px monospace';
+      // ── Title bar ─────────────────────────────────────────────────────
+      ctx.fillStyle = 'rgba(6,6,20,0.7)';
+      ctx.fillRect(0, 0, W, 30);
+      ctx.fillStyle = '#8899bb';
+      ctx.font = '11px monospace';
       ctx.textAlign = 'left';
       ctx.fillText(_mcLabel, 12, 20);
+
+      // Scanlines
+      for (let scanY = 0; scanY < H; scanY += 5) {
+        ctx.fillStyle = 'rgba(0,0,0,0.04)';
+        ctx.fillRect(0, scanY, W, 1.5);
+      }
 
       if (drawProgress >= STEPS) drawProgress = 0; // loop
     }
@@ -864,14 +1033,34 @@ window.VizLab = (() => {
       _liveLabel = `SPY Â· ${con.action || 'HOLD'} (${Math.round((con.confidence || 0) * 100)}% conf)`;
     }).catch(() => { });
 
+    // ── Star field ───────────────────────────────────────────────────────
+    const _radarStars = Array.from({ length: 90 }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      r: Math.random() * 1.1 + 0.15,
+      a: Math.random() * 0.4 + 0.05,
+      da: (Math.random() - 0.5) * 0.003
+    }));
+
     let frame = 0;
 
     function animate() {
       _animFrameId = requestAnimationFrame(animate);
       frame++;
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = '#060610';
+
+      // Background — space radial
+      const bgGrd = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.7);
+      bgGrd.addColorStop(0, '#0c0c22');
+      bgGrd.addColorStop(1, '#040410');
+      ctx.fillStyle = bgGrd;
       ctx.fillRect(0, 0, W, H);
+
+      // Twinkle stars
+      for (const s of _radarStars) {
+        s.a += s.da; if (s.a > 0.45 || s.a < 0.04) s.da *= -1;
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(170,200,255,${s.a.toFixed(3)})`; ctx.fill();
+      }
 
       // Update targets every 80 frames
       if (frame % 80 === 0) {
@@ -881,8 +1070,10 @@ window.VizLab = (() => {
 
       const rings = [0.25, 0.5, 0.75, 1.0];
 
-      // Draw ring backgrounds
-      for (const r of rings) {
+      // Ring backgrounds with colored bands
+      const ringColors = ['rgba(40,60,140,0.18)', 'rgba(50,100,180,0.2)', 'rgba(60,140,200,0.22)', 'rgba(80,160,255,0.14)'];
+      for (let ri = 0; ri < rings.length; ri++) {
+        const r = rings[ri];
         ctx.beginPath();
         for (let i = 0; i < N; i++) {
           const angle = (i / N) * Math.PI * 2 - Math.PI / 2;
@@ -891,9 +1082,14 @@ window.VizLab = (() => {
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         ctx.closePath();
-        ctx.strokeStyle = `rgba(80,100,180,${0.15 + r * 0.1})`;
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = ringColors[ri];
+        ctx.lineWidth = ri === rings.length - 1 ? 1.5 : 1;
         ctx.stroke();
+        // Fill inside outer ring only as faint glow
+        if (ri === rings.length - 1) {
+          ctx.fillStyle = 'rgba(40,60,180,0.04)';
+          ctx.fill();
+        }
       }
 
       // Draw axes
@@ -902,73 +1098,100 @@ window.VizLab = (() => {
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(cx + Math.cos(angle) * R, cy + Math.sin(angle) * R);
-        ctx.strokeStyle = 'rgba(80,100,180,0.3)';
+        ctx.strokeStyle = 'rgba(80,110,200,0.28)';
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Label
-        const lx = cx + Math.cos(angle) * (R + 22);
-        const ly = cy + Math.sin(angle) * (R + 22);
-        ctx.fillStyle = '#88aaff';
-        ctx.font = '10px monospace';
+        // Label with shadow
+        const lx = cx + Math.cos(angle) * (R + 24);
+        const ly = cy + Math.sin(angle) * (R + 24);
+        ctx.shadowBlur = 4; ctx.shadowColor = '#4488ff';
+        ctx.fillStyle = '#99bbff';
+        ctx.font = '9.5px monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(INDICATORS[i], lx, ly);
+        ctx.shadowBlur = 0;
       }
 
-      // Draw filled polygon
+      // Draw filled polygon — layered gradients for depth
       ctx.beginPath();
       for (let i = 0; i < N; i++) {
         const angle = (i / N) * Math.PI * 2 - Math.PI / 2;
-        const v = values[i];
-        const x = cx + Math.cos(angle) * R * v;
-        const y = cy + Math.sin(angle) * R * v;
+        const x = cx + Math.cos(angle) * R * values[i];
+        const y = cy + Math.sin(angle) * R * values[i];
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
       ctx.closePath();
-      const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-      grd.addColorStop(0, 'rgba(100,200,255,0.25)');
-      grd.addColorStop(1, 'rgba(80,50,200,0.08)');
-      ctx.fillStyle = grd;
-      ctx.fill();
-      ctx.strokeStyle = '#88ccff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
 
-      // Draw vertex dots
+      // Fill layer 1 — inner glow
+      const grd1 = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.7);
+      grd1.addColorStop(0, 'rgba(120,220,255,0.35)');
+      grd1.addColorStop(0.6, 'rgba(90,80,240,0.18)');
+      grd1.addColorStop(1, 'rgba(60,40,200,0.06)');
+      ctx.fillStyle = grd1;
+      ctx.fill();
+
+      // Stroke — electric cyan with glow
+      ctx.shadowBlur = 14; ctx.shadowColor = '#44ccff';
+      ctx.strokeStyle = '#66ddff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Draw vertex dots with pulsing glow
       for (let i = 0; i < N; i++) {
         const angle = (i / N) * Math.PI * 2 - Math.PI / 2;
         const v = values[i];
         const x = cx + Math.cos(angle) * R * v;
         const y = cy + Math.sin(angle) * R * v;
         const col = v > 0.65 ? '#00ff88' : v > 0.35 ? '#ffaa00' : '#ff4444';
+        // Outer ring
         ctx.beginPath();
-        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.arc(x, y, 8, 0, Math.PI * 2);
+        ctx.strokeStyle = col + '55';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // Core dot
+        ctx.beginPath();
+        ctx.arc(x, y, 4.5, 0, Math.PI * 2);
         ctx.fillStyle = col;
+        ctx.shadowBlur = 8; ctx.shadowColor = col;
         ctx.fill();
+        ctx.shadowBlur = 0;
       }
 
-      // Score + live label
+      // Score display with glow
       const avg = values.reduce((a, b) => a + b, 0) / N;
       const scoreColor = avg > 0.6 ? '#00ff88' : avg > 0.4 ? '#ffaa00' : '#ff4444';
+      ctx.shadowBlur = 16; ctx.shadowColor = scoreColor;
       ctx.fillStyle = scoreColor;
-      ctx.font = 'bold 22px monospace';
+      ctx.font = 'bold 28px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(`${(avg * 100).toFixed(0)}`, cx, cy - 10);
-      ctx.font = '11px monospace';
-      ctx.fillStyle = '#888';
-      ctx.fillText('Strategy Signal Score', cx, cy + 14);
+      ctx.fillText(`${(avg * 100).toFixed(0)}`, cx, cy - 12);
+      ctx.shadowBlur = 0;
       ctx.font = '10px monospace';
-      ctx.fillStyle = '#446';
+      ctx.fillStyle = '#6688aa';
+      ctx.fillText('STRATEGY SIGNAL SCORE', cx, cy + 14);
+      ctx.font = '9px monospace';
+      ctx.fillStyle = '#445566';
       ctx.fillText(_liveLabel, cx, H - 14);
 
-      // Rotating ring
-      const ringAngle = (frame * 0.015) % (Math.PI * 2);
-      ctx.beginPath();
-      ctx.arc(cx, cy, R + 8, ringAngle, ringAngle + Math.PI * 1.1);
-      ctx.strokeStyle = `rgba(100,200,255,0.4)`;
-      ctx.lineWidth = 3;
-      ctx.stroke();
+      // Dual rotating scan beams
+      const beam1 = (frame * 0.016) % (Math.PI * 2);
+      const beam2 = (frame * 0.016 + Math.PI * 0.7) % (Math.PI * 2);
+      for (const [angle, alpha] of [[beam1, 0.45], [beam2, 0.25]]) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, R + 10, angle, angle + 0.18);
+        ctx.strokeStyle = `rgba(80,200,255,${alpha})`;
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx, cy, R + 6, angle, angle + 0.32);
+        ctx.strokeStyle = `rgba(80,200,255,${alpha * 0.4})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     }
     animate();
   }

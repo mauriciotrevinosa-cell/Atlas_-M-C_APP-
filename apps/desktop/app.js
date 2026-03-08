@@ -5,8 +5,12 @@
  */
 
 // Configuration
+// Electron loads via file:// → hardcode localhost:8000 (run_server.py)
+// Browser load via run_atlas.py → origin already contains the right host:port (default 8088)
 const CONFIG = {
-  serverUrl: 'http://localhost:8000', // Python backend — must be running via run_server.py
+  serverUrl: (window.location.protocol === 'file:')
+    ? 'http://localhost:8000'
+    : window.location.origin,
   sessionId: localStorage.getItem('aria_session_id') || `session-${Date.now()}`,
   deviceId: 'desktop-terminal'
 };
