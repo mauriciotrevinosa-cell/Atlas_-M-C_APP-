@@ -22,6 +22,7 @@ import asyncio
 import os
 import re
 import time
+import math
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -62,6 +63,19 @@ def _cache_set(key: str, data: Any, ttl: int = 300) -> None:
             _API_CACHE.pop(k, None)
 
 
+def _json_safe(value: Any) -> Any:
+    """Recursively replace NaN/Inf floats to keep API responses JSON-compliant."""
+    if isinstance(value, float):
+        if math.isnan(value) or math.isinf(value):
+            return None
+        return value
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(v) for v in value]
+    return value
+
+
 # ==================== MODELS ====================
 
 class Message(BaseModel):
@@ -82,6 +96,27 @@ class QueryResponse(BaseModel):
     timestamp: str
     provider: Optional[str] = None
     latency_ms: Optional[int] = None
+
+
+class PortfolioRiskRequest(BaseModel):
+    tickers: List[str]
+    weights: Optional[Dict[str, float]] = None
+    period: str = "1y"
+    return_method: str = "log"
+    confidence: float = 0.95
+    risk_free_rate: float = 0.04
+    horizon_days: int = 1
+    run_stress: bool = True
+
+
+class PortfolioMonteCarloRequest(BaseModel):
+    tickers: List[str]
+    weights: Optional[Dict[str, float]] = None
+    period: str = "1y"
+    return_method: str = "log"
+    n_paths: int = 1200
+    horizon_days: int = 252
+    seed: Optional[int] = None
 
 
 # ==================== DATABASE ====================
@@ -211,11 +246,14 @@ _ATLAS_ROOT = Path(__file__).resolve().parents[2]
 _SYSTEM_MODULE_FLAGS: Dict[str, bool] = {
     "aria": True,
     "data_layer": True,
+    "analytics": True,
     "indicators": True,
     "signal_engine": True,
     "risk_engine": True,
+    "portfolio_risk": True,
     "monte_carlo": True,
     "backtest": True,
+    "education_kb": True,
     "ml_engine": False,   # Not trained yet
     "rl_agent": False,    # Not trained yet
     "execution": True,
@@ -391,6 +429,7 @@ def _build_connectivity_checks() -> Dict[str, Any]:
             "kind": "route",
             "target": "/api/health",
             "connected": "/api/health" in route_paths,
+            "required": True,
         },
         {
             "id": "api_command_center",
@@ -398,6 +437,7 @@ def _build_connectivity_checks() -> Dict[str, Any]:
             "kind": "route",
             "target": "/api/system/command_center",
             "connected": "/api/system/command_center" in route_paths,
+            "required": True,
         },
         {
             "id": "api_thought_map",
@@ -405,6 +445,7 @@ def _build_connectivity_checks() -> Dict[str, Any]:
             "kind": "route",
             "target": "/api/system/thought_map",
             "connected": "/api/system/thought_map" in route_paths,
+            "required": True,
         },
         {
             "id": "api_models",
@@ -412,6 +453,7 @@ def _build_connectivity_checks() -> Dict[str, Any]:
             "kind": "route",
             "target": "/api/aria/models",
             "connected": "/api/aria/models" in route_paths,
+            "required": True,
         },
         {
             "id": "api_query",
@@ -419,6 +461,31 @@ def _build_connectivity_checks() -> Dict[str, Any]:
             "kind": "route",
             "target": "/query",
             "connected": "/query" in route_paths,
+            "required": True,
+        },
+        {
+            "id": "api_analytics_summary",
+            "label": "Analytics summary endpoint",
+            "kind": "route",
+            "target": "/api/analytics/summary/{ticker}",
+            "connected": "/api/analytics/summary/{ticker}" in route_paths,
+            "required": False,
+        },
+        {
+            "id": "api_portfolio_risk",
+            "label": "Portfolio risk endpoint",
+            "kind": "route",
+            "target": "/api/risk/portfolio/assess",
+            "connected": "/api/risk/portfolio/assess" in route_paths,
+            "required": False,
+        },
+        {
+            "id": "api_portfolio_montecarlo",
+            "label": "Portfolio Monte Carlo endpoint",
+            "kind": "route",
+            "target": "/api/montecarlo/portfolio/simulate",
+            "connected": "/api/montecarlo/portfolio/simulate" in route_paths,
+            "required": False,
         },
         {
             "id": "ws_bridge",
@@ -426,6 +493,7 @@ def _build_connectivity_checks() -> Dict[str, Any]:
             "kind": "route",
             "target": "/ws/{session_id}",
             "connected": "/ws/{session_id}" in route_paths,
+            "required": True,
         },
         {
             "id": "desktop_view_thought",
@@ -433,6 +501,7 @@ def _build_connectivity_checks() -> Dict[str, Any]:
             "kind": "desktop",
             "target": "view-thought",
             "connected": "thought" in desktop_views,
+            "required": True,
         },
         {
             "id": "desktop_module_thought",
@@ -440,15 +509,24 @@ def _build_connectivity_checks() -> Dict[str, Any]:
             "kind": "desktop",
             "target": "thought_map.js",
             "connected": "thought_map.js" in desktop_js_modules,
+            "required": True,
         },
     ]
 
-    connected = sum(1 for check in checks if check["connected"])
-    total = len(checks)
+    required_checks = [check for check in checks if check.get("required", True)]
+    optional_checks = [check for check in checks if not check.get("required", True)]
+    connected = sum(1 for check in required_checks if check["connected"])
+    total = len(required_checks)
+    optional_connected = sum(1 for check in optional_checks if check["connected"])
+    optional_total = len(optional_checks)
     return {
         "connected": connected,
         "total": total,
         "all_connected": connected == total,
+        "connected_total": connected + optional_connected,
+        "total_checks": total + optional_total,
+        "optional_connected": optional_connected,
+        "optional_total": optional_total,
         "checks": checks,
     }
 
@@ -915,17 +993,19 @@ async def system_verify(ticker: str = "AAPL"):
     import time as _t
     report = {"ticker": ticker.upper(), "stages": {}, "ok": True, "ts": datetime.now().isoformat()}
 
-    # Stage 1: Data fetch
+    # Stage 1: Data fetch (real first, deterministic local fallback)
     t0 = _t.time()
     try:
-        import yfinance as yf
-        hist = await asyncio.to_thread(
-            lambda: yf.Ticker(ticker.upper()).history(period="5d", interval="1d", auto_adjust=True)
-        )
+        hist, is_synthetic = _fetch_ohlcv_local(ticker.upper(), period="1mo")
         if hist is None or hist.empty:
-            raise ValueError("Empty response from yfinance")
+            raise ValueError("Empty response from data layer")
         price = float(hist["Close"].dropna().iloc[-1])
-        report["stages"]["data"] = {"ok": True, "price": round(price, 2), "ms": round((_t.time()-t0)*1000)}
+        report["stages"]["data"] = {
+            "ok": True,
+            "price": round(price, 2),
+            "synthetic": bool(is_synthetic),
+            "ms": round((_t.time() - t0) * 1000),
+        }
     except Exception as e:
         report["stages"]["data"] = {"ok": False, "error": str(e)[:120], "ms": round((_t.time()-t0)*1000)}
         report["ok"] = False
@@ -946,14 +1026,16 @@ async def system_verify(ticker: str = "AAPL"):
     t0 = _t.time()
     try:
         from atlas.trader.composite_scorer import CompositeScorer
-        import yfinance as yf
-        hist2 = await asyncio.to_thread(
-            lambda: yf.Ticker(ticker.upper()).history(period="6mo", interval="1d", auto_adjust=True)
-        )
+        hist2, is_synthetic_sig = _fetch_ohlcv_local(ticker.upper(), period="6mo")
         scorer = CompositeScorer()
         score_result = await asyncio.to_thread(scorer.score, ticker.upper(), hist2)
         action = getattr(score_result, "action", None) or score_result.get("action", "?") if isinstance(score_result, dict) else str(score_result)[:40]
-        report["stages"]["signal"] = {"ok": True, "action": str(action)[:20], "ms": round((_t.time()-t0)*1000)}
+        report["stages"]["signal"] = {
+            "ok": True,
+            "action": str(action)[:20],
+            "synthetic": bool(is_synthetic_sig),
+            "ms": round((_t.time() - t0) * 1000),
+        }
     except Exception as e:
         report["stages"]["signal"] = {"ok": False, "error": str(e)[:120], "ms": round((_t.time()-t0)*1000)}
         report["stages"]["signal"]["warning"] = "signal engine degraded"
@@ -1204,26 +1286,20 @@ class ScenarioStartRequest(BaseModel):
 def start_scenario(request: ScenarioStartRequest):
     """Start a new interactive scenario session."""
     try:
-        # Try importing yfinance to get real data
-        import yfinance as yf
-        import pandas as pd
-        
-        print(f"Fetching data for {request.ticker}...")
-        data = yf.download(request.ticker, start=request.start_date, progress=False)
-        
-        if data.empty:
+        symbol = request.ticker.strip().upper()
+        print(f"Fetching data for {symbol}...")
+
+        data, is_synthetic = _fetch_ohlcv_local(symbol, period="5y")
+        if data is None or data.empty:
             raise HTTPException(status_code=404, detail="No data found for ticker")
-            
-        # Flatten MultiIndex if present (yfinance update)
-        if isinstance(data.columns, pd.MultiIndex):
-            data.columns = data.columns.get_level_values(0)
-            
-        # Ensure lowercase columns for consistency
+
+        data = data.copy()
         data.columns = [c.lower() for c in data.columns]
+        data["date"] = data.index
         
         # Initialize session
         from atlas.evaluation.scenario import ScenarioSession
-        session = ScenarioSession(data, request.initial_capital, request.ticker)
+        session = ScenarioSession(data, request.initial_capital, symbol)
         
         # Store in memory
         session_id = f"scen-{datetime.now().timestamp()}"
@@ -1234,13 +1310,12 @@ def start_scenario(request: ScenarioStartRequest):
         
         return {
             "session_id": session_id,
-            "ticker": request.ticker,
+            "ticker": symbol,
             "total_steps": len(data),
-            "initial_state": state
+            "initial_state": state,
+            "synthetic": bool(is_synthetic),
         }
-        
-    except ImportError:
-        raise HTTPException(status_code=500, detail="yfinance not installed on server")
+
     except Exception as e:
         print(f"Scenario error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -2156,7 +2231,8 @@ def _generate_synthetic_ohlcv(ticker: str = "SYN", n: int = 252, seed: int = Non
     sigma = 0.015  + (abs(hash(ticker)) % 10) * 0.001
     price = 100.0  + (abs(hash(ticker)) % 400)
 
-    dates  = pd.date_range(end=pd.Timestamp.today(), periods=n, freq="B")
+    # Normalize timestamp to midnight so synthetic series from different tickers align on index.
+    dates  = pd.date_range(end=pd.Timestamp.today().normalize(), periods=n, freq="B")
     closes = [price]
     for _ in range(n - 1):
         ret = rng.normal(mu - 0.5 * sigma**2, sigma)
@@ -2203,6 +2279,85 @@ def _fetch_ohlcv_local(ticker: str, period: str = "1y"):
 
     # Local fallback — deterministic synthetic data seeded by ticker name
     return _generate_synthetic_ohlcv(ticker, n=n_bars, seed=abs(hash(ticker)) % (2**31)), True
+
+
+def _parse_ticker_list(tickers: List[str] | str) -> List[str]:
+    """Normalize ticker input and keep first-seen order."""
+    if isinstance(tickers, str):
+        raw = [part.strip().upper() for part in tickers.replace(";", ",").split(",")]
+    else:
+        raw = [str(part).strip().upper() for part in tickers]
+
+    cleaned: List[str] = []
+    seen: set[str] = set()
+    for symbol in raw:
+        if not symbol or symbol in seen:
+            continue
+        cleaned.append(symbol)
+        seen.add(symbol)
+    return cleaned
+
+
+def _to_lower_ohlcv(df):
+    """Convert Open/High/Low/Close/Volume columns to lowercase equivalents."""
+    rename_map = {
+        "Open": "open",
+        "High": "high",
+        "Low": "low",
+        "Close": "close",
+        "Volume": "volume",
+    }
+    return df.rename(columns=rename_map).copy()
+
+
+def _load_ohlcv_bundle(tickers: List[str], period: str = "1y") -> tuple[Dict[str, Any], Dict[str, bool]]:
+    """Fetch OHLCV for multiple tickers with local synthetic fallback."""
+    ohlcv_map: Dict[str, Any] = {}
+    synthetic_map: Dict[str, bool] = {}
+    for symbol in tickers:
+        hist, is_synthetic = _fetch_ohlcv_local(symbol, period=period)
+        if hist is None or hist.empty:
+            continue
+        ohlcv_map[symbol] = _to_lower_ohlcv(hist)
+        synthetic_map[symbol] = bool(is_synthetic)
+    return ohlcv_map, synthetic_map
+
+
+def _resolve_weights(tickers: List[str], weights: Optional[Dict[str, float]] = None) -> Dict[str, float]:
+    """Build validated, normalized weights aligned to ticker order."""
+    if not tickers:
+        raise ValueError("No tickers provided")
+
+    if not weights:
+        equal = 1.0 / len(tickers)
+        return {symbol: equal for symbol in tickers}
+
+    mapped = {str(k).strip().upper(): float(v) for k, v in weights.items()}
+    aligned: Dict[str, float] = {}
+    for symbol in tickers:
+        value = float(mapped.get(symbol, 0.0))
+        if value < 0:
+            raise ValueError(f"Negative weight not allowed for {symbol}: {value}")
+        aligned[symbol] = value
+
+    total = float(sum(aligned.values()))
+    if total <= 0:
+        raise ValueError("Weight sum must be positive")
+    return {symbol: value / total for symbol, value in aligned.items()}
+
+
+def _clamp_int(value: int, low: int, high: int) -> int:
+    return max(low, min(high, int(value)))
+
+
+def _downsample_series(values: List[float], max_points: int = 120) -> List[float]:
+    """Downsample a long series for API payload efficiency."""
+    if not values:
+        return []
+    if len(values) <= max_points:
+        return [float(v) for v in values]
+    step = max(1, len(values) // max_points)
+    return [float(values[i]) for i in range(0, len(values), step)]
 
 
 @app.get("/api/market-state/{ticker}")
@@ -2286,6 +2441,381 @@ def api_market_state(ticker: str, period: str = "1y", adx_threshold: float = 25.
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/analytics/summary/{ticker}")
+def analytics_summary(ticker: str, period: str = "1y", window: int = 21):
+    """
+    Single-ticker analytics snapshot using recovered analytics modules.
+
+    Returns:
+    - return statistics (log + simple)
+    - annualized volatility
+    - drawdown summary
+    - Sharpe / Sortino / Calmar
+    - historical VaR/CVaR
+    """
+    try:
+        _add_sys_path()
+        import numpy as np
+
+        from atlas.analytics.returns import log_returns, simple_returns
+        from atlas.analytics.risk_metrics import (
+            calmar_ratio,
+            drawdown_summary,
+            historical_var,
+            sharpe_ratio,
+            sortino_ratio,
+        )
+        from atlas.analytics.volatility import historical_volatility, rolling_volatility
+
+        symbol = ticker.strip().upper()
+        cache_key = f"analytics:summary:{symbol}:{period}:{window}"
+        cache_hit = _cache_get(cache_key)
+        if cache_hit:
+            return cache_hit
+
+        hist, is_synthetic = _fetch_ohlcv_local(symbol, period=period)
+        if hist is None or hist.empty:
+            raise HTTPException(status_code=404, detail=f"No data for {symbol}")
+        if len(hist) < 40:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Need at least 40 bars for analytics summary, got {len(hist)}",
+            )
+
+        df = _to_lower_ohlcv(hist)
+        effective_window = _clamp_int(window, 5, max(5, len(df) - 1))
+
+        log_ret = log_returns(df, column="close")
+        simple_ret = simple_returns(df, column="close")
+        rolling_vol = rolling_volatility(df, window=effective_window, column="close")
+
+        latest_vol = None
+        rolling_non_null = rolling_vol.dropna()
+        if not rolling_non_null.empty:
+            latest_vol = float(rolling_non_null.iloc[-1])
+
+        daily_risk_free = 0.04 / 252.0
+        result = {
+            "ticker": symbol,
+            "period": period,
+            "n_bars": int(len(df)),
+            "synthetic": bool(is_synthetic),
+            "price": {
+                "last": float(df["close"].iloc[-1]),
+                "change_pct": float((df["close"].iloc[-1] / df["close"].iloc[0] - 1.0) * 100.0),
+            },
+            "returns": {
+                "log": {
+                    "mean": float(log_ret.mean()),
+                    "std": float(log_ret.std()),
+                    "last": float(log_ret.iloc[-1]),
+                },
+                "simple": {
+                    "mean": float(simple_ret.mean()),
+                    "std": float(simple_ret.std()),
+                    "last": float(simple_ret.iloc[-1]),
+                },
+            },
+            "volatility": {
+                "historical_annualized": float(historical_volatility(df, column="close", annualize=True)),
+                "rolling_window": int(effective_window),
+                "rolling_latest": latest_vol,
+            },
+            "risk": {
+                "drawdown": drawdown_summary(simple_ret),
+                "sharpe": float(sharpe_ratio(simple_ret, risk_free_rate=daily_risk_free)),
+                "sortino": float(sortino_ratio(simple_ret, risk_free_rate=daily_risk_free)),
+                "calmar": float(calmar_ratio(simple_ret)),
+                "historical_var": historical_var(simple_ret, confidence=0.95, horizon_days=1),
+            },
+        }
+
+        result = _json_safe(result)
+        _cache_set(cache_key, result, ttl=120)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Analytics summary error [%s]: %s", ticker, e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/analytics/correlation")
+def analytics_correlation(
+    tickers: str = "AAPL,MSFT,SPY",
+    period: str = "1y",
+    return_method: str = "log",
+    window: int = 63,
+):
+    """
+    Multi-asset correlation endpoint powered by recovered analytics modules.
+    """
+    try:
+        _add_sys_path()
+        import pandas as pd
+
+        from atlas.analytics.correlation import heatmap_data, rolling_correlation, static_correlation
+        from atlas.analytics.returns import returns_matrix
+
+        symbols = _parse_ticker_list(tickers)
+        if len(symbols) < 2:
+            raise HTTPException(status_code=400, detail="Need at least 2 tickers")
+        symbols = symbols[:20]
+
+        method = return_method.strip().lower()
+        if method not in {"log", "simple"}:
+            raise HTTPException(status_code=400, detail="return_method must be 'log' or 'simple'")
+
+        cache_key = f"analytics:corr:{','.join(symbols)}:{period}:{method}:{window}"
+        cache_hit = _cache_get(cache_key)
+        if cache_hit:
+            return cache_hit
+
+        ohlcv_map, synthetic_map = _load_ohlcv_bundle(symbols, period=period)
+        if len(ohlcv_map) < 2:
+            raise HTTPException(status_code=404, detail="Not enough ticker data for correlation analysis")
+
+        returns_df = returns_matrix(ohlcv_map, method=method)
+        if returns_df.empty or len(returns_df) < 20:
+            raise HTTPException(status_code=400, detail="Need at least 20 aligned return observations")
+
+        corr_matrix = static_correlation(
+            returns_df,
+            method="pearson",
+            min_periods=min(30, max(10, len(returns_df))),
+        )
+        rolling_window = _clamp_int(window, 10, max(10, len(returns_df)))
+        rolling_df = rolling_correlation(returns_df, window=rolling_window)
+
+        rolling_latest: Dict[str, float] = {}
+        if not rolling_df.empty:
+            for col in rolling_df.columns:
+                ser = rolling_df[col].dropna()
+                if not ser.empty:
+                    rolling_latest[str(col)] = float(ser.iloc[-1])
+
+        pair_strength: List[Dict[str, float]] = []
+        cols = list(corr_matrix.columns)
+        for i, a in enumerate(cols):
+            for b in cols[i + 1:]:
+                val = corr_matrix.loc[a, b]
+                if pd.notna(val):
+                    pair_strength.append(
+                        {
+                            "pair": f"{a}/{b}",
+                            "correlation": float(val),
+                            "abs_correlation": float(abs(val)),
+                        }
+                    )
+        pair_strength.sort(key=lambda x: x["abs_correlation"], reverse=True)
+
+        result = {
+            "tickers_requested": symbols,
+            "tickers_used": list(returns_df.columns),
+            "period": period,
+            "return_method": method,
+            "observations": int(len(returns_df)),
+            "synthetic": synthetic_map,
+            "matrix": corr_matrix.round(4).to_dict(),
+            "heatmap": heatmap_data(corr_matrix),
+            "rolling_window": int(rolling_window),
+            "rolling_latest": rolling_latest,
+            "top_pairs": pair_strength[:12],
+        }
+
+        result = _json_safe(result)
+        _cache_set(cache_key, result, ttl=180)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Analytics correlation error [%s]: %s", tickers, e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/risk/portfolio/assess")
+def portfolio_risk_assess(req: PortfolioRiskRequest):
+    """
+    Portfolio risk endpoint backed by atlas.risk.portfolio_risk.PortfolioRiskManager.
+    """
+    try:
+        _add_sys_path()
+        from atlas.analytics.returns import returns_matrix
+        from atlas.risk.portfolio_risk import PortfolioRiskManager
+
+        symbols = _parse_ticker_list(req.tickers)
+        if len(symbols) < 2:
+            raise HTTPException(status_code=400, detail="Need at least 2 tickers")
+
+        method = (req.return_method or "log").strip().lower()
+        if method not in {"log", "simple"}:
+            raise HTTPException(status_code=400, detail="return_method must be 'log' or 'simple'")
+
+        key_payload = {
+            "tickers": symbols,
+            "weights": req.weights or {},
+            "period": req.period,
+            "return_method": method,
+            "confidence": float(req.confidence),
+            "risk_free_rate": float(req.risk_free_rate),
+            "horizon_days": int(req.horizon_days),
+            "run_stress": bool(req.run_stress),
+        }
+        cache_key = "risk:portfolio:" + json.dumps(key_payload, sort_keys=True)
+        cache_hit = _cache_get(cache_key)
+        if cache_hit:
+            return cache_hit
+
+        ohlcv_map, synthetic_map = _load_ohlcv_bundle(symbols, period=req.period)
+        if len(ohlcv_map) < 2:
+            raise HTTPException(status_code=404, detail="Not enough ticker data for portfolio risk")
+
+        ret_df = returns_matrix(ohlcv_map, method=method)
+        if ret_df.empty or len(ret_df) < 20:
+            raise HTTPException(status_code=400, detail="Need at least 20 aligned return observations")
+
+        aligned_tickers = [symbol for symbol in symbols if symbol in ret_df.columns]
+        weights = _resolve_weights(aligned_tickers, req.weights)
+
+        manager = PortfolioRiskManager()
+        result_obj = manager.assess(
+            returns_df=ret_df[aligned_tickers],
+            weights=weights,
+            confidence=float(req.confidence),
+            risk_free_rate=float(req.risk_free_rate) / 252.0,
+            horizon_days=_clamp_int(req.horizon_days, 1, 252),
+            run_stress=bool(req.run_stress),
+        )
+
+        payload = {
+            "tickers": aligned_tickers,
+            "period": req.period,
+            "return_method": method,
+            "observations": int(len(ret_df)),
+            "synthetic": synthetic_map,
+            "weights": weights,
+            "risk": result_obj.to_dict(),
+        }
+        payload = _json_safe(payload)
+        _cache_set(cache_key, payload, ttl=180)
+        return payload
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Portfolio risk error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/montecarlo/portfolio/simulate")
+def portfolio_montecarlo_simulate(req: PortfolioMonteCarloRequest):
+    """
+    Correlated multi-asset Monte Carlo simulation endpoint.
+    """
+    try:
+        _add_sys_path()
+        import numpy as np
+
+        from atlas.analytics.returns import returns_matrix
+        from atlas.monte_carlo.multi_asset import MultiAssetSimulator, PortfolioSimConfig
+        from atlas.monte_carlo.simulator import VarianceReduction
+
+        symbols = _parse_ticker_list(req.tickers)
+        if len(symbols) < 2:
+            raise HTTPException(status_code=400, detail="Need at least 2 tickers")
+
+        method = (req.return_method or "log").strip().lower()
+        if method not in {"log", "simple"}:
+            raise HTTPException(status_code=400, detail="return_method must be 'log' or 'simple'")
+
+        n_paths = _clamp_int(req.n_paths, 200, 20000)
+        n_steps = _clamp_int(req.horizon_days, 20, 756)
+
+        key_payload = {
+            "tickers": symbols,
+            "weights": req.weights or {},
+            "period": req.period,
+            "return_method": method,
+            "n_paths": n_paths,
+            "horizon_days": n_steps,
+            "seed": req.seed,
+        }
+        cache_key = "mc:portfolio:" + json.dumps(key_payload, sort_keys=True)
+        cache_hit = _cache_get(cache_key)
+        if cache_hit:
+            return cache_hit
+
+        ohlcv_map, synthetic_map = _load_ohlcv_bundle(symbols, period=req.period)
+        if len(ohlcv_map) < 2:
+            raise HTTPException(status_code=404, detail="Not enough ticker data for simulation")
+
+        ret_df = returns_matrix(ohlcv_map, method=method)
+        if ret_df.empty or len(ret_df) < 20:
+            raise HTTPException(status_code=400, detail="Need at least 20 aligned return observations")
+
+        aligned_tickers = [symbol for symbol in symbols if symbol in ret_df.columns]
+        weights = _resolve_weights(aligned_tickers, req.weights)
+
+        config = PortfolioSimConfig(
+            n_paths=n_paths,
+            n_steps=n_steps,
+            dt=1.0 / 252.0,
+            variance_reduction=VarianceReduction.ANTITHETIC,
+            seed=req.seed,
+        )
+
+        simulator = MultiAssetSimulator()
+        results = simulator.simulate_from_returns(ret_df[aligned_tickers], weights, config)
+
+        final_values = results.portfolio_paths[:, -1]
+        p05 = results.percentiles.get(0.05)
+        p50 = results.percentiles.get(0.50)
+        p95 = results.percentiles.get(0.95)
+
+        payload = {
+            "tickers": results.tickers,
+            "period": req.period,
+            "return_method": method,
+            "observations": int(len(ret_df)),
+            "synthetic": synthetic_map,
+            "weights": results.weights,
+            "config": {
+                "n_paths": int(results.config.n_paths),
+                "n_steps": int(results.config.n_steps),
+                "dt": float(results.config.dt),
+                "variance_reduction": results.config.variance_reduction.value,
+                "seed": results.config.seed,
+            },
+            "terminal_distribution": {
+                "mean_final_value": float(np.mean(final_values)),
+                "median_final_value": float(np.median(final_values)),
+                "p05_final_value": float(np.percentile(final_values, 5)),
+                "p95_final_value": float(np.percentile(final_values, 95)),
+                "expected_return": float(np.mean(final_values - 1.0)),
+                "probability_of_loss": float((final_values < 1.0).mean()),
+            },
+            "risk_metrics": results.risk_metrics,
+            "correlation_matrix": results.corr_matrix.round(4).to_dict(),
+            "summary_table": results.summary().to_dict(orient="records"),
+            "percentile_paths": {
+                "p05": _downsample_series(p05.tolist() if p05 is not None else [], max_points=140),
+                "p50": _downsample_series(p50.tolist() if p50 is not None else [], max_points=140),
+                "p95": _downsample_series(p95.tolist() if p95 is not None else [], max_points=140),
+            },
+        }
+        payload = _json_safe(payload)
+        _cache_set(cache_key, payload, ttl=180)
+        return payload
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Portfolio Monte Carlo error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/strategy/analyze/{ticker}")
 def strategy_analyze(ticker: str, period: str = "6mo"):
     """
@@ -2300,7 +2830,12 @@ def strategy_analyze(ticker: str, period: str = "6mo"):
         from atlas.core_intelligence.engines.rule_based.multi_strategy import MultiStrategyEngine
 
         symbol = ticker.strip().upper()
-        hist = _fetch_ohlcv(symbol, period)
+        cache_key = f"strategy:analyze:{symbol}:{period}"
+        cache_hit = _cache_get(cache_key)
+        if cache_hit:
+            return cache_hit
+
+        hist, is_synthetic = _fetch_ohlcv_local(symbol, period)
         if hist is None or len(hist) < 60:
             raise HTTPException(status_code=404, detail=f"Not enough data for {symbol}")
 
@@ -2349,7 +2884,7 @@ def strategy_analyze(ticker: str, period: str = "6mo"):
         last_close = round(float(hist["Close"].iloc[-1]), 2)
         ret_5d     = round(float((hist["Close"].iloc[-1] / hist["Close"].iloc[-6] - 1) * 100), 2)
 
-        return {
+        result = {
             "ticker":     symbol,
             "period":     period,
             "last_close": last_close,
@@ -2357,7 +2892,11 @@ def strategy_analyze(ticker: str, period: str = "6mo"):
             "consensus":  consensus,
             "individual": individual,
             "bars_used":  len(hist),
+            "synthetic":  bool(is_synthetic),
         }
+        result = _json_safe(result)
+        _cache_set(cache_key, result, ttl=120)
+        return result
 
     except HTTPException:
         raise
@@ -2409,7 +2948,12 @@ def strategy_backtest(ticker: str, period: str = "1y", initial_cash: float = 100
         from atlas.core_intelligence.engines.rule_based.multi_strategy import MultiStrategyEngine
 
         symbol = ticker.strip().upper()
-        hist   = _fetch_ohlcv(symbol, period)
+        cache_key = f"strategy:backtest:{symbol}:{period}:{round(float(initial_cash), 2)}"
+        cache_hit = _cache_get(cache_key)
+        if cache_hit:
+            return cache_hit
+
+        hist, is_synthetic = _fetch_ohlcv_local(symbol, period)
         if hist is None or len(hist) < 80:
             raise HTTPException(status_code=404, detail=f"Not enough data for {symbol}")
 
@@ -2456,7 +3000,7 @@ def strategy_backtest(ticker: str, period: str = "1y", initial_cash: float = 100
                  for i in range(len(equity_log[::step]))]
         sampled = equity_log[::step]
 
-        return {
+        result = {
             "ticker":        symbol,
             "period":        period,
             "initial_cash":  initial_cash,
@@ -2467,7 +3011,11 @@ def strategy_backtest(ticker: str, period: str = "1y", initial_cash: float = 100
             "n_trades":      len(trade_log),
             "equity_curve":  [{"date": d, "equity": e} for d, e in zip(dates, sampled)],
             "trades":        trade_log[-20:],   # last 20 trades
+            "synthetic":     bool(is_synthetic),
         }
+        result = _json_safe(result)
+        _cache_set(cache_key, result, ttl=180)
+        return result
 
     except HTTPException:
         raise
@@ -2670,10 +3218,12 @@ def get_scenario_history(session_id: str):
 
 @app.get("/api/quote/{ticker}")
 def get_quote(ticker: str):
-    """Fetch latest price quote + daily change % for one ticker using yfinance. Cached 15 min."""
+    """
+    Fetch latest quote for one ticker.
+    Uses real Yahoo data first; falls back to deterministic local data if unavailable.
+    Cached for 15 minutes.
+    """
     try:
-        import yfinance as yf
-
         symbol = ticker.strip().upper()
         if not symbol:
             raise HTTPException(status_code=400, detail="Ticker is required")
@@ -2682,11 +3232,25 @@ def get_quote(ticker: str):
         _ck = f"quote:{symbol}"
         _hit = _cache_get(_ck)
         if _hit:
-            return _hit
+            return {**_hit, "_cached": True}
 
-        t = yf.Ticker(symbol)
-        hist = t.history(period="5d", interval="1d")
-        if hist.empty:
+        is_synthetic = False
+        hist = None
+
+        try:
+            import yfinance as yf
+
+            t = yf.Ticker(symbol)
+            hist = t.history(period="5d", interval="1d", auto_adjust=True)
+            if hist is not None and not hist.empty:
+                hist = hist[["Open", "High", "Low", "Close", "Volume"]].dropna()
+        except Exception:
+            hist = None
+
+        if hist is None or hist.empty:
+            hist, is_synthetic = _fetch_ohlcv_local(symbol, period="1mo")
+
+        if hist is None or hist.empty:
             raise HTTPException(status_code=404, detail="Ticker not found or no data")
 
         closes = hist["Close"].dropna()
@@ -2702,7 +3266,9 @@ def get_quote(ticker: str):
             "ticker":     symbol,
             "price":      round(price, 2),
             "change_pct": change_pct,
-            "source":     "yfinance",
+            "source":     "synthetic_local" if is_synthetic else "yfinance",
+            "synthetic":  bool(is_synthetic),
+            "_cached":    False,
         }
         _cache_set(_ck, result, ttl=900)   # 15-min cache
         return result
@@ -2719,23 +3285,36 @@ def get_market_data(ticker: str):
     Returns: Current Price, OHLC Data (for charts), and News.
     """
     try:
-        import yfinance as yf
-        import pandas as pd
+        symbol = ticker.upper().strip()
+        if not symbol:
+            raise HTTPException(status_code=400, detail="Ticker is required")
 
         # Cache check - 60-minute TTL (OHLC history changes slowly)
-        _ck = f"market_data:{ticker.upper().strip()}"
+        _ck = f"market_data:{symbol}"
         _hit = _cache_get(_ck)
         if _hit:
-            return _hit
+            return {**_hit, "_cached": True}
 
-        # 1. Get Ticker Object
-        t = yf.Ticker(ticker)
-        
-        # 2. History (1 Year for Daily Chart)
-        hist = t.history(period="1y")
-        if hist.empty:
+        is_synthetic = False
+        hist = None
+        t = None
+
+        try:
+            import yfinance as yf
+
+            t = yf.Ticker(symbol)
+            hist = t.history(period="1y", auto_adjust=True)
+            if hist is not None and not hist.empty:
+                hist = hist[["Open", "High", "Low", "Close", "Volume"]].dropna()
+        except Exception:
+            hist = None
+
+        if hist is None or hist.empty:
+            hist, is_synthetic = _fetch_ohlcv_local(symbol, period="1y")
+
+        if hist is None or hist.empty:
             raise HTTPException(status_code=404, detail="Ticker not found or no data")
-            
+
         # Format OHLC for Lightweight Charts
         # Needs: { time: '2023-01-01', open: 100, high: 105, low: 99, close: 102 }
         ohlc = []
@@ -2752,23 +3331,29 @@ def get_market_data(ticker: str):
         # 3. Current Price
         current_price = float(hist['Close'].iloc[-1])
         
-        # 4. News
-        news = t.news
         formatted_news = []
-        if news:
-            for n in news:
-                formatted_news.append({
-                    "title": n.get('title'),
-                    "publisher": n.get('publisher'),
-                    "link": n.get('link'),
-                    "timestamp": n.get('providerPublishTime')
-                })
+        if not is_synthetic and t is not None:
+            try:
+                news = t.news
+                if news:
+                    for n in news:
+                        formatted_news.append({
+                            "title": n.get('title'),
+                            "publisher": n.get('publisher'),
+                            "link": n.get('link'),
+                            "timestamp": n.get('providerPublishTime')
+                        })
+            except Exception:
+                formatted_news = []
                 
         result = {
-            "ticker": ticker.upper(),
+            "ticker": symbol,
             "price": current_price,
             "ohlc": ohlc,
             "news": formatted_news,
+            "source": "synthetic_local" if is_synthetic else "yfinance",
+            "synthetic": bool(is_synthetic),
+            "_cached": False,
         }
         _cache_set(_ck, result, ttl=3600)  # 60-min cache
         return result
@@ -3495,20 +4080,22 @@ async def get_factors(ticker: str, period: str = "1y"):
     Inspired by Microsoft qlib Alpha158 / Alpha360 feature pipeline.
     """
     _add_sys_path()
+    symbol = ticker.strip().upper()
+    cache_key = f"factors:{symbol}:{period}"
+    cache_hit = _cache_get(cache_key)
+    if cache_hit:
+        return cache_hit
+
     try:
-        import yfinance as yf
         from atlas.correlation_portfolio.factor_models.factor_engine import FactorEngine
     except ImportError as e:
         raise HTTPException(500, f"Factor engine import failed: {e}")
 
-    df = await asyncio.to_thread(
-        lambda: yf.Ticker(ticker.upper()).history(period=period, auto_adjust=True)
-    )
+    df, is_synthetic = _fetch_ohlcv_local(symbol, period=period)
     if df is None or df.empty:
-        raise HTTPException(404, f"No data for {ticker}")
+        raise HTTPException(404, f"No data for {symbol}")
 
-    # yf.Ticker.history() returns simple capitalized columns (Open, High, Low, Close, Volume)
-    # Drop any extra columns (Dividends, Stock Splits) to keep only OHLCV
+    # Keep only OHLCV in capitalized form expected by FactorEngine.
     ohlcv_cols = [c for c in df.columns if c.lower() in ("open", "high", "low", "close", "volume")]
     df = df[ohlcv_cols].copy()
     engine = FactorEngine()
@@ -3517,15 +4104,19 @@ async def get_factors(ticker: str, period: str = "1y"):
     group_avgs  = await asyncio.to_thread(engine.group_groups, df) if hasattr(engine,'group_groups') else await asyncio.to_thread(engine.group_scores, df)
     top_factors = await asyncio.to_thread(engine.top_factors, df, 15)
 
-    return {
-        "ticker":       ticker.upper(),
+    payload = _json_safe({
+        "ticker":       symbol,
         "period":       period,
         "factor_count": len(scores),
         "scores":       scores,
         "group_scores": group_avgs,
         "top_factors":  top_factors,
+        "source":       "synthetic_local" if is_synthetic else "yfinance",
+        "synthetic":    bool(is_synthetic),
         "timestamp":    datetime.now().isoformat(),
-    }
+    })
+    _cache_set(cache_key, payload, ttl=120)
+    return payload
 
 
 # ==================== FUNDAMENTAL ANALYSIS (Dexter-inspired) ====================
@@ -3850,23 +4441,34 @@ async def trader_analyze(ticker: str, period: str = Query("1y")):
     """
     try:
         _add_sys_path()
-        import yfinance as yf
         from atlas.trader.composite_scorer import CompositeScorer
 
-        df = _fetch_ohlcv(ticker, period)
+        symbol = ticker.strip().upper()
+        cache_key = f"trader:analyze:{symbol}:{period}"
+        cache_hit = _cache_get(cache_key)
+        if cache_hit:
+            return cache_hit
+
+        df, is_synthetic = _fetch_ohlcv_local(symbol, period)
         if df is None or len(df) < 30:
-            raise HTTPException(status_code=404, detail=f"Insufficient data for {ticker}")
+            raise HTTPException(status_code=404, detail=f"Insufficient data for {symbol}")
 
         # Pre-fetch info once (avoids double yfinance calls)
         info = {}
-        try:
-            info = yf.Ticker(ticker).info or {}
-        except Exception:
-            pass
+        if not is_synthetic:
+            try:
+                import yfinance as yf
+                info = yf.Ticker(symbol).info or {}
+            except Exception:
+                info = {}
 
         scorer = CompositeScorer()
-        result = scorer.score(ticker, df, info=info)
-        return result.to_dict()
+        result = scorer.score(symbol, df, info=info).to_dict()
+        result["synthetic"] = bool(is_synthetic)
+        result["source"] = "synthetic_local" if is_synthetic else "yfinance"
+        result = _json_safe(result)
+        _cache_set(cache_key, result, ttl=120)
+        return result
 
     except HTTPException:
         raise
@@ -3883,23 +4485,33 @@ async def trader_predict(ticker: str, period: str = Query("6mo")):
     """
     try:
         _add_sys_path()
-        import yfinance as yf
         from atlas.trader.composite_scorer import CompositeScorer
 
-        df = _fetch_ohlcv(ticker, period)
+        symbol = ticker.strip().upper()
+        cache_key = f"trader:predict:{symbol}:{period}"
+        cache_hit = _cache_get(cache_key)
+        if cache_hit:
+            return cache_hit
+
+        df, is_synthetic = _fetch_ohlcv_local(symbol, period)
         if df is None or len(df) < 14:
             raise HTTPException(status_code=404, detail="Insufficient data")
 
         scorer = CompositeScorer()
-        result = scorer.score(ticker, df, info={})
-        return {
+        result = scorer.score(symbol, df, info={})
+        payload = {
             "ticker":          result.ticker,
             "last_close":      result.last_close,
             "composite_score": result.composite_score,
             "verdict":         result.verdict,
             "confidence":      result.confidence,
             "prediction":      result.to_dict()["prediction"],
+            "synthetic":       bool(is_synthetic),
+            "source":          "synthetic_local" if is_synthetic else "yfinance",
         }
+        payload = _json_safe(payload)
+        _cache_set(cache_key, payload, ttl=120)
+        return payload
 
     except HTTPException:
         raise
@@ -3919,7 +4531,6 @@ async def trader_screen(
     """
     try:
         _add_sys_path()
-        import yfinance as yf
         from atlas.trader.composite_scorer import CompositeScorer
 
         universe = [t.strip().upper() for t in tickers.split(",")] if tickers else _TRADER_UNIVERSE
@@ -3928,28 +4539,32 @@ async def trader_screen(
         results = []
         for ticker in universe[:40]:          # cap at 40 to keep response fast
             try:
-                df = _fetch_ohlcv(ticker, period)
+                df, is_synthetic = _fetch_ohlcv_local(ticker, period)
                 if df is None or len(df) < 30:
                     continue
                 info = {}
-                try:
-                    info = yf.Ticker(ticker).info or {}
-                except Exception:
-                    pass
+                if not is_synthetic:
+                    try:
+                        import yfinance as yf
+                        info = yf.Ticker(ticker).info or {}
+                    except Exception:
+                        info = {}
                 r = scorer.score(ticker, df, info=info)
-                results.append(r.to_dict())
+                row = _json_safe(r.to_dict())
+                row["synthetic"] = bool(is_synthetic)
+                results.append(row)
             except Exception as e:
                 logger.warning("screen %s: %s", ticker, e)
 
         results.sort(key=lambda x: x["composite_score"], reverse=True)
 
-        return {
+        return _json_safe({
             "universe_size":  len(universe),
             "screened":       len(results),
             "top_buys":       results[:top_n],
             "top_avoids":     results[-top_n:][::-1],
             "full_ranking":   results,
-        }
+        })
 
     except Exception as e:
         logger.error("trader_screen: %s", e)
@@ -3967,7 +4582,6 @@ async def trader_batch(
     """
     try:
         _add_sys_path()
-        import yfinance as yf
         from atlas.trader.composite_scorer import CompositeScorer
 
         ticker_list = [t.strip().upper() for t in tickers.split(",")][:30]
@@ -3975,18 +4589,19 @@ async def trader_batch(
         out = []
         for ticker in ticker_list:
             try:
-                df = _fetch_ohlcv(ticker, "6mo")
+                df, is_synthetic = _fetch_ohlcv_local(ticker, "6mo")
                 if df is None or len(df) < 14:
                     out.append({"ticker": ticker, "error": "no data"})
                     continue
                 r = scorer.score(ticker, df, info={})
-                out.append({
+                out.append(_json_safe({
                     "ticker":          r.ticker,
                     "composite_score": r.composite_score,
                     "verdict":         r.verdict,
                     "confidence":      r.confidence,
                     "last_close":      r.last_close,
-                })
+                    "synthetic":       bool(is_synthetic),
+                }))
             except Exception as e:
                 out.append({"ticker": ticker, "error": str(e)[:60]})
         return {"results": out}
