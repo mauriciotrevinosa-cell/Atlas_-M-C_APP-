@@ -224,7 +224,7 @@ const AriaTrader = (() => {
     _hideResult();
 
     try {
-      const resp = await fetch(`/api/trader/analyze/${ticker}?period=1y`);
+      const resp = await fetch(`${CONFIG.serverUrl}/api/trader/analyze/${ticker}?period=1y`);
       if (!resp.ok) throw new Error(`API ${resp.status}`);
       const data = await resp.json();
       _currentResult = data;
@@ -613,7 +613,7 @@ const AriaTrader = (() => {
   async function loadWatchlist() {
     const tickers = DEFAULT_WATCH.join(',');
     try {
-      const resp = await fetch(`/api/trader/batch?tickers=${tickers}&period=6mo`);
+      const resp = await fetch(`${CONFIG.serverUrl}/api/trader/batch?tickers=${tickers}&period=6mo`);
       if (!resp.ok) return;
       const data = await resp.json();
       (data.results || []).forEach(r => {
@@ -653,8 +653,8 @@ const AriaTrader = (() => {
 
     try {
       const url = custom
-        ? `/api/trader/screen?tickers=${encodeURIComponent(custom)}&period=6mo&top_n=10`
-        : `/api/trader/screen?period=6mo&top_n=10`;
+        ? `${CONFIG.serverUrl}/api/trader/screen?tickers=${encodeURIComponent(custom)}&period=6mo&top_n=10`
+        : `${CONFIG.serverUrl}/api/trader/screen?period=6mo&top_n=10`;
 
       const resp = await fetch(url);
       if (!resp.ok) throw new Error(`API ${resp.status}`);
@@ -704,7 +704,7 @@ const AriaTrader = (() => {
     card.style.display = 'block';
 
     try {
-      const resp = await fetch(`/api/strategy/backtest/${ticker}?period=1y`);
+      const resp = await fetch(`${CONFIG.serverUrl}/api/strategy/backtest/${ticker}?period=1y`);
       if (!resp.ok) return;
       const d = await resp.json();
       if (!d.equity_curve || !d.equity_curve.length) return;
@@ -818,7 +818,7 @@ const AriaTrader = (() => {
     card.style.display = 'block';
 
     try {
-      const resp = await fetch(`/api/factors/${ticker}`);
+      const resp = await fetch(`${CONFIG.serverUrl}/api/factors/${ticker}`);
       if (!resp.ok) return;
       const d = await resp.json();
       _renderFactorHeatmap(d, el);

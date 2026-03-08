@@ -6,7 +6,7 @@
 
 // Configuration
 const CONFIG = {
-  serverUrl: '', // Relative path - uses same server as frontend
+  serverUrl: 'http://localhost:8000', // Python backend — must be running via run_server.py
   sessionId: localStorage.getItem('aria_session_id') || `session-${Date.now()}`,
   deviceId: 'desktop-terminal'
 };
@@ -55,6 +55,8 @@ async function init() {
   // Live dashboard stats
   _refreshDashboardStats();
   setInterval(_refreshDashboardStats, 60_000);   // refresh every 60 s
+  _refreshCommandCenter();
+  setInterval(_refreshCommandCenter, 45_000);    // refresh every 45 s
 
   // Slash hint listener on input
   const inp = document.getElementById('input');
@@ -112,6 +114,77 @@ async function _refreshDashboardStats() {
     // Fallback: show placeholder values
     if (v1) v1.textContent = '—';
     if (v2) v2.textContent = '—';
+  }
+}
+
+function _setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
+function _formatIsoLocal(value) {
+  if (!value) return 'n/a';
+  try {
+    return new Date(value).toLocaleString();
+  } catch (_) {
+    return String(value);
+  }
+}
+
+async function _refreshCommandCenter() {
+  const shell = document.getElementById('command-center-shell');
+  if (!shell) return;
+
+  try {
+    const res = await fetch('/api/system/command_center');
+    if (!res.ok) throw new Error('command center unavailable');
+    const data = await res.json();
+
+    const runtime = data.runtime || {};
+    const project = data.project || {};
+    const runs = data.runs || {};
+    const aria = data.aria || {};
+
+    const docsTotal = (project.docs_markdown || 0) + (project.governance_markdown || 0);
+    _setText('cc-api-routes', `${runtime.api_routes ?? '-'}`);
+    _setText('cc-ui-views', `${project.desktop_views ?? '-'}`);
+    _setText('cc-docs-count', `${docsTotal}`);
+    _setText('cc-runs-count', `${runs.count ?? 0}`);
+    _setText('cc-active-model', aria.active_model || 'n/a');
+    _setText(
+      'cc-core-folders',
+      `${project.core_folders_present ?? 0}/${project.core_folders_total ?? 0}`
+    );
+
+    const status = String(data.status || 'degraded').toLowerCase();
+    const stateClass = (
+      status === 'nominal' || status === 'critical' || status === 'degraded'
+    ) ? `state-${status}` : 'state-degraded';
+    shell.classList.remove('state-nominal', 'state-degraded', 'state-critical');
+    shell.classList.add(stateClass);
+    _setText('cc-pulse-status', status.toUpperCase());
+
+    const generatedAt = _formatIsoLocal(data.generated_at);
+    _setText('cc-last-updated', `Pulse ${data.pulse_score ?? 0}/100 | Updated ${generatedAt}`);
+
+    if (runs.latest_run_id) {
+      const latestAt = _formatIsoLocal(runs.latest_updated);
+      _setText('cc-footnote', `Latest run: ${runs.latest_run_id} | ${latestAt}`);
+    } else {
+      _setText('cc-footnote', 'Latest run: none');
+    }
+  } catch (error) {
+    shell.classList.remove('state-nominal', 'state-degraded', 'state-critical');
+    shell.classList.add('state-critical');
+    _setText('cc-pulse-status', 'OFFLINE');
+    _setText('cc-last-updated', 'Telemetry unavailable. Verify /api/system/command_center.');
+    _setText('cc-api-routes', '-');
+    _setText('cc-ui-views', '-');
+    _setText('cc-docs-count', '-');
+    _setText('cc-runs-count', '-');
+    _setText('cc-active-model', '-');
+    _setText('cc-core-folders', '-');
+    _setText('cc-footnote', 'Latest run: unavailable');
   }
 }
 

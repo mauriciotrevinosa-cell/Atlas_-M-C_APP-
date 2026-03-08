@@ -266,7 +266,9 @@ window.DerivativesModule = (() => {
   }
 
   async function _fetchJSON(url) {
-    const res = await fetch(url);
+    // Resolve relative paths to the Python backend
+    const resolvedUrl = url.startsWith('/') ? `${CONFIG.serverUrl}${url}` : url;
+    const res = await fetch(resolvedUrl);
     const raw = await res.text();
     let data = null;
     if (raw) {

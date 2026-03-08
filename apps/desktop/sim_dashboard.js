@@ -67,7 +67,9 @@
     }
 
     async function simApi(path, options = {}) {
-        const response = await fetch(path, options);
+        // Resolve relative paths to the Python backend
+        const resolvedPath = path.startsWith('/') ? `${CONFIG.serverUrl}${path}` : path;
+        const response = await fetch(resolvedPath, options);
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
             const detail = payload.detail || `${response.status} ${response.statusText}`;

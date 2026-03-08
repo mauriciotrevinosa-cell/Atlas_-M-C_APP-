@@ -20,6 +20,7 @@ from typing import List, Dict, Optional, Any
 import json
 import asyncio
 import os
+import re
 import time
 import logging
 from datetime import datetime
@@ -179,6 +180,502 @@ _KNOWN_MODELS: Dict[str, str] = {
     "codellama:7b":         "Code Llama · 7B 💻",
 }
 
+_ATLAS_ROOT = Path(__file__).resolve().parents[2]
+_SYSTEM_MODULE_FLAGS: Dict[str, bool] = {
+    "aria": True,
+    "data_layer": True,
+    "indicators": True,
+    "signal_engine": True,
+    "risk_engine": True,
+    "monte_carlo": True,
+    "backtest": True,
+    "ml_engine": False,   # Not trained yet
+    "rl_agent": False,    # Not trained yet
+    "execution": True,
+    "cpp_core": False,    # Build pending
+}
+
+
+def _safe_read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return ""
+
+
+def _safe_iterdir(path: Path) -> List[Path]:
+    if not path.is_dir():
+        return []
+    try:
+        return list(path.iterdir())
+    except Exception:
+        return []
+
+
+def _count_markdown(path: Path) -> int:
+    if not path.is_dir():
+        return 0
+    try:
+        return sum(1 for _ in path.glob("*.md"))
+    except Exception:
+        return 0
+
+
+def _discover_desktop_views() -> List[str]:
+    index_path = _ATLAS_ROOT / "apps" / "desktop" / "index.html"
+    content = _safe_read_text(index_path)
+    if not content:
+        return []
+    matches = re.findall(r'id="view-([a-zA-Z0-9_-]+)"', content)
+    return sorted(set(matches), key=str.lower)
+
+
+def _discover_desktop_js_modules() -> List[str]:
+    desktop_dir = _ATLAS_ROOT / "apps" / "desktop"
+    if not desktop_dir.is_dir():
+        return []
+    modules = [
+        p.name
+        for p in desktop_dir.glob("*.js")
+        if p.name.lower() not in {"preload.js"}
+    ]
+    return sorted(modules, key=str.lower)
+
+
+def _latest_run_snapshot() -> Dict[str, Any]:
+    runs_root = _ATLAS_ROOT / "outputs" / "runs"
+    run_dirs = [d for d in _safe_iterdir(runs_root) if d.is_dir()]
+    if not run_dirs:
+        return {"count": 0, "latest_run_id": None, "latest_updated": None}
+
+    latest = max(run_dirs, key=lambda d: d.stat().st_mtime)
+    latest_updated = datetime.fromtimestamp(latest.stat().st_mtime).isoformat()
+    return {
+        "count": len(run_dirs),
+        "latest_run_id": latest.name,
+        "latest_updated": latest_updated,
+    }
+
+
+def _route_counts() -> Dict[str, int]:
+    api_paths = set()
+    websocket_paths = 0
+    for route in app.routes:
+        path = getattr(route, "path", "")
+        if not path:
+            continue
+        if path.startswith("/api/"):
+            api_paths.add(path)
+        if path.startswith("/ws/"):
+            websocket_paths += 1
+    return {"api_routes": len(api_paths), "websocket_routes": websocket_paths}
+
+
+def _build_command_center_snapshot() -> Dict[str, Any]:
+    models = _get_local_models()
+    modules = dict(_SYSTEM_MODULE_FLAGS)
+    modules_online = sum(1 for is_ok in modules.values() if is_ok)
+    modules_total = len(modules)
+    routes = _route_counts()
+    desktop_views = _discover_desktop_views()
+    desktop_js = _discover_desktop_js_modules()
+    run_info = _latest_run_snapshot()
+
+    docs_md = _count_markdown(_ATLAS_ROOT / "docs")
+    gov_md = _count_markdown(_ATLAS_ROOT / "project_governance")
+    root_files = len([p for p in _safe_iterdir(_ATLAS_ROOT) if p.is_file()])
+    core_folders = [
+        "apps",
+        "python",
+        "tests",
+        "configs",
+        "docs",
+        "data",
+        "outputs",
+        "services",
+        "cpp",
+        "ui_web",
+        "scripts",
+    ]
+    core_present = sum(1 for name in core_folders if (_ATLAS_ROOT / name).exists())
+
+    module_ratio = modules_online / modules_total if modules_total else 0.0
+    model_ratio = min(len(models), 5) / 5.0
+    route_ratio = min(routes["api_routes"], 80) / 80.0
+    pulse_score = int((module_ratio * 0.60 + model_ratio * 0.20 + route_ratio * 0.20) * 100)
+
+    if pulse_score >= 75:
+        status = "nominal"
+    elif pulse_score >= 45:
+        status = "degraded"
+    else:
+        status = "critical"
+
+    return {
+        "status": status,
+        "pulse_score": pulse_score,
+        "generated_at": datetime.now().isoformat(),
+        "aria": {
+            "active_model": _aria_active_model,
+            "installed_models": len(models),
+            "audit_entries": len(_aria_audit_log),
+        },
+        "runtime": {
+            "modules_online": modules_online,
+            "modules_total": modules_total,
+            "api_routes": routes["api_routes"],
+            "websocket_routes": routes["websocket_routes"],
+        },
+        "project": {
+            "core_folders_present": core_present,
+            "core_folders_total": len(core_folders),
+            "root_files": root_files,
+            "desktop_views": len(desktop_views),
+            "desktop_js_modules": len(desktop_js),
+            "docs_markdown": docs_md,
+            "governance_markdown": gov_md,
+        },
+        "runs": run_info,
+        "highlights": {
+            "desktop_views_sample": desktop_views[:8],
+            "desktop_js_sample": desktop_js[:8],
+        },
+    }
+
+
+def _collect_route_paths() -> set:
+    return {
+        path
+        for route in app.routes
+        for path in [getattr(route, "path", "")]
+        if path
+    }
+
+
+def _build_connectivity_checks() -> Dict[str, Any]:
+    route_paths = _collect_route_paths()
+    desktop_views = set(_discover_desktop_views())
+    desktop_js_modules = set(_discover_desktop_js_modules())
+
+    checks = [
+        {
+            "id": "api_health",
+            "label": "API health endpoint",
+            "kind": "route",
+            "target": "/api/health",
+            "connected": "/api/health" in route_paths,
+        },
+        {
+            "id": "api_command_center",
+            "label": "Command center endpoint",
+            "kind": "route",
+            "target": "/api/system/command_center",
+            "connected": "/api/system/command_center" in route_paths,
+        },
+        {
+            "id": "api_thought_map",
+            "label": "Thought map endpoint",
+            "kind": "route",
+            "target": "/api/system/thought_map",
+            "connected": "/api/system/thought_map" in route_paths,
+        },
+        {
+            "id": "api_models",
+            "label": "ARIA model inventory",
+            "kind": "route",
+            "target": "/api/aria/models",
+            "connected": "/api/aria/models" in route_paths,
+        },
+        {
+            "id": "api_query",
+            "label": "ARIA query bridge",
+            "kind": "route",
+            "target": "/query",
+            "connected": "/query" in route_paths,
+        },
+        {
+            "id": "ws_bridge",
+            "label": "WebSocket bridge",
+            "kind": "route",
+            "target": "/ws/{session_id}",
+            "connected": "/ws/{session_id}" in route_paths,
+        },
+        {
+            "id": "desktop_view_thought",
+            "label": "Desktop thought-map view",
+            "kind": "desktop",
+            "target": "view-thought",
+            "connected": "thought" in desktop_views,
+        },
+        {
+            "id": "desktop_module_thought",
+            "label": "Desktop thought-map module",
+            "kind": "desktop",
+            "target": "thought_map.js",
+            "connected": "thought_map.js" in desktop_js_modules,
+        },
+    ]
+
+    connected = sum(1 for check in checks if check["connected"])
+    total = len(checks)
+    return {
+        "connected": connected,
+        "total": total,
+        "all_connected": connected == total,
+        "checks": checks,
+    }
+
+
+def _build_thinking_trace(limit: int = 14) -> List[Dict[str, Any]]:
+    if not _aria_audit_log:
+        return []
+
+    rows: List[Dict[str, Any]] = []
+    for idx, entry in enumerate(reversed(_aria_audit_log[-limit:]), start=1):
+        success = bool(entry.get("success"))
+        latency_ms = int(entry.get("latency_ms") or 0)
+        model = entry.get("model") or _aria_active_model
+        stage = "response_ok" if success else "response_failed"
+        rows.append(
+            {
+                "id": f"audit-{idx}",
+                "ts": entry.get("ts"),
+                "model": model,
+                "success": success,
+                "latency_ms": latency_ms,
+                "message_len": int(entry.get("message_len") or 0),
+                "stage": stage,
+                "label": f"{'OK' if success else 'ERR'} {latency_ms}ms · {model}",
+            }
+        )
+    return rows
+
+
+def _severity_from_ratio(ratio: float) -> str:
+    if ratio >= 0.8:
+        return "online"
+    if ratio >= 0.45:
+        return "degraded"
+    return "critical"
+
+
+def _build_thought_graph(
+    command_center: Dict[str, Any],
+    connectivity: Dict[str, Any],
+) -> Dict[str, Any]:
+    runtime = command_center.get("runtime", {})
+    project = command_center.get("project", {})
+    runs = command_center.get("runs", {})
+    aria = command_center.get("aria", {})
+
+    modules_online = int(runtime.get("modules_online") or 0)
+    modules_total = int(runtime.get("modules_total") or 0)
+    module_ratio = modules_online / modules_total if modules_total else 0.0
+    modules_state = _severity_from_ratio(module_ratio)
+
+    models_installed = int(aria.get("installed_models") or 0)
+    aria_state = "online" if models_installed > 0 else "degraded"
+
+    runs_count = int(runs.get("count") or 0)
+    runs_state = "online" if runs_count > 0 else "degraded"
+
+    docs_total = int(project.get("docs_markdown") or 0) + int(project.get("governance_markdown") or 0)
+    docs_state = "online" if docs_total > 0 else "critical"
+
+    bridge_state = "online" if connectivity.get("all_connected") else "degraded"
+    route_count = int(runtime.get("api_routes") or 0)
+    api_state = "online" if route_count >= 1 else "critical"
+
+    nodes = [
+        {
+            "id": "desktop",
+            "label": "Desktop UI",
+            "status": "online",
+            "x": 8,
+            "y": 50,
+            "meta": f"{project.get('desktop_views', 0)} views",
+        },
+        {
+            "id": "server",
+            "label": "FastAPI Core",
+            "status": api_state,
+            "x": 30,
+            "y": 50,
+            "meta": f"{route_count} API routes",
+        },
+        {
+            "id": "aria",
+            "label": "ARIA Runtime",
+            "status": aria_state,
+            "x": 52,
+            "y": 28,
+            "meta": str(aria.get("active_model") or "unknown"),
+        },
+        {
+            "id": "engines",
+            "label": "Atlas Engines",
+            "status": modules_state,
+            "x": 52,
+            "y": 72,
+            "meta": f"{modules_online}/{modules_total} online",
+        },
+        {
+            "id": "governance",
+            "label": "Governance",
+            "status": docs_state,
+            "x": 74,
+            "y": 28,
+            "meta": f"{docs_total} docs",
+        },
+        {
+            "id": "artifacts",
+            "label": "Run Artifacts",
+            "status": runs_state,
+            "x": 74,
+            "y": 72,
+            "meta": str(runs.get("latest_run_id") or "none"),
+        },
+        {
+            "id": "bridge",
+            "label": "System Bridge",
+            "status": bridge_state,
+            "x": 74,
+            "y": 50,
+            "meta": f"{connectivity.get('connected', 0)}/{connectivity.get('total', 0)} links",
+        },
+    ]
+
+    edges = [
+        {"source": "desktop", "target": "server", "status": "online", "label": "UI REST"},
+        {"source": "server", "target": "aria", "status": aria_state, "label": "inference"},
+        {"source": "server", "target": "engines", "status": modules_state, "label": "module calls"},
+        {"source": "server", "target": "governance", "status": docs_state, "label": "docs context"},
+        {"source": "server", "target": "artifacts", "status": runs_state, "label": "run outputs"},
+        {"source": "server", "target": "bridge", "status": bridge_state, "label": "wiring"},
+        {"source": "bridge", "target": "aria", "status": bridge_state, "label": "prompt path"},
+    ]
+
+    return {"nodes": nodes, "edges": edges}
+
+
+def _discover_switch_targets() -> List[str]:
+    index_path = _ATLAS_ROOT / "apps" / "desktop" / "index.html"
+    content = _safe_read_text(index_path)
+    if not content:
+        return []
+    matches = re.findall(r"switchView\('([a-zA-Z0-9_-]+)'\)", content)
+    return sorted(set(matches), key=str.lower)
+
+
+def _build_module_registry_snapshot() -> Dict[str, Any]:
+    modules = _discover_desktop_js_modules()
+    views = _discover_desktop_views()
+    view_set = set(views)
+    switch_targets = set(_discover_switch_targets())
+
+    view_hints = {
+        "analysis": "analysis",
+        "app": "dashboard",
+        "aria_core": "chat",
+        "decision": "decision",
+        "derivatives": "derivatives",
+        "finance": "finance",
+        "indicator_terminal": "indicators",
+        "info": "info",
+        "main": "dashboard",
+        "mmo": "mmo",
+        "paper_trading": "paper",
+        "playroom": "playroom",
+        "playroom_gitcity": "playroom",
+        "playroom_racing": "playroom",
+        "real_estate": "realestate",
+        "rl_lab": "rl",
+        "scenario": "practice",
+        "sim_dashboard": "practice",
+        "strategy": "finance",
+        "terminal": "chat",
+        "thought_map": "thought",
+        "trader": "trader",
+        "viz_lab": "vizlab",
+        "viz_mmo": "mmo",
+    }
+
+    entries: List[Dict[str, Any]] = []
+    visualized = 0
+    for module_name in modules:
+        stem = Path(module_name).stem.lower()
+        suggested_view = view_hints.get(stem)
+        if not suggested_view and stem in view_set:
+            suggested_view = stem
+        if not suggested_view:
+            normalized = stem.replace("_", "")
+            if normalized in view_set:
+                suggested_view = normalized
+
+        view_exists = bool(suggested_view and suggested_view in view_set)
+        linked = bool(suggested_view and suggested_view in switch_targets)
+        if view_exists and linked:
+            status = "visualized"
+            visualized += 1
+            note = "View exists and is linked in switchView."
+        elif view_exists or linked:
+            status = "partial"
+            note = "Partially wired. Keep this module but finish wiring."
+        else:
+            status = "pending"
+            note = "No visible view yet. Keep module and add UI wiring later."
+
+        entries.append(
+            {
+                "module": module_name,
+                "suggested_view": suggested_view,
+                "view_exists": view_exists,
+                "linked": linked,
+                "status": status,
+                "note": note,
+            }
+        )
+
+    total = len(entries)
+    pending = sum(1 for entry in entries if entry["status"] != "visualized")
+    return {
+        "total": total,
+        "visualized": visualized,
+        "pending": pending,
+        "views_discovered": len(views),
+        "switch_targets": sorted(switch_targets),
+        "entries": entries,
+    }
+
+
+def _build_thought_map_snapshot() -> Dict[str, Any]:
+    command_center = _build_command_center_snapshot()
+    connectivity = _build_connectivity_checks()
+    trace = _build_thinking_trace(limit=16)
+    graph = _build_thought_graph(command_center, connectivity)
+    module_registry = _build_module_registry_snapshot()
+
+    project = command_center.get("project", {})
+    runs = command_center.get("runs", {})
+
+    return {
+        "generated_at": datetime.now().isoformat(),
+        "status": command_center.get("status", "degraded"),
+        "pulse_score": int(command_center.get("pulse_score") or 0),
+        "connectivity": connectivity,
+        "thinking_trace": trace,
+        "graph": graph,
+        "module_registry": module_registry,
+        "visibility": {
+            "desktop_views": int(project.get("desktop_views") or 0),
+            "desktop_js_modules": int(project.get("desktop_js_modules") or 0),
+            "latest_run_id": runs.get("latest_run_id"),
+            "latest_run_updated": runs.get("latest_updated"),
+            "module_registry_pending": int(module_registry.get("pending") or 0),
+        },
+        "command_center": command_center,
+    }
+
 
 def _get_local_models() -> List[Dict]:
     """
@@ -336,6 +833,63 @@ def root():
     }
 
 
+@app.get("/api/monitor/tick")
+async def monitor_tick(tickers: str = "AAPL,MSFT,NVDA,BTC-USD,SPY,QQQ"):
+    """
+    Live Monitor snapshot — parallel quote fetch for multiple tickers.
+    Designed for the Viz Lab Live Monitor panel (auto-polls every 15s).
+    Returns: per-ticker price, change_pct, volume + server_ms + timestamp.
+    All fetches run concurrently so 6 tickers ≈ same latency as 1.
+    """
+    ticker_list = [t.strip().upper() for t in tickers.split(",") if t.strip()][:8]
+    t0 = time.time()
+
+    async def _fetch_one(sym: str) -> dict:
+        try:
+            import yfinance as yf
+            hist = await asyncio.to_thread(
+                lambda: yf.Ticker(sym).history(period="5d", interval="1d", auto_adjust=True)
+            )
+            if hist is None or hist.empty:
+                return {"symbol": sym, "price": None, "change_pct": None, "volume": None}
+            closes = hist["Close"].dropna()
+            price = float(closes.iloc[-1])
+            change_pct = 0.0
+            if len(closes) >= 2:
+                prev = float(closes.iloc[-2])
+                change_pct = round((price - prev) / prev * 100, 2) if prev else 0.0
+            volume = int(hist["Volume"].dropna().iloc[-1]) if "Volume" in hist.columns else None
+            return {
+                "symbol": sym,
+                "price": round(price, 4),
+                "change_pct": change_pct,
+                "volume": volume,
+            }
+        except Exception as exc:
+            return {"symbol": sym, "price": None, "change_pct": None, "volume": None, "error": str(exc)[:60]}
+
+    results = await asyncio.gather(*[_fetch_one(sym) for sym in ticker_list])
+    return {
+        "tickers": list(results),
+        "count": len(results),
+        "server_ms": round((time.time() - t0) * 1000),
+        "timestamp": datetime.now().isoformat(),
+        "status": "ok",
+    }
+
+
+@app.get("/api/system/command_center")
+def command_center_snapshot():
+    """Aggregated snapshot for the Atlas dashboard Command Center."""
+    return _build_command_center_snapshot()
+
+
+@app.get("/api/system/thought_map")
+def thought_map_snapshot():
+    """System-wide visibility graph + high-level ARIA reasoning trace."""
+    return _build_thought_map_snapshot()
+
+
 @app.post("/query", response_model=QueryResponse)
 async def query_aria(request: QueryRequest):
     """
@@ -378,6 +932,27 @@ async def query_aria(request: QueryRequest):
         elif cmd == "/audit":
             n = int(arg) if arg.isdigit() else 10
             response = _slash_audit(n)
+
+        elif cmd == "/project":
+            snap = _build_command_center_snapshot()
+            runtime = snap.get("runtime", {})
+            project = snap.get("project", {})
+            runs = snap.get("runs", {})
+            aria = snap.get("aria", {})
+            response = (
+                "**Atlas Command Center**\n\n"
+                f"- Status: **{snap.get('status', 'unknown').upper()}** "
+                f"(pulse {snap.get('pulse_score', 0)}/100)\n"
+                f"- Runtime: {runtime.get('modules_online', 0)}/{runtime.get('modules_total', 0)} modules online, "
+                f"{runtime.get('api_routes', 0)} API routes\n"
+                f"- Project: {project.get('desktop_views', 0)} UI views, "
+                f"{project.get('docs_markdown', 0)} docs, "
+                f"{project.get('governance_markdown', 0)} governance docs\n"
+                f"- Runs: {runs.get('count', 0)} total, latest `{runs.get('latest_run_id') or 'none'}`\n"
+                f"- ARIA: model `{aria.get('active_model', 'unknown')}`, "
+                f"{aria.get('installed_models', 0)} local model(s)\n\n"
+                "Live endpoint: `/api/system/command_center`"
+            )
 
         elif cmd == "/model":
             global _aria_active_model
@@ -436,6 +1011,7 @@ async def query_aria(request: QueryRequest):
                 "| `/models` | List locally installed Ollama models |\n"
                 "| `/model <name>` | Switch to a different local model |\n"
                 "| `/audit [n]` | Show last n request logs |\n"
+                "| `/project` | Show Atlas command-center snapshot |\n"
                 "| `/debug <topic>` | Structured debug protocol |\n"
                 "| `/review <ticker>` | Strategy review checklist |\n"
                 "| `/help` | This help message |\n\n"
@@ -1430,19 +2006,7 @@ def vizlab_system_status():
     import time
     return {
         "timestamp": time.time(),
-        "modules": {
-            "aria": True,
-            "data_layer": True,
-            "indicators": True,
-            "signal_engine": True,
-            "risk_engine": True,
-            "monte_carlo": True,
-            "backtest": True,
-            "ml_engine": False,       # Not trained yet
-            "rl_agent": False,        # Not trained yet
-            "execution": True,
-            "cpp_core": False,        # Build pending
-        },
+        "modules": dict(_SYSTEM_MODULE_FLAGS),
         "aria_model": os.getenv("ARIA_MODEL", "llama3.2:1b"),
         "uptime_note": "Atlas v0.6.0-alpha — Viz Lab online",
     }
@@ -1532,6 +2096,87 @@ def _fetch_ohlcv_local(ticker: str, period: str = "1y"):
 
     # Local fallback — deterministic synthetic data seeded by ticker name
     return _generate_synthetic_ohlcv(ticker, n=n_bars, seed=abs(hash(ticker)) % (2**31)), True
+
+
+@app.get("/api/market-state/{ticker}")
+def api_market_state(ticker: str, period: str = "1y", adx_threshold: float = 25.0):
+    """
+    Compute market-state snapshot for a ticker:
+    - regime detection
+    - volatility regime/forecast
+    - market internals
+    - sentiment score
+    """
+    try:
+        _add_sys_path()
+        import numpy as np
+
+        from atlas.market_state import (
+            MarketInternals,
+            RegimeDetector,
+            SentimentAnalyzer,
+            VolatilityRegime,
+        )
+
+        symbol = ticker.strip().upper()
+        ohlcv, is_synthetic = _fetch_ohlcv_local(symbol, period=period)
+        if ohlcv is None or ohlcv.empty:
+            raise HTTPException(status_code=404, detail=f"No data for {symbol}")
+
+        if len(ohlcv) < 20:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Need at least 20 bars for market-state analysis, got {len(ohlcv)}",
+            )
+
+        def _safe_float(value):
+            if value is None:
+                return None
+            try:
+                if np.isnan(value):
+                    return None
+            except Exception:
+                pass
+            try:
+                return float(value)
+            except Exception:
+                return None
+
+        regime = RegimeDetector(adx_threshold=adx_threshold, lookback=min(20, len(ohlcv))).detect(ohlcv)
+        vol_detector = VolatilityRegime(lookback=max(20, min(252, len(ohlcv))))
+        vol_regime = vol_detector.classify(ohlcv)
+        vol_forecast = vol_detector.get_volatility_forecast(ohlcv, horizon=5)
+        internals = MarketInternals().calculate(ohlcv)
+        sentiment = SentimentAnalyzer().analyze(ohlcv)
+
+        return {
+            "ticker": symbol,
+            "period": period,
+            "n_bars": int(len(ohlcv)),
+            "synthetic": bool(is_synthetic),
+            "regime": {
+                "name": regime.regime,
+                "confidence": _safe_float(regime.confidence),
+                "timestamp": regime.timestamp.isoformat() if hasattr(regime.timestamp, "isoformat") else str(regime.timestamp),
+                "metrics": {k: _safe_float(v) for k, v in regime.metrics.items()},
+            },
+            "volatility": {
+                "regime": vol_regime,
+                "forecast_annualized": _safe_float(vol_forecast),
+            },
+            "internals": {k: _safe_float(v) for k, v in internals.items()},
+            "sentiment": {
+                "score": _safe_float(sentiment.score),
+                "confidence": _safe_float(sentiment.confidence),
+                "source": sentiment.source,
+                "components": {k: _safe_float(v) for k, v in sentiment.components.items()},
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Market-state API error [{ticker}]: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/strategy/analyze/{ticker}")
@@ -2732,12 +3377,15 @@ async def get_factors(ticker: str, period: str = "1y"):
         raise HTTPException(500, f"Factor engine import failed: {e}")
 
     df = await asyncio.to_thread(
-        yf.download, ticker, period=period, auto_adjust=True, progress=False
+        lambda: yf.Ticker(ticker.upper()).history(period=period, auto_adjust=True)
     )
-    if df.empty:
+    if df is None or df.empty:
         raise HTTPException(404, f"No data for {ticker}")
 
-    df.columns = [str(c).capitalize() for c in df.columns]
+    # yf.Ticker.history() returns simple capitalized columns (Open, High, Low, Close, Volume)
+    # Drop any extra columns (Dividends, Stock Splits) to keep only OHLCV
+    ohlcv_cols = [c for c in df.columns if c.lower() in ("open", "high", "low", "close", "volume")]
+    df = df[ohlcv_cols].copy()
     engine = FactorEngine()
 
     scores      = await asyncio.to_thread(engine.score, df)
@@ -3456,6 +4104,109 @@ def mmo_quantum_state(ticker: str):
         result["error"] = str(e)
 
     return result
+
+
+# ==================== AI AGENT SYSTEM ====================
+
+# Lazy-init orchestrator (built once on first request)
+_agent_orchestrator = None
+
+def _get_agent_orchestrator():
+    global _agent_orchestrator
+    if _agent_orchestrator is None:
+        try:
+            import sys
+            from pathlib import Path
+            _root = Path(__file__).resolve().parents[2]
+            if str(_root / "python" / "src") not in sys.path:
+                sys.path.insert(0, str(_root / "python" / "src"))
+            from atlas.core.ai_assistant import build_system
+            _agent_orchestrator = build_system()
+        except Exception as e:
+            logging.warning(f"Agent system init failed: {e}")
+            _agent_orchestrator = None
+    return _agent_orchestrator
+
+
+@app.get("/api/agents")
+def list_agents():
+    """List all registered agents and their metadata."""
+    orch = _get_agent_orchestrator()
+    if orch is None:
+        return {"error": "Agent system not available", "agents": []}
+
+    agents_info = []
+    try:
+        for name in orch.registry.list_agents():
+            agent = orch.registry.get(name)
+            agents_info.append({
+                "name":    agent.name,
+                "version": agent.version,
+                "class":   type(agent).__name__,
+            })
+    except Exception as e:
+        return {"error": str(e), "agents": []}
+
+    return {
+        "total":  len(agents_info),
+        "agents": agents_info,
+        "status": "ok",
+    }
+
+
+class AgentRunRequest(BaseModel):
+    agent_name:  str
+    objective:   str
+    context:     Optional[Dict[str, Any]] = {}
+    inputs:      Optional[Dict[str, Any]] = {}
+    risk_level:  Optional[str] = "low"
+
+
+@app.post("/api/agents/run")
+def run_agent(req: AgentRunRequest):
+    """Execute an agent task and return the result."""
+    orch = _get_agent_orchestrator()
+    if orch is None:
+        return {"status": "error", "errors": ["Agent system not available"], "result": {}}
+
+    try:
+        from atlas.core.ai_assistant.task_schema import AgentTask
+        task = AgentTask(
+            objective  = req.objective,
+            agent_name = req.agent_name,
+            context    = req.context or {},
+            inputs     = req.inputs or {},
+            risk_level = req.risk_level or "low",
+        )
+        result = orch.execute(task)
+        return {
+            "task_id":  result.task_id,
+            "status":   result.status,
+            "summary":  result.summary,
+            "result":   result.result,
+            "errors":   result.errors,
+            "metadata": result.metadata,
+        }
+    except Exception as e:
+        return {"status": "error", "errors": [str(e)], "result": {}}
+
+
+@app.get("/api/agents/status")
+def agents_status():
+    """Quick status check for the agent system."""
+    orch = _get_agent_orchestrator()
+    if orch is None:
+        return {"available": False, "agents_count": 0, "reason": "Import error or build failed"}
+
+    try:
+        count = len(orch.registry.list_agents())
+        return {
+            "available":    True,
+            "agents_count": count,
+            "agents":       orch.registry.list_agents(),
+        }
+    except Exception as e:
+        return {"available": False, "agents_count": 0, "reason": str(e)}
 
 
 # ==================== WEBSOCKET ====================
