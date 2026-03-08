@@ -105,7 +105,9 @@ async function _refreshDashboardStats() {
         const r = await fetch(`/api/strategy/analyze/${t}`);
         if (r.ok) {
           const d = await r.json();
-          if (d.consensus && d.consensus !== 'HOLD') signalCount++;
+          // Use top-level signal key (new API) or fall back to consensus.action
+          const sig = d.signal || (d.consensus && d.consensus.action) || 'HOLD';
+          if (sig !== 'HOLD') signalCount++;
         }
       } catch (_) { /* offline graceful */ }
     }));
@@ -240,6 +242,8 @@ function setStatus(state, text) {
 // ==================== EVENT LISTENERS ====================
 
 function setupEventListeners() {
+  if (!input || !voiceBtn) return;
+
   // Enter key to send
   input.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -363,9 +367,10 @@ function _updateLatencyBadge(provider, latencyMs) {
 }
 
 function _addSystemNote(text) {
+  if (!chat) return;
   const note = document.createElement('div');
   note.style.cssText = 'font-size:10px;color:var(--txt-muted);text-align:center;padding:4px 0;letter-spacing:.04em;';
-  note.textContent = `— ${text} —`;
+  note.textContent = `- ${text} -`;
   chat.appendChild(note);
   chat.scrollTop = chat.scrollHeight;
 }
@@ -448,6 +453,8 @@ function _renderMarkdown(text) {
 }
 
 function addMessage(role, content, timestamp = null, metadata = null) {
+  if (!chat) return null;
+
   const messageDiv = document.createElement('div');
   messageDiv.className = `message ${role}`;
 
@@ -491,6 +498,7 @@ function addMessage(role, content, timestamp = null, metadata = null) {
 }
 
 async function sendMessage(text) {
+  if (!chat || !input) return;
   if (!text.trim()) return;
 
   // Clear input + hide slash hints
@@ -628,7 +636,7 @@ document.addEventListener('keydown', (e) => {
   // Ctrl/Cmd + K - Focus input
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
     e.preventDefault();
-    input.focus();
+    if (input) input.focus();
   }
 
   // Ctrl/Cmd + Shift + V - Toggle voice
@@ -641,7 +649,7 @@ document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
     e.preventDefault();
     if (confirm('Clear chat history?')) {
-      chat.innerHTML = '';
+      if (chat) chat.innerHTML = '';
       addMessage('assistant', 'Chat cleared. How can I help you?');
     }
   }
