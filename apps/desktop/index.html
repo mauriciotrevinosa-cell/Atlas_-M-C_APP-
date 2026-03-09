@@ -915,7 +915,12 @@
               <option value="1y">1 yr</option>
             </select>
           </div>
-          <button class="btn primary" id="strat-run-btn" type="button" onclick="runStrategyAnalysis()">Analyze</button>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button class="btn primary" id="strat-run-btn" type="button" onclick="runStrategyAnalysis()">Analyze</button>
+            <button class="btn secondary" id="strat-train-btn" type="button" onclick="trainMLModels()"
+              title="Train XGBoost + RandomForest ML engines on historical data"
+              style="font-size:12px; padding:6px 14px;">🤖 Train Models</button>
+          </div>
           <div id="strat-status" style="margin-top:10px; font-size:11px; color:#aaa;"></div>
 
           <!-- Consensus box -->

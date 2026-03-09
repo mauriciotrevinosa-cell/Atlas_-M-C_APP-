@@ -66,10 +66,13 @@ const ENGINE_LABELS = {
   macd:       "MACD",
   bb_squeeze: "BB Squeeze",
   momentum:   "Momentum",
+  ml_xgboost: "🤖 XGBoost ML",
+  ml_rf:      "🌲 Random Forest",
 };
 
 const ENGINE_WEIGHTS = {
   sma: 0.15, rsi_mr: 0.25, macd: 0.25, bb_squeeze: 0.20, momentum: 0.15,
+  ml_xgboost: 0.25, ml_rf: 0.15,
 };
 
 let _lastStratTicker = null;
@@ -97,7 +100,9 @@ async function runStrategyAnalysis() {
   try {
     const data = await _apiFetch(`/api/strategy/analyze/${ticker}?period=${period}`, 40000);
     _renderStrategyResult(data);
-    statusEl.textContent = `Analysis complete · ${data.bars_used} bars used`;
+    const mlCount = data.ml_signals || 0;
+    const mlNote  = mlCount > 0 ? ` · ${mlCount} ML engine${mlCount > 1 ? "s" : ""} active` : " · ML engines untrained";
+    statusEl.textContent = `Analysis complete · ${data.bars_used} bars used${mlNote}`;
   } catch (err) {
     statusEl.textContent = `Error: ${err.message}`;
   } finally {
@@ -150,35 +155,45 @@ function _renderStrategyResult(data) {
   `;
 
   rowsEl.innerHTML = "";
-  const engineOrder = ["sma", "rsi_mr", "macd", "bb_squeeze", "momentum"];
-  engineOrder.forEach(key => {
+
+  function _appendEngineRow(key, sectionLabel) {
+    if (sectionLabel) {
+      const sep = document.createElement("div");
+      sep.style.cssText = "font-size:10px; color:#445; text-transform:uppercase; letter-spacing:1px; margin-top:6px; padding:0 2px;";
+      sep.textContent = sectionLabel;
+      rowsEl.appendChild(sep);
+    }
     const sig    = individual[key] || { action: "HOLD", confidence: 0.50, reason: "" };
     const label  = ENGINE_LABELS[key] || key;
     const weight = ENGINE_WEIGHTS[key] || 0;
     const ec     = _actionColor(sig.action);
     const bar    = Math.round(sig.confidence * 100);
-
     const row = document.createElement("div");
-    row.style.cssText = `
-      display:flex; align-items:center; gap:10px;
-      padding:8px 10px; border-radius:6px; border:1px solid #1e2030;
-      background:#0b0e1a; font-size:12px;
-    `;
+    row.style.cssText = "display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:6px; border:1px solid #1e2030; background:#0b0e1a; font-size:12px;";
     row.innerHTML = `
-      <div style="width:110px; color:#aaa; flex-shrink:0;">${label}</div>
-      <div style="
-        min-width:48px; padding:2px 8px; border-radius:4px; text-align:center;
-        font-weight:700; font-family:monospace; font-size:11px;
-        color:${ec.text}; background:${ec.bg}; border:1px solid ${ec.border};
-      ">${(sig.action || "HOLD").toUpperCase()}</div>
-      <div style="flex:1; height:4px; border-radius:2px; background:#1a2030; overflow:hidden;">
-        <div style="height:100%; width:${bar}%; background:${_confColor(sig.confidence)}; border-radius:2px;"></div>
-      </div>
+      <div style="width:118px; color:#aaa; flex-shrink:0;">${label}</div>
+      <div style="min-width:48px; padding:2px 8px; border-radius:4px; text-align:center; font-weight:700; font-family:monospace; font-size:11px; color:${ec.text}; background:${ec.bg}; border:1px solid ${ec.border};">${(sig.action || "HOLD").toUpperCase()}</div>
+      <div style="flex:1; height:4px; border-radius:2px; background:#1a2030; overflow:hidden;"><div style="height:100%; width:${bar}%; background:${_confColor(sig.confidence)}; border-radius:2px;"></div></div>
       <div style="color:#667; width:34px; text-align:right;">${bar}%</div>
       <div style="color:#445; width:38px; text-align:right; font-size:10px;">w=${weight}</div>
     `;
     rowsEl.appendChild(row);
+  }
+
+  ["sma", "rsi_mr", "macd", "bb_squeeze", "momentum"].forEach((key, i) => {
+    _appendEngineRow(key, i === 0 ? "Rule-Based Engines" : null);
   });
+
+  // ML engines — only render if they exist in individual dict
+  const mlKeys = ["ml_xgboost", "ml_rf"].filter(k => individual[k]);
+  if (mlKeys.length > 0) {
+    mlKeys.forEach((key, i) => _appendEngineRow(key, i === 0 ? "ML Engines" : null));
+  } else {
+    const hint = document.createElement("div");
+    hint.style.cssText = "font-size:10px; color:#334; margin-top:8px; padding:6px 10px; border-radius:4px; border:1px dashed #1a2030;";
+    hint.textContent = "ML engines not trained — click Train Models to enable XGBoost + RF signals.";
+    rowsEl.appendChild(hint);
+  }
 
   // ── Indicator Diagnostics (new: from /api/strategy/analyze diagnostics) ────
   const diag = data.diagnostics;
@@ -216,6 +231,37 @@ function _renderStrategyResult(data) {
         </div>
       `;
     }
+  }
+}
+
+// ── ML Model Training ─────────────────────────────────────────────────────────
+
+async function trainMLModels() {
+  const ticker = (_lastStratTicker ||
+    (document.getElementById("strat-ticker")?.value || "AAPL")).trim().toUpperCase();
+  const statusEl = document.getElementById("strat-status");
+  const btn = document.getElementById("strat-train-btn");
+  if (btn) btn.disabled = true;
+  statusEl.textContent = `Training ML models for ${ticker}… (may take 10-20s)`;
+  try {
+    const data = await _apiFetch(`/api/ml/train/${ticker}`, 60000, { method: "POST" });
+    const xgb  = data.engines?.ml_xgboost;
+    const rf   = data.engines?.ml_rf;
+    const xgbLine = xgb?.status === "trained"
+      ? `XGBoost val-acc ${Math.round((xgb.val_accuracy || 0) * 100)}%`
+      : `XGBoost: ${xgb?.error || "failed"}`;
+    const rfLine = rf?.status === "trained"
+      ? `RF val-acc ${Math.round((rf.val_accuracy || 0) * 100)}%`
+      : `RF: ${rf?.error || "failed"}`;
+    statusEl.textContent = `✓ Models trained — ${xgbLine} · ${rfLine} · ${data.n_samples} samples`;
+    // Auto-refresh analysis to show ML signals
+    if (xgb?.status === "trained" || rf?.status === "trained") {
+      setTimeout(runStrategyAnalysis, 500);
+    }
+  } catch (err) {
+    statusEl.textContent = `Train error: ${err.message}`;
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
