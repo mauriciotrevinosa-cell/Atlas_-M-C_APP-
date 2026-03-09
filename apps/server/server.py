@@ -2880,6 +2880,55 @@ def strategy_analyze(ticker: str, period: str = "6mo"):
                 "buy_weight": 0, "sell_weight": 0, "net_score": 0, "agreement": 0,
             }
 
+        # ── ML Engine Signals (injected when trained models exist) ─────────
+        ml_individual: Dict[str, Any] = {}
+        try:
+            import pickle
+            from atlas.core_intelligence.engines.ml.ml_suite import FeaturePipeline
+
+            hist_norm = hist.copy()
+            hist_norm.columns = [c.lower() for c in hist_norm.columns]
+            pipeline   = FeaturePipeline(lookback=20, forecast_horizon=5)
+            X_ml, _, _ = pipeline.prepare(hist_norm, label_method="direction")
+
+            for ml_key in ("ml_xgboost", "ml_rf"):
+                mpath = _ml_model_path(symbol, ml_key)
+                if mpath.exists():
+                    try:
+                        with open(mpath, "rb") as f:
+                            ml_eng = pickle.load(f)
+                        proba = ml_eng.predict_proba(X_ml[-1:])   # last row
+                        # proba shape: (1, n_classes) — class 0=SELL, 1=HOLD, 2=BUY (direction)
+                        if proba is not None and len(proba) > 0:
+                            p = proba[0]
+                            if len(p) == 3:
+                                sell_p, hold_p, buy_p = float(p[0]), float(p[1]), float(p[2])
+                            elif len(p) == 2:
+                                sell_p, buy_p = float(p[0]), float(p[1])
+                                hold_p = 0.0
+                            else:
+                                sell_p, hold_p, buy_p = 0.0, 1.0, 0.0
+
+                            if buy_p >= max(sell_p, hold_p) and buy_p > 0.45:
+                                ml_action, ml_conf = "BUY",  round(buy_p, 3)
+                            elif sell_p >= max(buy_p, hold_p) and sell_p > 0.45:
+                                ml_action, ml_conf = "SELL", round(sell_p, 3)
+                            else:
+                                ml_action, ml_conf = "HOLD", round(hold_p if hold_p else 0.5, 3)
+
+                            ml_individual[ml_key] = {
+                                "action":     ml_action,
+                                "confidence": ml_conf,
+                                "reason":     f"ML {ml_key.split('_')[-1].upper()} (p_buy={buy_p:.2f}, p_sell={sell_p:.2f})",
+                            }
+                    except Exception as ml_e:
+                        logger.debug("ML inference %s: %s", ml_key, ml_e)
+        except Exception as ml_import_e:
+            logger.debug("ML pipeline unavailable: %s", ml_import_e)
+
+        # Merge ML signals into individual (ML signals don't override rule-based)
+        individual.update(ml_individual)
+
         # Recent price info
         last_close = round(float(hist["Close"].iloc[-1]), 2)
         ret_5d     = round(float((hist["Close"].iloc[-1] / hist["Close"].iloc[-6] - 1) * 100), 2)
@@ -2949,6 +2998,7 @@ def strategy_analyze(ticker: str, period: str = "6mo"):
             "consensus":   consensus,
             "individual":  individual,
             "diagnostics": diagnostics,
+            "ml_signals":  len(ml_individual),       # how many ML engines contributed
             "bars_used":   len(hist),
             "synthetic":   bool(is_synthetic),
         }
@@ -2963,32 +3013,157 @@ def strategy_analyze(ticker: str, period: str = "6mo"):
 
 
 @app.get("/api/strategy/engines")
-def strategy_engines():
+def strategy_engines(ticker: str = "AAPL"):
     """
-    List all available strategy engines, their types, and weights in the MultiStrategy.
+    List all available strategy engines, their types, weights, and training status.
+    Pass ?ticker=AAPL to check ML model status for a specific ticker.
     """
-    try:
-        _add_sys_path()
-        from atlas.core_intelligence.engines.rule_based.multi_strategy import MultiStrategyEngine  # noqa
-    except Exception:
-        pass
+    symbol = ticker.strip().upper()
+    ml_stat = _ml_model_status(symbol)
 
     return {
+        "ticker": symbol,
         "rule_based": [
-            {"name": "sma",        "label": "SMA Crossover",       "weight": 0.15, "type": "trend"},
-            {"name": "rsi_mr",     "label": "RSI Mean Reversion",   "weight": 0.25, "type": "contrarian"},
-            {"name": "macd",       "label": "MACD Multi-Signal",    "weight": 0.25, "type": "momentum"},
-            {"name": "bb_squeeze", "label": "BB Squeeze Breakout",  "weight": 0.20, "type": "volatility"},
-            {"name": "momentum",   "label": "Time-Series Momentum", "weight": 0.15, "type": "momentum"},
+            {"name": "sma",        "label": "SMA Crossover",       "weight": 0.15, "type": "trend",       "status": "active"},
+            {"name": "rsi_mr",     "label": "RSI Mean Reversion",   "weight": 0.25, "type": "contrarian",  "status": "active"},
+            {"name": "macd",       "label": "MACD Multi-Signal",    "weight": 0.25, "type": "momentum",    "status": "active"},
+            {"name": "bb_squeeze", "label": "BB Squeeze Breakout",  "weight": 0.20, "type": "volatility",  "status": "active"},
+            {"name": "momentum",   "label": "Time-Series Momentum", "weight": 0.15, "type": "momentum",    "status": "active"},
         ],
         "ml": [
-            {"name": "ml_xgboost", "label": "XGBoost",       "weight": 0.25, "status": "untrained"},
-            {"name": "ml_rf",      "label": "Random Forest",  "weight": 0.15, "status": "untrained"},
-            {"name": "ml_lstm",    "label": "LSTM",           "weight": 0.20, "status": "untrained"},
+            {**{"name": k, **v}} for k, v in ml_stat.items()
+        ] + [
+            {"name": "ml_lstm", "label": "LSTM", "weight": 0.20, "status": "untrained", "note": "requires PyTorch"},
         ],
         "rl": [
             {"name": "rl_dqn", "label": "DQN Agent", "weight": 0.25, "status": "untrained"},
         ],
+        "train_endpoint": f"/api/ml/train/{symbol}",
+    }
+
+
+# ==================== ML ENGINE TRAINING ====================
+
+_ML_MODEL_DIR = Path("data/models")
+_ML_MODEL_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _ml_model_path(ticker: str, engine: str) -> Path:
+    return _ML_MODEL_DIR / f"{ticker.upper()}_{engine}.pkl"
+
+
+def _ml_model_status(ticker: str) -> Dict[str, Any]:
+    """Return training status for each ML engine for a given ticker."""
+    engines = {
+        "ml_xgboost": {"label": "XGBoost",      "weight": 0.25},
+        "ml_rf":      {"label": "Random Forest", "weight": 0.15},
+    }
+    result = {}
+    for key, meta in engines.items():
+        path = _ml_model_path(ticker, key)
+        if path.exists():
+            age_s = int(time.time() - path.stat().st_mtime)
+            result[key] = {**meta, "status": "trained", "age_seconds": age_s,
+                           "model_path": str(path)}
+        else:
+            result[key] = {**meta, "status": "untrained", "model_path": str(path)}
+    return result
+
+
+@app.post("/api/ml/train/{ticker}")
+async def ml_train(ticker: str, period: str = "2y"):
+    """
+    Train XGBoost and RandomForest ML signal engines for a ticker.
+    Models saved to data/models/{TICKER}_{engine}.pkl.
+    Returns per-engine training metrics.
+    """
+    try:
+        _add_sys_path()
+        import pickle
+        from atlas.core_intelligence.engines.ml.ml_suite import (
+            XGBoostEngine, RandomForestEngine, FeaturePipeline,
+        )
+
+        symbol = ticker.strip().upper()
+        hist, is_synthetic = _fetch_ohlcv_local(symbol, period=period)
+        if hist is None or len(hist) < 80:
+            raise HTTPException(status_code=404,
+                detail=f"Need ≥80 bars to train ML engines; got {len(hist) if hist is not None else 0}")
+
+        # Normalise column names for FeaturePipeline
+        hist_norm = hist.copy()
+        hist_norm.columns = [c.lower() for c in hist_norm.columns]
+        hist_norm.index.name = "date"
+
+        pipeline = FeaturePipeline(lookback=20, forecast_horizon=5)
+        X, y, _ = pipeline.prepare(hist_norm, label_method="direction")
+        if len(X) < 40:
+            raise HTTPException(status_code=422,
+                detail=f"Feature pipeline produced only {len(X)} samples; need ≥40")
+
+        metrics: Dict[str, Any] = {}
+
+        # ── XGBoost ─────────────────────────────────────────────────────
+        try:
+            xgb_engine = XGBoostEngine()
+            xgb_engine.name = "ml_xgboost"
+            xgb_engine.model_dir = _ML_MODEL_DIR
+            m = xgb_engine.train(X, y)
+            xgb_engine.is_trained = True
+            path = _ml_model_path(symbol, "ml_xgboost")
+            with open(path, "wb") as f:
+                pickle.dump(xgb_engine, f)
+            metrics["ml_xgboost"] = {**m, "status": "trained", "saved_to": str(path)}
+        except Exception as e:
+            metrics["ml_xgboost"] = {"status": "error", "error": str(e)}
+
+        # ── Random Forest ────────────────────────────────────────────────
+        try:
+            rf_engine = RandomForestEngine()
+            rf_engine.name = "ml_rf"
+            rf_engine.model_dir = _ML_MODEL_DIR
+            m = rf_engine.train(X, y)
+            rf_engine.is_trained = True
+            path = _ml_model_path(symbol, "ml_rf")
+            with open(path, "wb") as f:
+                pickle.dump(rf_engine, f)
+            metrics["ml_rf"] = {**m, "status": "trained", "saved_to": str(path)}
+        except Exception as e:
+            metrics["ml_rf"] = {"status": "error", "error": str(e)}
+
+        return {
+            "ticker":    symbol,
+            "period":    period,
+            "n_samples": int(len(X)),
+            "n_features": int(X.shape[1] if len(X.shape) > 1 else 1),
+            "synthetic": bool(is_synthetic),
+            "engines":   metrics,
+            "label_method": "direction",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("ML train error [%s]: %s", ticker, e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ml/status")
+async def ml_status(ticker: str = "AAPL"):
+    """
+    Return training status of all ML engines for a given ticker.
+    Lists which models are saved, their age, and their paths.
+    """
+    symbol = ticker.strip().upper()
+    status = _ml_model_status(symbol)
+    trained_count = sum(1 for v in status.values() if v.get("status") == "trained")
+    return {
+        "ticker":        symbol,
+        "model_dir":     str(_ML_MODEL_DIR),
+        "engines":       status,
+        "trained_count": trained_count,
+        "total":         len(status),
+        "summary":       f"{trained_count}/{len(status)} ML engines trained",
     }
 
 
