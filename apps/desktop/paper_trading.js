@@ -88,19 +88,62 @@ window.PaperTrading = (() => {
      PRICE ENGINE (Synthetic Market)
   ═══════════════════════════════════════════════════════════ */
 
+  // Fallback prices used until real quotes arrive
   const BASE_PRICES = {
-    AAPL:185, MSFT:375, NVDA:480, GOOGL:155, AMZN:185, META:500,
-    TSLA:245, AVGO:165, AMD:165, INTC:22, JPM:215, BAC:42, GS:495,
-    MS:120, V:285, MA:495, BRK:425, JNJ:155, PFE:26, UNH:545,
-    XOM:110, CVX:155, COP:115, SLB:45, MPC:165, SPY:445, QQQ:385,
-    IWM:205, DIA:385, VIX:16, GLD:185, SLV:24, TLT:88, HYG:77,
-    ARKK:48, COIN:195, MSTR:185, PLTR:24, RBLX:42, NET:115,
+    AAPL:257, MSFT:415, NVDA:875, GOOGL:175, AMZN:225, META:590,
+    TSLA:280, AVGO:195, AMD:175, INTC:21,  JPM:240, BAC:44,  GS:560,
+    MS:135,  V:310,   MA:545,  BRK:460,  JNJ:158, PFE:28,  UNH:560,
+    XOM:115, CVX:160, COP:120, SLB:47,   MPC:175, SPY:575, QQQ:490,
+    IWM:225, DIA:435, VIX:14,  GLD:295,  SLV:33,  TLT:86,  HYG:77,
+    ARKK:52, COIN:310, MSTR:330, PLTR:85, RBLX:44, NET:125,
   };
+
+  // Live-seeded tickers fetched from /api/quote on init
+  const SEED_TICKERS = ['AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','SPY','QQQ','GLD'];
+  let _liveSeeded = false;
 
   function _initPrices() {
     MARKET_UNIVERSE.forEach(t => {
       _prices[t] = BASE_PRICES[t] || 50;
     });
+  }
+
+  async function _seedRealPrices() {
+    try {
+      const results = await Promise.allSettled(
+        SEED_TICKERS.map(t =>
+          fetch(`/api/quote/${t}`, { signal: AbortSignal.timeout(5000) })
+            .then(r => r.ok ? r.json() : null)
+        )
+      );
+      let seeded = 0;
+      results.forEach((r, i) => {
+        const ticker = SEED_TICKERS[i];
+        if (r.status === 'fulfilled' && r.value?.price) {
+          _prices[ticker] = r.value.price;
+          seeded++;
+        }
+      });
+      if (seeded > 0) {
+        _liveSeeded = true;
+        const badge = document.getElementById('pt-data-badge');
+        if (badge) {
+          badge.textContent = `🟢 Live prices (${seeded}/${SEED_TICKERS.length} seeded)`;
+          badge.style.color = '#00e676';
+        }
+      }
+    } catch (_) { /* silent fallback — synthetic prices remain */ }
+  }
+
+  async function _fetchLivePrice(ticker) {
+    try {
+      const res = await fetch(`/api/quote/${ticker}`, { signal: AbortSignal.timeout(4000) });
+      if (res.ok) {
+        const d = await res.json();
+        if (d?.price) { _prices[ticker] = d.price; return d.price; }
+      }
+    } catch (_) {}
+    return _prices[ticker] || BASE_PRICES[ticker] || 50;
   }
 
   function _tickPrices() {
@@ -310,6 +353,7 @@ window.PaperTrading = (() => {
       <div>
         <div class="pt-title">ARIA Paper Trading Lab</div>
         <div class="pt-sub">Autonomous strategy testing · Full market universe · Audit trail</div>
+        <div id="pt-data-badge" style="font-size:10px; color:#556; font-family:monospace; margin-top:2px;">⏳ Seeding prices…</div>
       </div>
     </div>
     <div class="pt-header-right">
@@ -535,6 +579,8 @@ window.PaperTrading = (() => {
     _initPrices();
     _renderAll();
     _initialized = true;
+    // Async: seed real prices from API (non-blocking)
+    _seedRealPrices().then(() => { if (_liveSeeded) _renderAll(); });
     console.log('[PaperTrading] init OK');
   }
 
@@ -577,28 +623,30 @@ window.PaperTrading = (() => {
     }
   }
 
-  function manualBuy() {
+  async function manualBuy() {
     const ticker = (document.getElementById('pt-manual-ticker')?.value || '').trim().toUpperCase();
     const shares = parseInt(document.getElementById('pt-manual-shares')?.value || '10');
     if (!ticker || !shares) return;
+    await _fetchLivePrice(ticker);   // seed real price if available
     _tickPrices();
-    if (!_prices[ticker]) _prices[ticker] = BASE_PRICES[ticker] || 50;
-    _execute(ticker, 'BUY', 'Manual buy order', shares);
+    _execute(ticker, 'BUY', 'Manual buy · live price', shares);
     _renderAll();
   }
 
-  function manualSell() {
+  async function manualSell() {
     const ticker = (document.getElementById('pt-manual-ticker')?.value || '').trim().toUpperCase();
     const shares = parseInt(document.getElementById('pt-manual-shares')?.value || '10');
     if (!ticker) return;
+    await _fetchLivePrice(ticker);   // refresh price before sell
     _tickPrices();
-    _execute(ticker, 'SELL', 'Manual sell order', shares);
+    _execute(ticker, 'SELL', 'Manual sell · live price', shares);
     _renderAll();
   }
 
-  function watchlistBuy(ticker) {
+  async function watchlistBuy(ticker) {
+    await _fetchLivePrice(ticker);
     _tickPrices();
-    _execute(ticker, 'BUY', `Watchlist quick-buy — ${ticker}`, 5);
+    _execute(ticker, 'BUY', `Watchlist quick-buy · live price — ${ticker}`, 5);
     _renderAll();
   }
 

@@ -636,24 +636,24 @@ window.RLLab = (() => {
   /* ── Metrics UI update ──────────────────────────────────────────── */
   function _updateUI(ret, sharpe, nTrades) {
     const $ = id => document.getElementById(id);
+    const _set = (id, val, style) => { const el = $(id); if (el) { el.textContent = val; if (style) Object.assign(el.style, style); } };
     if (!$('rm-ep')) return;
 
-    $('rm-ep').textContent  = _agent.episode;
+    _set('rm-ep', _agent.episode);
     const rs = `${ret >= 0 ? '+' : ''}${ret.toFixed(2)}%`;
-    $('rm-ret').textContent = rs;
-    $('rm-ret').style.color = ret >= 0 ? '#00ff88' : '#ff5555';
-    $('rm-shr').textContent  = sharpe.toFixed(3);
-    $('rm-eps').textContent  = _agent.eps.toFixed(3);
-    $('rm-trd').textContent  = nTrades;
-    $('rm-buf').textContent  = _agent.buf.size;
+    _set('rm-ret', rs, { color: ret >= 0 ? '#00ff88' : '#ff5555' });
+    _set('rm-shr', sharpe.toFixed(3));
+    _set('rm-eps', _agent.eps.toFixed(3));
+    _set('rm-trd', nTrades);
+    _set('rm-buf', _agent.buf.size);
 
     const wins = _returns.filter(r => r > 0).length;
-    $('rm-wr').textContent  = _returns.length ? `${(wins / _returns.length * 100).toFixed(1)}%` : '—';
+    _set('rm-wr', _returns.length ? `${(wins / _returns.length * 100).toFixed(1)}%` : '—');
 
     const avgL = _agent.losses.length
       ? mean(_agent.losses.slice(-20)).toFixed(5)
       : '—';
-    $('rm-loss').textContent = avgL;
+    _set('rm-loss', avgL);
 
     // Action distribution bars
     const total = _agent.actCounts.reduce((a, b) => a + b, 0) || 1;
