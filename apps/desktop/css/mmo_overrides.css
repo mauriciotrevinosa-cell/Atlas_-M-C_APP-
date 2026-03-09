@@ -436,6 +436,69 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   DECOHERENCE PULSE ANIMATION
+   Speed is set inline via animation-duration, driven by τ value.
+   Fast pulse (0.35s) = RAPID COLLAPSE · Slow (2.5s) = STABLE.
+══════════════════════════════════════════════════════════════════ */
+@keyframes mmo-deco-pulse {
+    0%, 100% { opacity: 1;   transform: scale(1);    }
+    50%       { opacity: 0.55; transform: scale(0.95); }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   J_FLOWS STATE-CHAIN DIAGRAM
+   Horizontal probability current flow from BEAR → BULL across
+   the 5-state basis. Rendered inside the Heisenberg panel.
+══════════════════════════════════════════════════════════════════ */
+.mmo-jflow-chain {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 0 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.mmo-jflow-chain::-webkit-scrollbar { display: none; }
+
+.mmo-jflow-node {
+    font-size: 8px;
+    font-family: monospace;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 0 2px;
+}
+
+.mmo-jflow-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    flex-shrink: 0;
+    min-width: 28px;
+}
+
+.mmo-jflow-bar {
+    width: 100%;
+    border-radius: 2px;
+    transition: height 0.4s ease, box-shadow 0.4s ease;
+    min-width: 24px;
+}
+
+.mmo-jflow-dir {
+    font-size: 10px;
+    font-family: monospace;
+    line-height: 1;
+}
+
+.mmo-jflow-val {
+    font-size: 7px;
+    color: #445;
+    font-family: monospace;
+}
+
+/* ══════════════════════════════════════════════════════════════════
    THEORY MODAL
    Full-screen overlay showing quantum physics derivations.
    Opened by MMO.showTheory() — classes used by mmo.js innerHTML.

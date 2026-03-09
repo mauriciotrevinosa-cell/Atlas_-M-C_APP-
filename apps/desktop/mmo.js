@@ -994,6 +994,49 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
   }
 
   /* ═══════════════════════════════════════════════════════════════
+     HELPER: PROBABILITY CURRENT FLOW CHAIN
+     Renders a state-chain diagram showing the 4 inter-state
+     probability currents from the j_flows array:
+       BEAR →[J₀]→ SIDEWAYS →[J₁]→ VOLATILE →[J₂]→ TRENDING →[J₃]→ BULL
+     Arrow thickness and color encode magnitude and direction.
+     ═══════════════════════════════════════════════════════════════ */
+  function _renderJFlowsChain(jFlows) {
+    if (!jFlows || jFlows.length < 4) return '';
+
+    const CHAIN = ['BEAR', 'SIDEW', 'VOLAT', 'TREND', 'BULL'];
+    const CHAIN_COLORS = ['#ff4757', '#4da6ff', '#ff9500', '#cc99ff', '#00ff88'];
+    const maxJ = Math.max(...jFlows.map(j => Math.abs(j)), 0.01);
+
+    const cells = [];
+    CHAIN.forEach((label, i) => {
+      // State node
+      cells.push(`<div class="mmo-jflow-node" style="color:${CHAIN_COLORS[i]};">${label}</div>`);
+      // Arrow between nodes
+      if (i < 4) {
+        const j = jFlows[i];
+        const norm = Math.abs(j) / maxJ;
+        const h = Math.max(2, Math.round(norm * 8));          // 2–8 px height
+        const col = j > 0 ? '#00ff88' : j < 0 ? '#ff4757' : '#333';
+        const dir = j > 0 ? '→' : j < 0 ? '←' : '·';
+        cells.push(`
+          <div class="mmo-jflow-arrow" title="J${i}=${j.toFixed(4)}">
+            <div class="mmo-jflow-bar" style="height:${h}px;background:${col};box-shadow:0 0 4px ${col}55;"></div>
+            <span class="mmo-jflow-dir" style="color:${col};">${dir}</span>
+            <span class="mmo-jflow-val">${Math.abs(j).toFixed(3)}</span>
+          </div>`);
+      }
+    });
+
+    return `
+      <div style="margin-top:8px;">
+        <div style="font-size:8px;color:#445;font-family:monospace;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">
+          State Transition Currents J_{n→n+1}
+        </div>
+        <div class="mmo-jflow-chain">${cells.join('')}</div>
+      </div>`;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
      RENDER: HEISENBERG UNCERTAINTY PRINCIPLE
      Δp = momentum uncertainty (proxy: volatility)
      Δx = position uncertainty (proxy: 1/trend_clarity)
@@ -1055,6 +1098,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
             <div style="height:100%;width:${Math.min(Math.abs(jTotal)*200,100)}%;background:${jColor};border-radius:2px;transition:width 0.5s;"></div>
           </div>
         </div>
+        ${_renderJFlowsChain(d.j_flows)}
       </div>
       <div style="border-top:1px solid rgba(255,255,255,0.06);margin:8px 0;padding-top:8px;">
         <div style="font-size:9px;color:#556;margin-bottom:4px;font-family:monospace;text-transform:uppercase;">QFI-Adjusted Position Sizing</div>
@@ -1080,16 +1124,35 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
     const tauNorm = Math.min(1, tau / 5);
     const tauColor = tau < 0.5 ? '#ff4757' : tau < 1.5 ? '#f1c40f' : '#00ff88';
     const regime  = tau < 0.5 ? 'RAPID COLLAPSE' : tau < 1.5 ? 'MODERATE DECAY' : 'STABLE SUPERPOSITION';
+    // Pulse speed: fast (0.35s) when τ near 0, slow (2.5s) when τ stable
+    const pulseSpeed = tau < 0.5 ? '0.35s' : tau < 1.5 ? '0.9s' : '2.5s';
+    const glowShadow = tau < 0.5 ? `0 0 14px ${tauColor}` : tau < 1.5 ? `0 0 8px ${tauColor}88` : 'none';
+    const urgencyBadge = tau < 0.5
+      ? `<span style="font-size:9px;background:#ff475722;border:1px solid #ff475744;color:#ff4757;padding:1px 6px;border-radius:4px;font-family:monospace;margin-left:6px;">⚠ COLLAPSING</span>`
+      : tau < 1.5
+      ? `<span style="font-size:9px;background:#f1c40f22;border:1px solid #f1c40f44;color:#f1c40f;padding:1px 6px;border-radius:4px;font-family:monospace;margin-left:6px;">DECAYING</span>`
+      : `<span style="font-size:9px;background:#00ff8822;border:1px solid #00ff8844;color:#00ff88;padding:1px 6px;border-radius:4px;font-family:monospace;margin-left:6px;">STABLE</span>`;
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;">
-        <div style="text-align:center;">
-          <div style="font-size:26px;font-weight:900;color:${tauColor};font-family:monospace;">${tau.toFixed(2)}</div>
-          <div style="font-size:9px;color:#556;">τ (days)</div>
+        <div style="text-align:center;position:relative;">
+          <div style="
+            font-size:26px;font-weight:900;color:${tauColor};font-family:monospace;
+            animation: mmo-deco-pulse ${pulseSpeed} ease-in-out infinite;
+            text-shadow:${glowShadow};
+            display:inline-block;
+          ">${tau.toFixed(2)}</div>
+          <div style="font-size:9px;color:#556;">τ (trading days)</div>
         </div>
         <div style="flex:1;">
-          <div style="font-size:11px;font-weight:700;color:${tauColor};margin-bottom:4px;">${regime}</div>
+          <div style="display:flex;align-items:center;margin-bottom:4px;">
+            <div style="font-size:11px;font-weight:700;color:${tauColor};">${regime}</div>
+            ${urgencyBadge}
+          </div>
           <div style="height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:${tauNorm*100}%;background:${tauColor};border-radius:3px;transition:width 0.6s;"></div>
+            <div style="height:100%;width:${tauNorm*100}%;background:${tauColor};border-radius:3px;transition:width 0.6s;box-shadow:0 0 6px ${tauColor}55;"></div>
+          </div>
+          <div style="font-size:9px;color:#445;margin-top:4px;font-family:monospace;">
+            τ = 1/(σ_CIR × H) · Signal expires in ~${tau < 1 ? (tau * 6.5).toFixed(1) + 'h' : tau.toFixed(1) + ' days'}
           </div>
         </div>
       </div>
@@ -1215,10 +1278,22 @@ ${rows}
     const entFill = Math.round(entropy * 100);
     const entCol = entropy < 0.25 ? '#00ff88' : entropy < 0.5 ? '#00d4ff' : entropy < 0.75 ? '#f1fa8c' : '#ff4757';
 
+    // 5-bar amplitude histogram (BULL / BEAR / SIDEWAYS / VOLATILE / TRENDING)
+    const STATE_ORDER = ['BULL', 'BEAR', 'SIDEWAYS', 'VOLATILE', 'TRENDING'];
+    const ampBars = STATE_ORDER.map(s => {
+      const p = (qs.amplitudes || {})[s] || 0;
+      const col = STATES[s] ? STATES[s].color : '#556';
+      const h = Math.max(2, Math.round(p * 28));  // 2–28 px tall
+      return `<div title="${s} ${(p*100).toFixed(0)}%" style="flex:1;height:${h}px;background:${col};border-radius:1px 1px 0 0;opacity:0.85;align-self:flex-end;"></div>`;
+    }).join('');
+
     el.innerHTML = `
 <div class="mmo-mini-ticker">${ticker}</div>
 <div class="mmo-mini-state" style="color:${STATES[dominant] ? STATES[dominant].color : '#cc99ff'}">${dominant}</div>
 <div class="mmo-mini-verdict" style="color:${vCol}">${verdict.replace('SUPERPOSED — ', '')}</div>
+<div style="display:flex;align-items:flex-end;gap:1px;height:30px;margin:4px 0 2px;border-bottom:1px solid rgba(255,255,255,0.06);">
+  ${ampBars}
+</div>
 <div class="mmo-mini-entropy">
   <div class="mmo-mini-entropy-fill" style="width:${entFill}%;background:${entCol}"></div>
 </div>
@@ -1461,6 +1536,10 @@ ${rows}
       return acc + ((current.re * next.im) - (current.im * next.re)) / 0.5;
     }, 0);
     const j_directional = probability_current_J > 0.02 ? 'BULL_FLOW' : probability_current_J < -0.02 ? 'BEAR_FLOW' : 'NEUTRAL';
+    const j_flows = orderedPsi.slice(0, -1).map((psi_n, i) => {
+      const psi_next = orderedPsi[i + 1];
+      return Number(((psi_n.re * psi_next.im) - (psi_n.im * psi_next.re)) / 0.5);
+    });
 
     const observableAxis = [-1, -0.5, 0, 0.5, 1];
     const meanObservable = stateOrder.reduce((acc, state, index) => acc + amps[state] * observableAxis[index], 0);
@@ -1594,6 +1673,7 @@ ${rows}
       heisenberg,
       quantum_fisher_info: { F_Q, cramer_rao_bound, signal_clarity },
       probability_current_J: Number(probability_current_J.toFixed(4)),
+      j_flows: j_flows.map(j => Number(j.toFixed(4))),
       j_directional,
       decoherence_tau: tau,
       cir_drift,
