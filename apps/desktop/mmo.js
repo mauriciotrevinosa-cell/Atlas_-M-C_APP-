@@ -1826,10 +1826,10 @@ ${rows}
   function launchViz(vizKey) {
     if (window.VizLab && typeof window.VizLab.launch === 'function') {
       window.__MMO_CURRENT_TICKER__ = _ticker;
-      window.VizLab.launch(vizKey === 'blackhole' ? 'quantum' : 'galaxy');
+      window.VizLab.launch(vizKey === 'blackhole' ? 'blackhole' : 'galaxy3d');
       return;
     }
-    focus(vizKey === 'blackhole' ? 'quantum' : 'surface');
+    focus(vizKey === 'blackhole' ? 'nodes' : 'surface');
   }
 
   function _buildView() {

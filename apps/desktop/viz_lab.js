@@ -66,6 +66,7 @@ window.VizLab = (() => {
   const _LOCAL_THREE = new Set([
     'psaturn', 'pheart', 'pmorph',                             // sphere-main
     'pmobius', 'ptoroidal', 'pspherical', 'plissajous', 'plorenzp', // nexus-core
+    'galaxy3d',                                                 // MMO Market Galaxy 3D
   ]);
 
   function _open(vizName) {
@@ -151,6 +152,8 @@ window.VizLab = (() => {
     orderbook: { cat: 'algo', label: 'Order Book Depth', icon: 'ðŸ“–', api: '/api/quote/SPY', desc: 'Real mid-price from yfinance anchors simulated L2 bid/ask pressure' },
     worldmodel: { cat: 'algo', label: 'World Model Tokens', icon: 'ðŸŽ²', api: '/api/market_data/SPY', desc: 'Real price returns encoded as masked tokens â€” the market\'s generative model' },
     volsmile: { cat: 'algo', label: 'Vol Smile Surface', icon: 'ðŸ˜Š', api: '/api/options/surface/SPY', desc: 'Real implied vol surface from options chain across strikes and expiries' },
+    blackhole: { cat: 'algo', label: 'Liquidity Black Hole', icon: '🕳', api: null, desc: 'Market liquidity singularity — capital in accretion infall, event horizon, lensing rings' },
+    galaxy3d: { cat: 'algo', label: 'Market Galaxy 3D', icon: '🌌', api: '/api/correlation/cluster', desc: 'Three.js 3D spiral galaxy — sector arms orbit the benchmark singularity' },
     // â•â• DECORATIVE SIMS â€” mathematical art, no live data â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     lorenz: { cat: 'art', label: 'Lorenz Attractor', icon: 'ðŸŒ€', api: null, desc: 'Chaotic differential equation â€” butterfly effect in 3D phase space' },
     quantum: { cat: 'art', label: 'Quantum Superposition', icon: 'ðŸ”¬', api: null, desc: 'Probability wave collapse simulation â€” SchrÃ¶dinger market analogy' },
@@ -5947,6 +5950,370 @@ window.VizLab = (() => {
     };
   }
 
+  /* ═══════════════════════════════════════════════════════════════
+     LIQUIDITY BLACK HOLE
+     Canvas2D — particles spiral into an event horizon with
+     accretion disk, gravitational lensing, and infall tracking.
+  ═══════════════════════════════════════════════════════════════ */
+  function vizLiquidityBlackHole() {
+    const { canvas, ctx } = _getCanvas2D();
+    if (!canvas || !ctx) return;
+    const W = canvas.width, H = canvas.height;
+    const cx = W / 2, cy = H / 2;
+
+    // Accretion disk particles
+    const PARTS = 700;
+    const particles = Array.from({ length: PARTS }, () => {
+      const angle  = Math.random() * Math.PI * 2;
+      const r      = 70 + Math.random() * 200;
+      return {
+        angle,
+        r,
+        speed:   0.007 + (60 / Math.max(r, 10)) * 0.025,   // Keplerian: faster inside
+        opacity: 0.3 + Math.random() * 0.7,
+        size:    0.5 + Math.random() * 2.5,
+        hue:     15 + Math.random() * 45,                    // orange-yellow
+        infall:  false,
+        infallT: 0,
+      };
+    });
+
+    // Background stars
+    const BG = 220;
+    const bgStars = Array.from({ length: BG }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      size: 0.3 + Math.random() * 1.3,
+      twinkle: Math.random() * Math.PI * 2,
+      speed: 0.01 + Math.random() * 0.04,
+    }));
+
+    // Jet stream particles (polar jets)
+    const JETS = 60;
+    const jets = Array.from({ length: JETS }, (_, i) => ({
+      y: (Math.random() - 0.5) * cy * 0.6,
+      speed: 1.5 + Math.random() * 2.5,
+      dir: i < JETS / 2 ? 1 : -1,   // up or down jet
+      x: (Math.random() - 0.5) * 20,
+      opacity: 0.3 + Math.random() * 0.5,
+      size: 0.8 + Math.random() * 1.6,
+    }));
+
+    let frame = 0;
+    let infallCount = 0;
+
+    function drawEventHorizon() {
+      // Gravitational lensing rings
+      for (let i = 3; i >= 0; i--) {
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, 55 + i * 12, (55 + i * 12) * 0.28, Math.PI / 5, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255, ${100 + i * 30}, 0, ${0.12 - i * 0.025})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      // Photon sphere glow
+      const pgrd = ctx.createRadialGradient(cx, cy, 38, cx, cy, 62);
+      pgrd.addColorStop(0, `rgba(255, 120, 0, ${0.25 + 0.12 * Math.sin(frame * 0.06)})`);
+      pgrd.addColorStop(1, 'transparent');
+      ctx.fillStyle = pgrd;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 62, 0, Math.PI * 2);
+      ctx.fill();
+      // Event horizon — absolute black
+      const ehgrd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 42);
+      ehgrd.addColorStop(0.0, '#000000');
+      ehgrd.addColorStop(0.7, '#000000');
+      ehgrd.addColorStop(1.0, 'rgba(0,0,0,0)');
+      ctx.fillStyle = ehgrd;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 42, 0, Math.PI * 2);
+      ctx.fill();
+      // Inner photon ring
+      ctx.beginPath();
+      ctx.arc(cx, cy, 43, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255, 160, 0, ${0.5 + 0.2 * Math.sin(frame * 0.08)})`;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = '#ff8800';
+      ctx.shadowBlur = 10;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    function animate() {
+      _animFrameId = requestAnimationFrame(animate);
+      frame++;
+
+      // Deep space
+      ctx.fillStyle = 'rgba(2, 2, 10, 0.30)';
+      ctx.fillRect(0, 0, W, H);
+
+      // Background nebula glow
+      if (frame % 3 === 0) {
+        const ngrd = ctx.createRadialGradient(cx, cy, 60, cx, cy, 280);
+        ngrd.addColorStop(0, 'rgba(60, 10, 80, 0.06)');
+        ngrd.addColorStop(1, 'transparent');
+        ctx.fillStyle = ngrd;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // Background stars
+      for (const s of bgStars) {
+        s.twinkle += s.speed;
+        const a = 0.15 + 0.25 * Math.sin(s.twinkle);
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(180, 190, 255, ${a})`;
+        ctx.fill();
+      }
+
+      // Polar jets (relativistic jets above/below)
+      for (const j of jets) {
+        j.y += j.speed * j.dir * 0.8;
+        if (Math.abs(j.y) > cy + 20) {
+          j.y = (Math.random() - 0.5) * 30;
+          j.x = (Math.random() - 0.5) * 24;
+        }
+        const jx = cx + j.x;
+        const jy = cy + j.y;
+        ctx.beginPath();
+        ctx.arc(jx, jy, j.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(150, 100, 255, ${j.opacity * (1 - Math.abs(j.y) / (cy + 20))})`;
+        ctx.fill();
+      }
+
+      // Accretion disk — back to front by radius
+      particles.sort((a, b) => b.r - a.r);
+      infallCount = 0;
+      for (const p of particles) {
+        if (p.infall) {
+          p.r = Math.max(0, p.r - (2.5 + (80 - p.r) * 0.10));
+          p.infallT++;
+          infallCount++;
+          if (p.r < 12) {
+            p.r      = 160 + Math.random() * 110;
+            p.angle  = Math.random() * Math.PI * 2;
+            p.infall = false;
+            p.infallT = 0;
+          }
+        } else {
+          p.angle += p.speed;
+          if (Math.random() < 0.0004) p.infall = true;
+        }
+
+        const x = cx + Math.cos(p.angle) * p.r;
+        const y = cy + Math.sin(p.angle) * p.r * 0.38;
+        const distFactor = Math.min(1, p.r / 130);
+        const alpha = p.opacity * distFactor * (p.infall ? Math.min(1, p.infallT / 18) : 1);
+        const sz = p.size * (p.infall ? Math.max(0.2, 1 - p.infallT * 0.025) : 1);
+        const light = 38 + (1 - distFactor) * 44;
+        ctx.beginPath();
+        ctx.arc(x, y, sz, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue + (1 - distFactor) * 25}, 95%, ${light}%, ${alpha})`;
+        ctx.fill();
+      }
+
+      drawEventHorizon();
+
+      // Labels
+      ctx.shadowBlur = 0;
+      ctx.fillStyle  = 'rgba(255, 140, 0, 0.85)';
+      ctx.font       = 'bold 13px monospace';
+      ctx.textAlign  = 'left';
+      ctx.fillText('LIQUIDITY BLACK HOLE', 14, 26);
+      ctx.fillStyle = 'rgba(255, 100, 0, 0.45)';
+      ctx.font      = '10px monospace';
+      ctx.fillText('Market singularity — capital in accretion infall', 14, 42);
+      ctx.fillStyle = 'rgba(255, 140, 0, 0.4)';
+      ctx.font      = '9px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(
+        `• ${infallCount} units in infall  • Event horizon r≈42px  • Polar jets active`,
+        W - 12, H - 14
+      );
+    }
+    animate();
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     MARKET GALAXY 3D
+     Three.js — 3D spiral galaxy with 3 sector arms, each arm
+     color-coded by market sector. Stars orbit the core (SPY/QQQ).
+     Camera auto-orbits and slowly tilts.
+  ═══════════════════════════════════════════════════════════════ */
+  function vizGalaxy3D() {
+    const container = document.getElementById('viz-three-mount');
+    if (!container || typeof THREE === 'undefined') {
+      const { canvas, ctx } = _getCanvas2D();
+      if (ctx) {
+        ctx.fillStyle = '#06060e';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#556';
+        ctx.font = '14px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('Three.js required for Market Galaxy 3D', canvas.width / 2, canvas.height / 2);
+      }
+      return;
+    }
+
+    const W = container.offsetWidth  || 800;
+    const H = container.offsetHeight || 600;
+
+    const scene    = new THREE.Scene();
+    const camera   = new THREE.PerspectiveCamera(55, W / H, 0.1, 2000);
+    camera.position.set(0, 90, 170);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setClearColor(0x020208, 1);
+    container.appendChild(renderer.domElement);
+
+    // Galaxy core
+    const coreGeo  = new THREE.SphereGeometry(4, 32, 32);
+    const coreMat  = new THREE.MeshBasicMaterial({ color: 0xfff5cc });
+    const coreNode = new THREE.Mesh(coreGeo, coreMat);
+    scene.add(coreNode);
+
+    // Halo glow
+    const haloGeo = new THREE.SphereGeometry(16, 16, 16);
+    const haloMat = new THREE.MeshBasicMaterial({
+      color: 0xffcc66, transparent: true, opacity: 0.12,
+      blending: THREE.AdditiveBlending, side: THREE.BackSide,
+    });
+    scene.add(new THREE.Mesh(haloGeo, haloMat));
+
+    // Spiral arm stars
+    const ARMS         = 3;
+    const PER_ARM      = 2500;
+    const TOTAL        = ARMS * PER_ARM;
+    const positions    = new Float32Array(TOTAL * 3);
+    const colors       = new Float32Array(TOTAL * 3);
+    const ARM_PALETTE  = [
+      new THREE.Color(0.25, 0.55, 1.00),   // arm 0 — Tech (blue)
+      new THREE.Color(1.00, 0.50, 0.18),   // arm 1 — Finance/Energy (orange)
+      new THREE.Color(0.30, 1.00, 0.55),   // arm 2 — Defensive/Crypto (green)
+    ];
+
+    let vi = 0;
+    for (let arm = 0; arm < ARMS; arm++) {
+      const baseAngle = (arm / ARMS) * Math.PI * 2;
+      for (let i = 0; i < PER_ARM; i++) {
+        const t       = i / PER_ARM;
+        const r       = 6 + t * 85;
+        const theta   = baseAngle + t * Math.PI * 4.5 + (Math.random() - 0.5) * 0.7;
+        const scatter = (0.8 + t * 3.5) * (Math.random() - 0.5);
+        positions[vi * 3]     = Math.cos(theta) * r + scatter * 0.6;
+        positions[vi * 3 + 1] = (Math.random() - 0.5) * r * 0.07 + scatter * 0.08;
+        positions[vi * 3 + 2] = Math.sin(theta) * r + scatter * 0.6;
+
+        const col = ARM_PALETTE[arm].clone();
+        col.multiplyScalar(0.4 + Math.random() * 0.6);
+        colors[vi * 3]     = col.r;
+        colors[vi * 3 + 1] = col.g;
+        colors[vi * 3 + 2] = col.b;
+        vi++;
+      }
+    }
+
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    starGeo.setAttribute('color',    new THREE.BufferAttribute(colors,    3));
+
+    const starMat = new THREE.PointsMaterial({
+      size: 0.9, vertexColors: true,
+      transparent: true, opacity: 0.88,
+      sizeAttenuation: true, blending: THREE.AdditiveBlending,
+    });
+    const galaxy = new THREE.Points(starGeo, starMat);
+    scene.add(galaxy);
+
+    // Sector label sprites
+    function makeLbl(text, color) {
+      const c = document.createElement('canvas');
+      c.width = 180; c.height = 44;
+      const lx = c.getContext('2d');
+      lx.font = 'bold 18px monospace';
+      lx.fillStyle = color;
+      lx.textAlign = 'center';
+      lx.fillText(text, 90, 30);
+      const tex = new THREE.CanvasTexture(c);
+      const sp  = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+      sp.scale.set(18, 4.5, 1);
+      return sp;
+    }
+
+    const SECTORS = [
+      { name: 'TECH',     arm: 0, t: 0.35, color: '#4488ff' },
+      { name: 'FINANCE',  arm: 1, t: 0.32, color: '#ff8833' },
+      { name: 'CRYPTO',   arm: 2, t: 0.28, color: '#44ff88' },
+      { name: 'ENERGY',   arm: 1, t: 0.62, color: '#ff6644' },
+      { name: 'DEFENSE',  arm: 2, t: 0.58, color: '#cc99ff' },
+      { name: 'HEALTH',   arm: 0, t: 0.66, color: '#44ddff' },
+    ];
+
+    SECTORS.forEach(sec => {
+      const baseAngle = (sec.arm / ARMS) * Math.PI * 2;
+      const theta     = baseAngle + sec.t * Math.PI * 4.5;
+      const r         = 6 + sec.t * 85;
+      const sp        = makeLbl(sec.name, sec.color);
+      sp.position.set(Math.cos(theta) * r, 5, Math.sin(theta) * r);
+      scene.add(sp);
+    });
+
+    // SPY / QQQ core labels
+    const spyLbl = makeLbl('SPY/QQQ', '#fff5cc');
+    spyLbl.position.set(0, 8, 0);
+    scene.add(spyLbl);
+
+    // Background halo dust ring
+    const ringGeo = new THREE.TorusGeometry(95, 4, 4, 80);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x334466, transparent: true, opacity: 0.08,
+      blending: THREE.AdditiveBlending,
+    });
+    scene.add(new THREE.Mesh(ringGeo, ringMat));
+
+    // Load live cluster data
+    _api.get('/api/correlation/cluster').then(d => {
+      if (!d || !d.clusters) return;
+      const keys = Object.keys(d.clusters).slice(0, 6);
+      keys.forEach((k, i) => {
+        const armIdx   = i % ARMS;
+        const baseAngle = (armIdx / ARMS) * Math.PI * 2;
+        const t = 0.25 + (i / Math.max(keys.length, 1)) * 0.5;
+        const theta = baseAngle + t * Math.PI * 4.5;
+        const r = 6 + t * 85;
+        const COLORS = ['#4488ff','#ff8833','#44ff88','#ff6644','#cc99ff','#44ddff'];
+        const sp = makeLbl(k, COLORS[i % COLORS.length]);
+        sp.position.set(Math.cos(theta) * r, 5, Math.sin(theta) * r);
+        scene.add(sp);
+      });
+    }).catch(() => {});
+
+    // Camera orbit
+    let camAngle = 0;
+    let localAnimId;
+
+    function animateScene() {
+      localAnimId = requestAnimationFrame(animateScene);
+      camAngle += 0.0012;
+      const camY = 55 + Math.sin(camAngle * 0.25) * 35;
+      camera.position.set(Math.cos(camAngle) * 165, camY, Math.sin(camAngle) * 165);
+      camera.lookAt(0, 0, 0);
+      galaxy.rotation.y += 0.0002;
+      coreNode.rotation.y += 0.01;
+      renderer.render(scene, camera);
+    }
+    animateScene();
+
+    return () => {
+      cancelAnimationFrame(localAnimId);
+      renderer.dispose();
+      if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
+    };
+  }
+
   const VIZZES = {
     // â”€â”€ Repo-inspired new vizzes (added 2026-03-01) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     assetgraph: vizAssetGraph,
@@ -5992,6 +6359,8 @@ window.VizLab = (() => {
     plorenzp: vizNexusLorenz,
     // Speed Racer
     speedracer: vizSpeedRacer,
+    blackhole: vizLiquidityBlackHole,
+    galaxy3d: vizGalaxy3D,
   };
 
   /* â”€â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
