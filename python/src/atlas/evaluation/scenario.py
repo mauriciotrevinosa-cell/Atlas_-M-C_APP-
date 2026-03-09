@@ -17,6 +17,76 @@ from datetime import datetime
 
 logger = logging.getLogger("atlas.scenario")
 
+
+def _generate_synthetic_history(ticker: str, n: int = 1260) -> pd.DataFrame:
+    """
+    Build deterministic OHLCV history for offline/fallback scenario sessions.
+    """
+    seed = abs(hash(ticker.upper())) % (2**31)
+    rng = np.random.default_rng(seed)
+
+    mu = 0.00025 + (seed % 17) * 0.00001
+    sigma = 0.012 + (seed % 11) * 0.001
+    start_price = 80.0 + (seed % 420)
+
+    closes = [start_price]
+    for _ in range(max(1, n - 1)):
+        step = rng.normal(mu - 0.5 * sigma**2, sigma)
+        closes.append(closes[-1] * np.exp(step))
+
+    closes = np.array(closes, dtype=float)
+    spread = rng.uniform(0.002, 0.015, size=n)
+    highs = closes * (1 + spread)
+    lows = closes * (1 - spread)
+    opens = np.concatenate([[closes[0]], closes[:-1]]) * rng.uniform(0.997, 1.003, size=n)
+    opens = np.clip(opens, lows, highs)
+    vols = rng.lognormal(mean=12.0, sigma=0.8, size=n).astype(int)
+    dates = pd.date_range(end=pd.Timestamp.today(), periods=n, freq="B")
+
+    frame = pd.DataFrame(
+        {
+            "open": opens,
+            "high": highs,
+            "low": lows,
+            "close": closes,
+            "volume": vols,
+        },
+        index=dates,
+    )
+    frame["date"] = frame.index
+    return frame
+
+
+def _load_ticker_history(ticker: str, period: str = "5y") -> tuple[pd.DataFrame, bool]:
+    """
+    Fetch ticker history with Yahoo first; fallback to deterministic synthetic OHLCV.
+    """
+    period_bars = {
+        "1mo": 21,
+        "3mo": 63,
+        "6mo": 126,
+        "1y": 252,
+        "2y": 504,
+        "5y": 1260,
+    }
+    n_bars = period_bars.get(period, 1260)
+
+    try:
+        import yfinance as yf
+
+        data = yf.Ticker(ticker.upper()).history(period=period, auto_adjust=True)
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = data.columns.get_level_values(0)
+        if not data.empty:
+            data = data[["Open", "High", "Low", "Close", "Volume"]].dropna().copy()
+            data.columns = [c.lower() for c in data.columns]
+            data["date"] = data.index
+            return data, False
+    except Exception:
+        pass
+
+    return _generate_synthetic_history(ticker, n=n_bars), True
+
 @dataclass
 class ScenarioState:
     """Snapshot of the simulation state at a specific step."""
@@ -126,22 +196,16 @@ class ScenarioSession:
         """
         Switch the simulation to a new ticker, maintaining date and capital.
         """
-        import yfinance as yf
         logger.info(f"Switching simulation to {new_ticker}...")
-        
-        # 1. Fetch new data
-        ticker_obj = yf.Ticker(new_ticker)
-        # Fetch enough history to cover potential start date
-        new_data = ticker_obj.history(period="5y") 
-        
+
+        # 1. Fetch new data (real first, deterministic fallback)
+        new_data, is_synthetic = _load_ticker_history(new_ticker, period="5y")
         if new_data.empty:
             logger.error(f"No data found for {new_ticker}")
             return False
-            
-        # 2. Normalize Data
-        new_data.columns = [c.lower() for c in new_data.columns]
-        new_data['date'] = new_data.index
-        
+        if is_synthetic:
+            logger.warning("Using synthetic fallback data for %s", new_ticker)
+
         # 3. Find matching index for current_date
         # We try to find the closest date
         try:

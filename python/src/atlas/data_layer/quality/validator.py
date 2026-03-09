@@ -97,7 +97,7 @@ class DataValidator:
 
         # --- Check 2: Price spikes ---
         if "close" in df.columns and total_rows > 1:
-            returns = df["close"].pct_change().abs()
+            returns = df["close"].pct_change(fill_method=None).abs()
             spikes = returns[returns > self.max_spike_pct]
             checks["spike_count"] = len(spikes)
 

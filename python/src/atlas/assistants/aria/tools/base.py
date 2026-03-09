@@ -133,6 +133,30 @@ class Tool(ABC):
                 "required": required
             }
         }
+
+    def get_parameters_schema(self) -> Dict[str, Any]:
+        """
+        Compatibility schema for ARIA's tool registration pipeline.
+        """
+        properties: Dict[str, Dict[str, Any]] = {}
+        required: list[str] = []
+
+        for param_name, param in self.parameters.items():
+            prop: Dict[str, Any] = {
+                "type": param.type,
+                "description": param.description,
+            }
+            if param.default is not None:
+                prop["default"] = param.default
+            properties[param_name] = prop
+            if param.required:
+                required.append(param_name)
+
+        return {
+            "type": "object",
+            "properties": properties,
+            "required": required,
+        }
     
     def validate_parameters(self, **kwargs) -> bool:
         """

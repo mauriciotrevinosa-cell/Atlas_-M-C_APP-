@@ -1,90 +1,97 @@
 """
 Get Market State Tool for ARIA
-=============================
+==============================
 
-Allows ARIA to analyze market regimes (Bull/Bear/Sideways) and volatility.
-Use this when users ask "How is the market?", "Is it bullish?", "What's the regime?".
-
-Copyright (c) 2026 M&C. All rights reserved.
+Analyzes regime + volatility using Atlas `market_state` package.
 """
 
-import sys
-from pathlib import Path
+from __future__ import annotations
 
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
+from typing import Any, Dict
 
 from atlas.assistants.aria.tools.base import Tool
-from atlas.data_layer import DataManager
-from atlas.core_intelligence.market_state.regime import MarketStateAnalyzer, MarketRegime
+from atlas.assistants.aria.tools._data_utils import get_history_with_fallback
+from atlas.data_layer.manager import DataManager
+from atlas.market_state import RegimeDetector, VolatilityRegime
+
 
 class GetMarketStateTool(Tool):
     """
-    Tool for analyzing market state (Regime & Volatility)
+    Tool for analyzing market state (regime + volatility).
     """
-    
+
     def __init__(self):
         super().__init__(
             name="get_market_state",
-            description="Analyze market regime (Bull/Bear/Sideways) and volatility for a symbol",
-            category="analysis"
+            description="Analyze market regime (trend/range/volatility) for a symbol.",
+            category="analysis",
         )
-        
         self.add_parameter(
             "symbol",
             "string",
             "Ticker symbol (e.g., AAPL, SPY, BTC-USD)",
-            required=True
+            required=True,
         )
-        
         self.add_parameter(
             "period",
             "string",
             "Analysis period (e.g., '1y', '6mo', 'ytd')",
             required=False,
-            default="1y"
+            default="1y",
         )
-        
-        # Initialize DataManager & Analyzer
+
         self.dm = DataManager()
-        self.analyzer = MarketStateAnalyzer()
-        
-    def execute(self, symbol: str, period: str = "1y") -> dict:
+
+    def execute(self, symbol: str, period: str = "1y", **_: Any) -> Dict[str, Any]:
         """
-        Execute market state analysis
+        Execute market state analysis.
         """
         try:
-            print(f"📊 Analyzing market state for {symbol} ({period})...")
-            
-            # 1. Fetch Data
-            df = self.dm.get_historical(symbol, timeframe=period)
-            
-            if df.empty:
-                return {"error": f"No data found for {symbol}"}
-                
-            # 2. Analyze Regime
-            state = self.analyzer.analyze(df)
-            
-            # 3. Format result strictly for ARIA to read
+            ticker = symbol.strip().upper()
+            df, synthetic = get_history_with_fallback(self.dm, ticker, period)
+
+            # market_state package expects capitalized OHLCV.
+            cap = df.rename(
+                columns={
+                    "open": "Open",
+                    "high": "High",
+                    "low": "Low",
+                    "close": "Close",
+                    "volume": "Volume",
+                }
+            ).copy()
+            required = ("Open", "High", "Low", "Close", "Volume")
+            if any(col not in cap.columns for col in required):
+                return {"error": f"Missing OHLCV columns for {ticker}", "symbol": ticker}
+            cap = cap[list(required)]
+
+            lookback = max(20, min(252, len(cap)))
+            detector = RegimeDetector(adx_threshold=25.0, lookback=min(lookback, 60))
+            regime_state = detector.detect(cap)
+
+            vol = VolatilityRegime(lookback=lookback)
+            vol_regime = vol.classify(cap)
+            vol_forecast = vol.get_volatility_forecast(cap, horizon=5)
+
+            adx_value = float(regime_state.metrics.get("adx", 0.0))
+            description = (
+                f"{ticker} is in {regime_state.regime} regime "
+                f"(confidence {regime_state.confidence:.1%}, ADX {adx_value:.2f}) "
+                f"with {vol_regime} volatility."
+            )
+
             return {
-                "symbol": symbol,
+                "symbol": ticker,
                 "period": period,
-                "current_regime": state.regime.value,  # e.g., "BULL_TREND"
-                "regime_confidence": f"{state.confidence:.1f}%",
-                "volatility_regime": state.volatility_state, # e.g., "HIGH_VOLATILITY"
-                "trend_strength": f"{state.trend_strength:.2f} (ADX)",
-                "description": self._get_human_description(state)
+                "bars": int(len(cap)),
+                "current_regime": str(regime_state.regime),
+                "regime_confidence": round(float(regime_state.confidence) * 100, 2),
+                "trend_strength": round(adx_value, 4),
+                "volatility_regime": str(vol_regime),
+                "volatility_forecast_annualized": round(float(vol_forecast), 6),
+                "source": "synthetic_local" if synthetic else "provider",
+                "synthetic": bool(synthetic),
+                "description": description,
             }
-            
         except Exception as e:
-            return {"error": str(e)}
-
-    def _get_human_description(self, state) -> str:
-        """Generate a short sentence describing the state"""
-        regime = state.regime.value.replace("_", " ").title()
-        vol = state.volatility_state.replace("_", " ").lower()
-        return f"The market is in a {regime} with {vol}."
-
-if __name__ == "__main__":
-    tool = GetMarketStateTool()
-    print(tool.execute("AAPL", "1y"))
+            return {"error": str(e), "symbol": symbol}

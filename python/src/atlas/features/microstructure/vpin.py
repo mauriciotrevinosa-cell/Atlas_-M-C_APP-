@@ -143,7 +143,7 @@ class VPINCalculator:
         classification[price_change < 0] = -1  # Sell
         
         # Forward fill for zero changes
-        classification = classification.replace(0, np.nan).fillna(method='ffill')
+        classification = classification.replace(0, np.nan).ffill()
         classification = classification.fillna(1)  # Default to buy
         
         # Split volume
@@ -205,3 +205,12 @@ class VPINCalculator:
         vpin = vpin.fillna(0).clip(0, 1)
         
         return vpin
+
+
+class VPIN(VPINCalculator):
+    """
+    Backward-compatible alias expected by legacy tests/code.
+    """
+
+
+__all__ = ["VPINConfig", "VPINCalculator", "VPIN"]

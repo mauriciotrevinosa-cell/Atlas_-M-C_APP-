@@ -44,7 +44,7 @@ def estimate_kyle_lambda(
     
     # Estimate trade direction (Tick Rule)
     direction = np.sign(price_change)
-    direction = direction.replace(0, method='ffill').fillna(1)
+    direction = direction.replace(0, np.nan).ffill().fillna(1)
     
     # Signed Order Flow (Q)
     signed_flow = volume * direction

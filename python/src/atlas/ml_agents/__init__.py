@@ -1,22 +1,29 @@
 """
-ML Agents Bridge
-================
-Connects ML engines (ml_suite.py) to the AutoTrader decision pipeline.
+ML Agents — Swarm Committee + ML Bridge
+=========================================
+Two parallel systems for autonomous trading intelligence:
 
-Provides:
-  MLSignalAdapter  — wraps an MLEngine, uses FeaturePipeline, returns Decision
-  MLAgentBridge    — factory with pre-configured XGBoost, RF, and LSTM adapters
-  make_ml_sources  — convenience to get source tuples for auto_trader.register_source()
+1. SWARM COMMITTEE (Multi-Agent System):
+   SwarmCoordinator — ARIA as CEO orchestrating specialized agents
+   RiskAgent        — Capital preservation, VaR, drawdown, stress tests
+   MomentumAgent    — Trend analysis, RSI, MACD, ADX, price momentum
+   OptionsAgent     — IV surface, options flow, gamma walls, max pain
 
-Usage:
-    from atlas.ml_agents import MLAgentBridge
+   Usage:
+       from atlas.ml_agents import SwarmCoordinator
+       coordinator = SwarmCoordinator()
+       decision = coordinator.decide("AAPL", ohlcv_df)
+       print(decision.summary())
 
-    bridge = MLAgentBridge()
-    bridge.train_all(ohlcv_df)          # optional — returns HOLD if untrained
+2. ML SIGNAL BRIDGE (AutoTrader integration):
+   MLSignalAdapter  — wraps an MLEngine, uses FeaturePipeline, returns Decision
+   MLAgentBridge    — factory with pre-configured XGBoost, RF, and LSTM adapters
+   make_ml_sources  — convenience to get source tuples for auto_trader.register_source()
 
-    trader = AutoTrader(mode=TradingMode.ADVISORY)
-    for name, callback, weight in bridge.get_sources():
-        trader.register_source(name, callback, weight)
+   Usage:
+       from atlas.ml_agents import MLAgentBridge
+       bridge = MLAgentBridge()
+       bridge.train_all(ohlcv_df)
 
 Copyright (c) 2026 M&C. All rights reserved.
 """
@@ -280,3 +287,26 @@ def make_ml_sources(lookback: int = 20) -> List[Tuple[str, Callable, float]]:
     is called. Register them first, then train when data is available.
     """
     return MLAgentBridge(lookback=lookback).get_sources()
+
+
+# ── Swarm Exports ──────────────────────────────────────────────────────────────
+
+try:
+    from .swarm_coordinator import SwarmCoordinator, SwarmDecision, AgentVote
+    from .risk_agent        import RiskAgent, RiskReport
+    from .momentum_agent    import MomentumAgent, MomentumReport
+    from .options_agent     import OptionsAgent, OptionsReport
+
+    __all__ = [
+        # Swarm committee
+        "SwarmCoordinator", "SwarmDecision", "AgentVote",
+        "RiskAgent",        "RiskReport",
+        "MomentumAgent",    "MomentumReport",
+        "OptionsAgent",     "OptionsReport",
+        # ML bridge
+        "MLSignalAdapter", "MLAgentBridge", "make_ml_sources",
+    ]
+
+except ImportError as _e:
+    logger.warning("Swarm agents import failed (numpy/pandas may be missing): %s", _e)
+    __all__ = ["MLSignalAdapter", "MLAgentBridge", "make_ml_sources"]

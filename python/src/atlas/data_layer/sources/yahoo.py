@@ -98,7 +98,16 @@ class YahooProvider(DataProvider):
         
         Delega a DataValidator para consistencia
         """
-        return DataValidator.validate_all(data)
+        normalized_cols = data.rename(
+            columns={
+                "Open": "open",
+                "High": "high",
+                "Low": "low",
+                "Close": "close",
+                "Volume": "volume",
+            }
+        )
+        return DataValidator().validate(normalized_cols)
     
     def normalize(self, data: pd.DataFrame) -> pd.DataFrame:
         """

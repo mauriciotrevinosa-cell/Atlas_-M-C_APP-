@@ -1,4 +1,4 @@
-"""
+﻿"""
 Cache Store
 ===========
 Disk-based cache using Parquet files with TTL (time-to-live) support.
@@ -9,10 +9,9 @@ Copyright (c) 2026 M&C. All rights reserved.
 
 import json
 import logging
-import os
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 
@@ -24,8 +23,8 @@ class CacheStore:
     Parquet-based cache with TTL and metadata tracking.
 
     Each cached item gets two files:
-      - {key}.parquet  → the actual data
-      - {key}.meta     → JSON metadata (timestamp, rows, etc.)
+      - {key}.parquet  -> the actual data
+      - {key}.meta     -> JSON metadata (timestamp, rows, etc.)
     """
 
     def __init__(self, cache_dir: str = "data/cache", ttl_hours: int = 24):
@@ -49,56 +48,94 @@ class CacheStore:
     def _meta_path(self, key: str) -> Path:
         return self.cache_dir / f"{self._safe_key(key)}.meta"
 
-    def get(self, key: str) -> Optional[pd.DataFrame]:
+    def _read_meta(self, key: str) -> Dict[str, Any]:
+        """Read sidecar metadata safely."""
+        meta_path = self._meta_path(key)
+        if not meta_path.exists():
+            return {}
+        try:
+            parsed = json.loads(meta_path.read_text())
+            if isinstance(parsed, dict):
+                return parsed
+        except (json.JSONDecodeError, OSError):
+            pass
+        return {}
+
+    def get(
+        self,
+        key: str,
+        allow_stale: bool = False,
+        with_metadata: bool = False,
+    ) -> Optional[pd.DataFrame | Tuple[pd.DataFrame, Dict[str, Any]]]:
         """
         Retrieve cached DataFrame if it exists and is not expired.
 
         Args:
             key: Cache key (e.g. "yahoo_AAPL_2024-01-01_2024-12-31_1d")
+            allow_stale: If True, return expired entries instead of deleting them
+            with_metadata: If True, return tuple (df, metadata)
 
         Returns:
-            DataFrame if cache hit, None if miss or expired
+            DataFrame (or tuple) on hit, None on miss
         """
         data_path = self._data_path(key)
-        meta_path = self._meta_path(key)
 
         if not data_path.exists():
             return None
 
-        # Check TTL
-        if meta_path.exists():
-            try:
-                meta = json.loads(meta_path.read_text())
-                cached_at = meta.get("cached_at", 0)
-                if time.time() - cached_at > self.ttl_seconds:
+        # TTL check
+        stale = False
+        meta = self._read_meta(key)
+
+        if meta:
+            cached_at = float(meta.get("cached_at", 0) or 0)
+            if cached_at > 0 and (time.time() - cached_at > self.ttl_seconds):
+                if not allow_stale:
                     logger.debug("Cache EXPIRED for %s", key)
                     self._remove(key)
                     return None
-            except (json.JSONDecodeError, KeyError):
-                pass  # Corrupted meta — treat as miss
+                stale = True
         else:
-            # No meta file — check file modification time as fallback
+            # No metadata file, fallback to file mtime
             file_age = time.time() - data_path.stat().st_mtime
             if file_age > self.ttl_seconds:
-                self._remove(key)
-                return None
+                if not allow_stale:
+                    self._remove(key)
+                    return None
+                stale = True
 
         try:
             df = pd.read_parquet(data_path)
-            logger.debug("Cache HIT: %s (%d rows)", key, len(df))
+            logger.debug("Cache HIT: %s (%d rows%s)", key, len(df), ", stale" if stale else "")
+            if with_metadata:
+                meta_out = dict(meta)
+                meta_out["stale"] = stale
+                return df, meta_out
             return df
         except Exception as e:
             logger.warning("Cache read error for %s: %s", key, e)
             self._remove(key)
             return None
 
-    def set(self, key: str, df: pd.DataFrame) -> None:
+    def get_with_meta(
+        self,
+        key: str,
+        allow_stale: bool = False,
+    ) -> Optional[Tuple[pd.DataFrame, Dict[str, Any]]]:
+        """Return (DataFrame, metadata) if available."""
+        cached = self.get(key, allow_stale=allow_stale, with_metadata=True)
+        if cached is None:
+            return None
+        return cached
+
+    def set(self, key: str, df: pd.DataFrame, metadata: Optional[Dict[str, Any]] = None) -> None:
         """
         Store DataFrame in cache.
 
         Args:
             key: Cache key
-            df:  DataFrame to cache
+            df: DataFrame to cache
+            metadata: Optional extra metadata for this cache entry
         """
         data_path = self._data_path(key)
         meta_path = self._meta_path(key)
@@ -106,7 +143,7 @@ class CacheStore:
         try:
             df.to_parquet(data_path, index=True)
 
-            meta = {
+            meta: Dict[str, Any] = {
                 "cached_at": time.time(),
                 "rows": len(df),
                 "columns": list(df.columns),
@@ -115,8 +152,10 @@ class CacheStore:
                     "end": str(df.index.max()) if len(df) > 0 else None,
                 },
             }
-            meta_path.write_text(json.dumps(meta, indent=2))
+            if metadata:
+                meta["custom"] = metadata
 
+            meta_path.write_text(json.dumps(meta, indent=2))
             logger.debug("Cache SET: %s (%d rows)", key, len(df))
         except Exception as e:
             logger.error("Cache write error for %s: %s", key, e)
@@ -179,6 +218,6 @@ class CacheStore:
             "newest": time.ctime(max(mod_times)),
         }
 
-    def list_keys(self) -> list:
+    def list_keys(self) -> list[str]:
         """Return all cached keys."""
         return [f.stem for f in self.cache_dir.glob("*.parquet")]

@@ -11,13 +11,17 @@ Based on patterns from Claude Code, Cursor, and AI tool analysis
 """
 
 import json
+import logging
 import ollama
 from typing import Dict, List, Any, Optional
 from pathlib import Path
+from datetime import datetime, timezone
 
 # Import validation and system prompt v2
 from .validation import validate_tool_params, ValidationError
 from .system_prompt import get_system_prompt
+
+logger = logging.getLogger("atlas.aria")
 
 
 class ARIA:
@@ -69,6 +73,10 @@ class ARIA:
             "tools_called": 0,
             "validation_errors": 0
         }
+
+        # Structured tool-call audit trail
+        self.tool_event_log_path = Path("outputs") / "runs" / "aria_tool_calls.jsonl"
+        self.tool_event_log_path.parent.mkdir(parents=True, exist_ok=True)
         
         # Verify Ollama connection
         self._verify_connection()
@@ -92,28 +100,17 @@ class ARIA:
                 pass
 
     def print_banner(self):
-        """Print welcome banner"""
-        banner = """
-╔══════════════════════════════════════════════════════════╗
-║                                                          ║
-║     █████╗ ██████╗ ██╗ █████╗                            ║
-║    ██╔══██╗██╔══██╗██║██╔══██╗                           ║
-║    ███████║██████╔╝██║███████║                           ║
-║    ██╔══██║██╔══██╗██║██╔══██║                           ║
-║    ██║  ██║██║  ██║██║██║  ██║                           ║
-║    ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝                           ║
-║                                                          ║
-║    Atlas Reasoning & Intelligence Assistant              ║
-║    v5.0 - Autonomous Edition                             ║
-║    100% Local | Powered by Ollama                        ║
-║    Product by M&C © 2026                                 ║
-║                                                          ║
-╚══════════════════════════════════════════════════════════╝
-
-Sistema: 100% Local (sin APIs comerciales)
-Modelo: llama3.1:8b (puede cambiar a qwen/deepseek según tarea)
-Estado: Listo para asistir
-"""
+        """Print startup banner."""
+        banner = (
+            "\n"
+            + "=" * 60
+            + "\nARIA - Atlas Reasoning & Intelligence Assistant\n"
+            + "v5.0 - Autonomous Edition\n"
+            + "System: 100% Local (no commercial APIs)\n"
+            + f"Model: {self.model}\n"
+            + "Status: Ready\n"
+            + "=" * 60
+        )
         self._safe_print(banner)
     
     def _verify_connection(self):
@@ -322,13 +319,33 @@ Estado: Listo para asistir
                     "error": str(e),
                     "error_type": "execution"
                 }
-            
+
+            self._log_tool_event(
+                tool_name=tool_name or "unknown",
+                params=tool_params,
+                result=result,
+            )
+
             results.append({
                 "tool": tool_name,
                 "result": result
             })
-        
+
         return results
+
+    def _log_tool_event(self, tool_name: str, params: Dict[str, Any], result: Dict[str, Any]) -> None:
+        """Append a structured JSONL record for each tool call."""
+        record = {
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+            "tool_name": tool_name,
+            "params": params,
+            "result": result,
+        }
+        try:
+            with self.tool_event_log_path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+        except Exception as exc:
+            logger.debug("Failed to write tool event log: %s", exc)
     
     def _handle_error(self, error: Exception) -> str:
         """
