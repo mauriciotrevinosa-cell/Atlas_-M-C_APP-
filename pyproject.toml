@@ -12,7 +12,20 @@ requires-python = ">=3.10"
 dependencies = [
     "anthropic>=0.40.0",
     "pandas>=2.0.0",
+    "python-dateutil>=2.9.0",
     "python-dotenv>=1.0.0",
+    "ollama>=0.0.0",
+    "yfinance>=0.2.30",
+    "requests>=2.31.0",
+    "qiskit>=1.0.0",
+    "qiskit-ibm-runtime>=0.20.0",
+    "numpy>=1.24.0",
+    "ccxt>=4.0.0",
+    "scipy>=1.10.0",
+    "matplotlib>=3.8.0",
+    "fastapi",
+    "uvicorn",
+    "websockets"
 ]
 
 [project.optional-dependencies]
@@ -63,6 +76,8 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "black>=23.0.0",
     "ruff>=0.1.0",
+    "flake8",
+    "mypy"
 ]
 
 [build-system]
@@ -70,8 +85,11 @@ requires = ["setuptools>=68.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["atlas"]
 package-dir = {"" = "python/src"}
+
+[tool.setuptools.packages.find]
+where = ["python/src"]
+include = ["atlas*"]
 
 [tool.black]
 line-length = 100
@@ -80,3 +98,7 @@ target-version = ['py310']
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

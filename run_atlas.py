@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import socket
 import subprocess
 import sys
 import threading
 import time
 import webbrowser
+from datetime import datetime
 from pathlib import Path
 
 
@@ -23,6 +25,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "python" / "src"))
 
 from atlas.assistants.aria import ARIA
 from atlas.assistants.aria.tools import register_phase1_tools
+from atlas.assistants.aria.tools.setup import register_all_tools
 from atlas.assistants.aria.tools.create_file import CreateFileTool
 from atlas.assistants.aria.tools.execute_code import ExecuteCodeTool
 from atlas.assistants.aria.tools.read_file import ReadFileTool
@@ -36,6 +39,208 @@ FAST_BROWSER_SYSTEM_PROMPT = (
     "Answer clearly and directly in the user's language. "
     "Keep responses concise unless asked for detail."
 )
+
+
+def _safe_read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return ""
+
+
+def _sample_names(items: list[str], limit: int = 8) -> str:
+    if not items:
+        return "-"
+    if len(items) <= limit:
+        return ", ".join(items)
+    visible = ", ".join(items[:limit])
+    return f"{visible}, ... (+{len(items) - limit} more)"
+
+
+def _summarize_dir(path: Path) -> tuple[int, int, list[str]]:
+    if not path.is_dir():
+        return 0, 0, []
+    dirs = []
+    files = []
+    try:
+        for item in path.iterdir():
+            if item.name.startswith("."):
+                continue
+            if item.is_dir():
+                dirs.append(item.name)
+            else:
+                files.append(item.name)
+    except Exception:
+        return 0, 0, []
+    return len(dirs), len(files), sorted(dirs + files, key=str.lower)
+
+
+def _extract_desktop_views(index_html: Path) -> list[str]:
+    content = _safe_read_text(index_html)
+    if not content:
+        return []
+    matches = re.findall(r'id="view-([a-zA-Z0-9_-]+)"', content)
+    unique = sorted(set(matches), key=str.lower)
+    return unique
+
+
+def _extract_fastapi_routes(server_file: Path) -> list[str]:
+    content = _safe_read_text(server_file)
+    if not content:
+        return []
+    matches = re.findall(
+        r"@app\.(?:get|post|put|delete|patch|websocket)\(\s*[\"']([^\"']+)[\"']",
+        content,
+    )
+    unique = sorted(set(matches), key=str.lower)
+    return unique
+
+
+def _build_project_visibility_report(root: Path) -> str:
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    lines: list[str] = []
+    lines.append("=" * 60)
+    lines.append("ATLAS PROJECT VISIBILITY REPORT")
+    lines.append("=" * 60)
+    lines.append(f"Generated: {timestamp}")
+    lines.append(f"Root: {root}")
+
+    lines.append("\n[Section 1/7] Repository Areas")
+    core_folders = [
+        "apps",
+        "python",
+        "tests",
+        "configs",
+        "docs",
+        "project_governance",
+        "data",
+        "outputs",
+        "services",
+        "cpp",
+        "ui_web",
+        "scripts",
+        "legacy",
+        "logs",
+        "info_instructions",
+        "trash",
+    ]
+    for name in core_folders:
+        folder = root / name
+        if not folder.exists():
+            lines.append(f"- {name}/ -> not found")
+            continue
+        dir_count, file_count, sample = _summarize_dir(folder)
+        lines.append(
+            f"- {name}/ -> {dir_count} dirs, {file_count} files | sample: {_sample_names(sample, 6)}"
+        )
+
+    lines.append("\n[Section 2/7] Root Files")
+    root_files = sorted(
+        [p.name for p in root.iterdir() if p.is_file() and not p.name.startswith(".")],
+        key=str.lower,
+    )
+    lines.append(f"- Root files ({len(root_files)}): {_sample_names(root_files, 20)}")
+
+    lines.append("\n[Section 3/7] Python Source Visibility")
+    atlas_src = root / "python" / "src" / "atlas"
+    if atlas_src.is_dir():
+        packages = sorted(
+            [
+                p.name
+                for p in atlas_src.iterdir()
+                if p.is_dir() and not p.name.startswith("_")
+            ],
+            key=str.lower,
+        )
+        lines.append(f"- python/src/atlas packages ({len(packages)}): {_sample_names(packages, 12)}")
+    else:
+        lines.append("- python/src/atlas not found")
+
+    phase1_files = [
+        root / "python" / "src" / "atlas" / "market_finance" / "data_layer.py",
+        root / "python" / "src" / "atlas" / "market_finance" / "analytics_layer.py",
+        root / "python" / "src" / "atlas" / "market_finance" / "simulation_layer.py",
+        root / "python" / "src" / "atlas" / "market_finance" / "risk_layer.py",
+        root / "python" / "src" / "atlas" / "market_finance" / "pipeline.py",
+    ]
+    phase1_visible = [p.relative_to(root).as_posix() for p in phase1_files if p.exists()]
+    lines.append(f"- Official Phase 1 files ({len(phase1_visible)}): {_sample_names(phase1_visible, 5)}")
+
+    recovered_modules = [
+        root / "python" / "src" / "atlas" / "analytics" / "returns.py",
+        root / "python" / "src" / "atlas" / "analytics" / "risk_metrics.py",
+        root / "python" / "src" / "atlas" / "analytics" / "volatility.py",
+        root / "python" / "src" / "atlas" / "analytics" / "correlation.py",
+        root / "python" / "src" / "atlas" / "risk" / "portfolio_risk.py",
+        root / "python" / "src" / "atlas" / "monte_carlo" / "multi_asset.py",
+        root / "python" / "src" / "atlas" / "shared" / "finance_concepts.py",
+        root / "python" / "src" / "atlas" / "assistants" / "aria" / "tools" / "explain_concept.py",
+    ]
+    recovered_visible = [
+        p.relative_to(root).as_posix()
+        for p in recovered_modules
+        if p.exists()
+    ]
+    lines.append(
+        f"- Recovered modules integrated ({len(recovered_visible)}/{len(recovered_modules)}): "
+        f"{_sample_names(recovered_visible, 8)}"
+    )
+
+    lines.append("\n[Section 4/7] Frontend Sections (apps/desktop)")
+    desktop_index = root / "apps" / "desktop" / "index.html"
+    views = _extract_desktop_views(desktop_index)
+    lines.append(f"- UI views discovered ({len(views)}): {_sample_names(views, 14)}")
+
+    desktop_js = root / "apps" / "desktop"
+    if desktop_js.is_dir():
+        js_files = sorted(
+            [
+                p.name
+                for p in desktop_js.glob("*.js")
+                if p.name.lower() not in {"preload.js"}
+            ],
+            key=str.lower,
+        )
+        lines.append(f"- Desktop JS modules ({len(js_files)}): {_sample_names(js_files, 14)}")
+    else:
+        lines.append("- apps/desktop not found")
+
+    lines.append("\n[Section 5/7] API Surface (apps/server/server.py)")
+    routes = _extract_fastapi_routes(root / "apps" / "server" / "server.py")
+    lines.append(f"- FastAPI routes discovered ({len(routes)}): {_sample_names(routes, 16)}")
+
+    lines.append("\n[Section 6/7] Documentation and Governance")
+    for doc_folder_name in ("docs", "project_governance"):
+        doc_folder = root / doc_folder_name
+        if not doc_folder.is_dir():
+            lines.append(f"- {doc_folder_name}/ -> not found")
+            continue
+        md_files = sorted([p.name for p in doc_folder.glob("*.md")], key=str.lower)
+        lines.append(
+            f"- {doc_folder_name}/ markdown files ({len(md_files)}): {_sample_names(md_files, 10)}"
+        )
+
+    lines.append("\n[Section 7/7] Entrypoints and Execution")
+    entrypoints = [
+        "run_atlas.py",
+        "run_aria.py",
+        "run_server.py",
+        "scripts/run_phase1_demo.py",
+        "apps/server/start_server.bat",
+        "START_ATLAS.bat",
+        "run_desktop.ps1",
+    ]
+    for rel in entrypoints:
+        path = root / rel
+        status = "ok" if path.exists() else "missing"
+        lines.append(f"- {rel} -> {status}")
+
+    lines.append("\nRuntime access after launch:")
+    lines.append("- Frontend: http://localhost:<port>")
+    lines.append("- API docs: http://localhost:<port>/docs")
+    lines.append("- Health: http://localhost:<port>/api/health")
+    lines.append("=" * 60)
+    return "\n".join(lines)
 
 
 def _configure_stdout_utf8() -> None:
@@ -148,6 +353,18 @@ def _register_phase1_workflow_tools(aria: ARIA) -> list[str]:
         return []
 
 
+def _register_recovered_aria_tools(aria: ARIA) -> list[str]:
+    """Register recovered ARIA tools (education/knowledge modules)."""
+    try:
+        before = set(getattr(aria, "tools", {}).keys())
+        register_all_tools(aria)
+        after = set(getattr(aria, "tools", {}).keys())
+        return sorted(after - before)
+    except Exception as exc:
+        _safe_print(f"   -> Warning: failed to register recovered ARIA tools: {exc}")
+        return []
+
+
 def _env_enabled(name: str, default: str = "0") -> bool:
     value = os.getenv(name, default).strip().lower()
     return value in {"1", "true", "yes", "on"}
@@ -223,6 +440,16 @@ def _open_browser_delayed(port: int) -> None:
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Atlas launcher")
     parser.add_argument(
+        "--project-map-only",
+        action="store_true",
+        help="Print a full project visibility report and exit.",
+    )
+    parser.add_argument(
+        "--no-project-map",
+        action="store_true",
+        help="Skip project visibility report at startup.",
+    )
+    parser.add_argument(
         "--demo",
         action="store_true",
         help="Run the official Phase 1 market-finance demo workflow and exit.",
@@ -279,6 +506,13 @@ def _run_phase1_demo(args: argparse.Namespace) -> int:
 def main() -> None:
     _configure_stdout_utf8()
     args = _parse_args()
+
+    show_project_map = _env_enabled("ATLAS_SHOW_PROJECT_MAP", "1") and not args.no_project_map
+    if show_project_map:
+        _safe_print(_build_project_visibility_report(PROJECT_ROOT))
+
+    if args.project_map_only:
+        return
 
     if args.demo:
         try:
@@ -358,6 +592,18 @@ def main() -> None:
                 _safe_print("   -> Phase 1 workflow tools were requested but none were registered.")
         else:
             _safe_print("   -> Phase 1 workflow tools disabled (ATLAS_ENABLE_PHASE1_TOOLS=0).")
+
+        if _env_enabled("ATLAS_ENABLE_RECOVERED_TOOLS", "1"):
+            recovered_tools = _register_recovered_aria_tools(aria)
+            if recovered_tools:
+                _safe_print(
+                    "   -> Recovered ARIA tools active: "
+                    + ", ".join(recovered_tools)
+                )
+            else:
+                _safe_print("   -> Recovered ARIA tools requested but none were registered.")
+        else:
+            _safe_print("   -> Recovered ARIA tools disabled (ATLAS_ENABLE_RECOVERED_TOOLS=0).")
 
         if _env_enabled("ATLAS_ENABLE_GOV_CONTEXT", "0"):
             governance_context = _build_governance_prompt_context(PROJECT_ROOT)

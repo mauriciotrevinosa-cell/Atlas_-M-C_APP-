@@ -1,80 +1,35 @@
-# 🌌 Atlas (M&C APP)
+﻿# Atlas
 
-**System:** Quantitative Trading & Intelligence Platform  
-**Version:** Alpha (In Development)  
-**Developers:** M&C  
+Atlas is a local-first quantitative research platform with ARIA as assistant layer.
 
----
+## Quick Start
 
-## 🚀 About Atlas
-
-Atlas is a comprehensive ecosystem designed for **quantitative finance, algorithmic trading, and data-driven intelligence**. 
-It combines high-frequency data processing, advanced mathematical modelling, and autonomous AI agents to create a next-generation trading platform.
-
-### 🏛️ Core Pillars
-
-1.  **Atlas Data Layer:** 
-    - High-performance data ingestion (Stocks, Crypto, Forex).
-    - Unified storage and normalization.
-2.  **Quantum Field (Lab):**
-    - Experimental environment for strategy development.
-    - Advanced mathematics and backtesting.
-3.  **ARIA (Assistant):**
-    - **A**tlas **R**easoning & **I**ntelligence **A**ssistant.
-    - The autonomous interface that connects you to the data.
-
----
-
-## 🤖 ARIA: The Intelligence Layer
-
-ARIA is the voice and brain of Atlas. It is not just a chatbot, but a fully integrated agent capable of:
-*   **Recursive Memory:** Remembering context across sessions.
-*   **Tool Execution:** Fetching data, running code, and managing files.
-*   **Multi-Modal Interaction:** Text and Voice (Basic & Advanced).
-*   **Autonomous Analysis:** Proactive market insights.
-
-> **Note:** ARIA is located in `python/src/atlas/assistants/aria/`
-
----
-
-## 🛠️ Project Structure
-
-```
-Atlas/
-├── python/
-│   └── src/
-│       └── atlas/
-│           ├── data/          # Data Layer (Ingestion, Storage)
-│           ├── lab/           # Quantum Field (Experiments)
-│           └── assistants/
-│               └── aria/      # ARIA Agent Source Code
-├── Project_Governance/        # Roadmap, Plans, Keys
-├── ui_web/                    # Future Web Interface
-└── tests/                     # System Verification
-```
-
----
-
-## ⚡ Quick Start
-
-### 1. Run ARIA
-Interact with the assistant immediately:
 ```powershell
+# 1) Install dependencies from pyproject source of truth
+pip install -e .
+
+# 2) Run official Phase 1 demo (data -> analytics -> simulation -> risk)
+python run_atlas.py --demo
+
+# 3) Run ARIA terminal with Atlas workflow tools
 python run_aria.py
 ```
 
-### 2. Check Governance
-See where the project is heading:
-- [Master Plan](Project_Governance/ATLAS_MASTER_PLAN.md)
-- [Roadmap](Project_Governance/ROADMAP.md)
+## Main Entrypoints
 
----
+- `python run_atlas.py`: launches browser mode.
+- `python run_atlas.py --demo`: runs official Phase 1 workflow and writes artifacts to `outputs/runs/<run_id>/`.
+- `python scripts/run_phase1_demo.py`: direct CLI for Phase 1 run params.
+- `python run_aria.py`: ARIA terminal with Phase 1 tool registry.
 
-## 🔐 Privacy & Security
+## Project Layout
 
-- **100% Local First:** Atlas is designed to run locally using Ollama.
-- **Optional Cloud:** Integrations (ElevenLabs, OpenAI) are optional and configurable via `NEEDED_KEYS.md`.
+- `python/src/atlas/market_finance/`: official Phase 1 implementation.
+- `python/src/atlas/assistants/aria/`: ARIA core and tools.
+- `outputs/runs/`: per-run artifacts, manifests, and logs.
+- `docs/REPO_MAP.md`: canonical repo map and governance policy.
 
----
+## Dependencies
 
-**© 2026 M&C - Building the Future of Trading**
+- Source of truth: `pyproject.toml`
+- `requirements.txt` is compatibility-only (`-e .`).

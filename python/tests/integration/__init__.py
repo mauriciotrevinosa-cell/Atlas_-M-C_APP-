@@ -1,1 +1,1 @@
-ÿş
+"""Integration test package marker."""

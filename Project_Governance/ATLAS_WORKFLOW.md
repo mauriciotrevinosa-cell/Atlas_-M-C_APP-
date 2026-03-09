@@ -1,55 +1,7 @@
-# 🧭 PROJECT ATLAS — WORKFLOW v6.4
+# 🧭 PROJECT ATLAS — WORKFLOW v6.3
 
-**Última Actualización:** 2026-03-04
-**Versión:** 6.4 (Phase 1 formal workflow active in launcher + core quant modules implemented + validation/test baseline)
-
----
-
-## 🎯 CHANGELOG v6.3 → v6.4 (2026-03-04) — Phase 1 Consolidation + Core Expansion
-
-### **NEW — Core Quant Modules Implemented (from skeleton to runnable code)**
-- `python/src/atlas/core/intraday_patterns/`
-  - `engine.py`, `gap_analyzer.py`, `opening_drive.py`, `session_model.py`
-  - Gap continuation detection, opening-drive signals, session volatility profiles
-- `python/src/atlas/core/options_probability/`
-  - `engine.py`, `fetcher.py`, `iv_surface.py`, `distribution.py`
-  - Options chain ingestion, IV surface extraction, risk-neutral style distribution approximation
-- `python/src/atlas/core/whale_detection/`
-  - `engine.py`, `flow.py`, `options_flow.py`, `volume.py`
-  - Volume anomaly + institutional flow proxy + unusual options activity fusion
-- `python/src/atlas/core/signal_discovery/`
-  - `engine.py`, `pattern_scanner.py`, `correlation.py`, `feature_ranker.py`
-  - Pattern mining, lead-lag correlations, feature relevance ranking
-- `python/src/atlas/core/system_models/`
-  - `utility_functions.py`, `constraint_engine.py`, `probabilistic_state.py`
-  - Utility scoring, feasibility constraints, probabilistic regime-state inference
-- `python/src/atlas/core/validation/`
-  - `pbo.py`, `walk_forward.py`, `cross_validation.py`, `bootstrap_tests.py`, `scorer.py`
-  - Anti-overfitting toolkit: PBO, purged CV, bootstrap significance, composite scoring
-- `python/src/atlas/research/`
-  - `pipeline.py`, `idea.py`, `validator.py`, `report.py`
-  - End-to-end research loop (idea → data → returns model → statistical validation → artifacts)
-
-### **NEW — Launcher Integration (run_atlas.py)**
-- Browser launcher now registers official Phase 1 ARIA tools at startup by default:
-  - `atlas_get_data`, `atlas_analytics`, `atlas_simulate`, `atlas_risk`, `atlas_phase1_run`, `atlas_run_script`
-- New env toggle:
-  - `ATLAS_ENABLE_PHASE1_TOOLS=1` (default enabled)
-  - `ATLAS_ENABLE_PHASE1_TOOLS=0` disables this registration explicitly
-- Startup logs now show which Phase 1 tools are active for visibility.
-
-### **NEW — Test Baseline for New Modules**
-- Added `tests/unit/test_core_extensions.py` for:
-  - intraday patterns, whale detection, signal discovery, system models,
-    validation stack, options probability engine (local chain), research pipeline
-- Verified with:
-  - `python -m pytest tests/unit/test_core_extensions.py tests/unit/test_phase1_workflow.py -q`
-  - Result: `10 passed`
-
-### **STATUS SNAPSHOT (2026-03-04)**
-- Phase 1 official pipeline is operational end-to-end.
-- Core expansion modules imported successfully and are now executable APIs instead of broken skeleton imports.
-- Local-first implementation preserved (free providers + offline-safe pathways where possible).
+**Última Actualización:** 2026-02-28
+**Versión:** 6.3 (ARIA Multi-Provider v3.0 — Ollama/Groq/OpenRouter/Cerebras, slash commands, provider toolbar, markdown rendering. Atlas v1.0.4-alpha)
 
 ---
 
