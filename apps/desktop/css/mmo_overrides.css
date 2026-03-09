@@ -637,3 +637,72 @@
         font-size: 11px;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PHASE 3B — BERRY PHASE CARD
+   ═══════════════════════════════════════════════════════════════ */
+.mmo-berry-card {
+    flex: 1;
+    min-width: 220px;
+}
+
+.mmo-berry-cycle-badge {
+    display: inline-block;
+    font-size: 9px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border: 1px solid;
+    white-space: nowrap;
+}
+
+.mmo-berry-cycle-bull {
+    color: #00ff88;
+    border-color: rgba(0, 255, 136, 0.27);
+    background: rgba(0, 255, 136, 0.07);
+}
+
+.mmo-berry-cycle-bear {
+    color: #ff4757;
+    border-color: rgba(255, 71, 87, 0.27);
+    background: rgba(255, 71, 87, 0.07);
+}
+
+.mmo-berry-cycle-neutral {
+    color: #8be9fd;
+    border-color: rgba(139, 233, 253, 0.27);
+    background: rgba(139, 233, 253, 0.07);
+}
+
+.mmo-berry-topo-badge {
+    display: inline-block;
+    font-size: 8px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(189, 147, 249, 0.2);
+    border: 1px solid rgba(189, 147, 249, 0.35);
+    color: #bd93f9;
+    font-family: monospace;
+    letter-spacing: 0.3px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PHASE 3B — PATH INTEGRAL DISTRIBUTION BARS
+   ═══════════════════════════════════════════════════════════════ */
+.mmo-pi-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 30px;
+    margin: 4px 0;
+    padding: 0 2px;
+}
+
+.mmo-pi-bar {
+    flex: 1;
+    border-radius: 2px 2px 0 0;
+    min-height: 2px;
+    transition: height 0.45s ease;
+}

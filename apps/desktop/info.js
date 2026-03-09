@@ -828,12 +828,12 @@ window.InfoModule = (() => {
     {
       id: 'mmo_phase3b',
       category: 'quantum',
-      name: 'Phase 3B — Roadmap',
+      name: 'Phase 3B — Implemented ✓',
       icon: '🔭',
-      desc: 'Phase 3B extends MMO with multi-asset entanglement networks, path-integral pricing, and a real-time quantum regime dashboard. The goal is a complete quantum-mechanical description of cross-asset market dynamics.',
-      source: 'Planned features: cross-ticker QFI correlation matrix, Feynman path-integral return distribution, non-Hermitian Hamiltonian for open market systems, Berry phase for cyclical market regime detection.',
-      how: 'Entanglement matrix: for each pair (A, B) compute |⟨ψ_A|ψ_B⟩|² (state overlap). Path integral: discretise 60-day return path into N steps; compute Σ exp(iS/ℏ_eff) where action S = Σ (ΔP)²/(2σ²). Berry phase: γ = i ∮ ⟨ψ(t)|∂_t|ψ(t)⟩ dt along a closed cycle in market-parameter space — detects regime loops (bull→bear→sideways→bull). Non-Hermitian H: add imaginary decay term iΓ/2 to represent information leakage from the system. These extensions will surface as new panels in the MMO HUD alongside existing Wave, Heisenberg, String, and Thermal cards.',
-      tags: ['Phase 3B', 'Entanglement', 'Path Integral', 'Berry Phase', 'Roadmap', 'Non-Hermitian'],
+      desc: 'Phase 3B brings Berry phase topology, Feynman path-integral return distributions, and quantum state overlap (fidelity) matrices to the MMO HUD. These three new panels appear in the bottom bar alongside String Theory and Entanglement.',
+      source: 'Implemented features: (1) Berry phase γ card — geometric phase along closed loop in (T_CIR, trend) space, detecting BULL_LOOP / BEAR_LOOP / NEUTRAL regime cycles; (2) Path Integral K(R) bars in String Theory — Feynman amplitude distribution over 60 random paths; (3) Quantum Overlap |⟨ψ_A|ψ_B⟩|² in Entanglement Matrix — state fidelity computed from scanner cache after all tickers load. Non-Hermitian correction planned for Phase 3C.',
+      how: 'Berry: γ = Im log ∏_k ⟨ψ_k|ψ_{k+1}⟩ for N=8 waypoints on a (T_CIR, trend) circle. Topological flag |γ| > π/2. Winding number = γ/(2π). Path integral: S = Σ(ΔP)²/(2σ²), K(R) = Σ_paths exp(−S/ℏ_eff) binned by final return R. Quantum overlap: |⟨ψ_A|ψ_B⟩|² = (Σ_s √(p_As·p_Bs))² — computed in _computeOverlapMatrix() once all scanner states are cached in _onAllScansLoaded().',
+      tags: ['Phase 3B', 'Entanglement', 'Path Integral', 'Berry Phase', 'Implemented', 'Overlap Matrix'],
     },
   ];
 

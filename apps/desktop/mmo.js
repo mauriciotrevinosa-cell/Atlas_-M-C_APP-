@@ -29,6 +29,7 @@
   let _scanCache = {};        // ticker → qState
   let _initialized = false;
   let _focusKey = 'surface';
+  let _overlapMatrix = null;    // Phase 3B: quantum state overlap matrix (computed after scanner)
 
   const SCAN_TICKERS = ['SPY', 'QQQ', 'AAPL', 'MSFT', 'NVDA', 'TSLA', 'GLD', 'BTC-USD'];
 
@@ -878,6 +879,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
         ${nodeHTML}${extraHTML}
       </div>
       <div style="font-size:9px;color:#334;margin-top:5px;">T→1: barrier breakout likely · T→0: wall holds</div>` : ''}
+      ${_renderPathIntegral(d.path_integral)}
     `;
   }
 
@@ -1215,6 +1217,38 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
 </div>`;
     }).join('');
 
+    // ── Phase 3B: quantum state overlap |⟨ψ_A|ψ_B⟩|² ───────────────
+    let overlapHtml = '';
+    if (_overlapMatrix && ticker && _overlapMatrix[ticker]) {
+      const overlaps = Object.entries(_overlapMatrix[ticker])
+        .filter(([k]) => k !== ticker)
+        .sort((a, b) => b[1] - a[1]);
+      if (overlaps.length) {
+        const overlapRows = overlaps.map(([other, ov]) => {
+          const pct = Math.round(ov * 100);
+          const col = ov > 0.85 ? '#00ff88' : ov > 0.70 ? '#00d4ff' : ov > 0.50 ? '#f1fa8c' : '#ff9500';
+          return `<div class="mmo-entangle-row">
+            <span class="mmo-entangle-pair" style="color:${col}">${ticker} ⊙ ${other}</span>
+            <div class="mmo-entangle-track">
+              <div class="mmo-entangle-fill" style="width:${pct}%;background:${col};box-shadow:0 0 4px ${col}44;"></div>
+            </div>
+            <span class="mmo-entangle-val" style="color:${col}">${ov.toFixed(3)}</span>
+          </div>`;
+        }).join('');
+        overlapHtml = `
+          <div style="border-top:1px solid rgba(255,255,255,0.06);margin:8px 0;padding-top:8px;">
+            <div style="font-size:9px;color:#556;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">
+              State Fidelity |⟨ψ_A|ψ_B⟩|² — Phase 3B Quantum Overlap
+            </div>
+            ${overlapRows}
+            <div style="margin-top:5px;font-size:9px;color:#2a2a4a;font-style:italic;">
+              (Σ√(p_as·p_bs))² — 1.0=identical states · 0=orthogonal
+            </div>
+          </div>
+        `;
+      }
+    }
+
     el.innerHTML = `
 <div class="mmo-entangle-legend">
   ρ(A,B) = quantum correlation &nbsp;·&nbsp;
@@ -1224,6 +1258,7 @@ ${rows}
 <div style="margin-top:10px;font-size:9px;color:#2a2a4a;font-style:italic">
   Entangled pairs move together — diversification reduces entanglement energy
 </div>
+${overlapHtml}
 `;
   }
 
@@ -1246,9 +1281,12 @@ ${rows}
      SCANNER
      ═══════════════════════════════════════════════════════════════ */
   function _loadScanner() {
+    let remaining = SCAN_TICKERS.length;
+    const _done = () => { if (--remaining === 0) _onAllScansLoaded(); };
     SCAN_TICKERS.forEach(t => {
       if (_scanCache[t]) {
         _renderMiniCard(t, _scanCache[t]);
+        _done();
         return;
       }
       // Try API first, fall back to local computation
@@ -1256,6 +1294,7 @@ ${rows}
         const state = _normalizeQuantumState(d, t);
         _scanCache[t] = state;
         _renderMiniCard(t, state);
+        _done();
       });
     });
   }
@@ -1305,6 +1344,143 @@ ${rows}
     let best = 'BULL', bestP = 0;
     Object.entries(amps).forEach(([s, p]) => { if (p > bestP) { bestP = p; best = s; } });
     return best;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     PHASE 3B — BERRY PHASE RENDER
+     Geometric phase γ acquired by |ψ⟩ as parameters (T_CIR, trend)
+     traverse a closed loop in market-parameter space.
+     Detects cyclical regime patterns: BULL_LOOP / BEAR_LOOP / NEUTRAL
+     ═══════════════════════════════════════════════════════════════ */
+  function _renderBerry(qs) {
+    const el = document.getElementById('mmo-berry-display');
+    if (!el || !qs) return;
+    const bp = qs.berry_phase;
+    if (!bp) {
+      el.innerHTML = '<div style="font-size:9px;color:#3a3a5a">Berry phase requires local quantum state</div>';
+      return;
+    }
+    const gamma    = bp.gamma;
+    const gamma_pi = bp.gamma_pi;
+    const cycle    = bp.regime_cycle;
+    const topo     = bp.topological;
+    const winding  = bp.winding;
+    const cycleCol = cycle === 'BULL_LOOP' ? '#00ff88' : cycle === 'BEAR_LOOP' ? '#ff4757' : '#8be9fd';
+    const cycleCls = cycle === 'BULL_LOOP' ? 'mmo-berry-cycle-bull' : cycle === 'BEAR_LOOP' ? 'mmo-berry-cycle-bear' : 'mmo-berry-cycle-neutral';
+    // gauge: 0% = −π, 50% = 0, 100% = +π
+    const gaugePct = Math.round(((gamma + Math.PI) / (2 * Math.PI)) * 100);
+    const topoLabel = topo
+      ? '<span class="mmo-berry-topo-badge">⟲ TOPOLOGICAL</span>'
+      : '';
+    const cycleDesc = cycle === 'BULL_LOOP'
+      ? '▲ Forward rotation — regime cycling toward BULL'
+      : cycle === 'BEAR_LOOP'
+      ? '▼ Reverse rotation — regime cycling toward BEAR'
+      : '→ No dominant rotation — neutral topology';
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;">
+        <div style="text-align:center;min-width:52px;">
+          <div style="font-size:26px;font-weight:900;font-family:monospace;color:${cycleCol};">${gamma_pi >= 0 ? '+' : ''}${gamma_pi}π</div>
+          <div style="font-size:8px;color:#556;letter-spacing:0.5px;text-transform:uppercase;">Berry γ</div>
+        </div>
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <span class="mmo-berry-cycle-badge ${cycleCls}">${cycle.replace('_', ' ')}</span>
+            ${topoLabel}
+          </div>
+          <div style="height:5px;background:rgba(255,255,255,0.07);border-radius:3px;position:relative;overflow:visible;">
+            <div style="height:100%;width:${gaugePct}%;background:linear-gradient(90deg,#ff4757,${cycleCol});border-radius:3px;transition:width 0.6s;"></div>
+            <div style="position:absolute;top:-3px;left:50%;transform:translateX(-50%);width:1px;height:11px;background:rgba(255,255,255,0.18);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:8px;color:#334;margin-top:2px;font-family:monospace;">
+            <span>−π</span><span>0</span><span>+π</span>
+          </div>
+        </div>
+      </div>
+      <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">
+        <div class="mmo-heis-grid">
+          <div class="mmo-heis-kpi">
+            <div class="mmo-heis-val" style="color:${cycleCol}">${gamma.toFixed(4)}</div>
+            <div class="mmo-heis-label">γ (rad)</div>
+          </div>
+          <div class="mmo-heis-kpi">
+            <div class="mmo-heis-val" style="color:#bd93f9">${gamma_pi >= 0 ? '+' : ''}${gamma_pi}π</div>
+            <div class="mmo-heis-label">γ / π</div>
+          </div>
+          <div class="mmo-heis-kpi">
+            <div class="mmo-heis-val" style="color:#f1fa8c">${winding >= 0 ? '+' : ''}${winding}</div>
+            <div class="mmo-heis-label">Winding #</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:9px;color:#2a2a4a;font-style:italic;">
+        γ = Im log ∏⟨ψₖ|ψₖ₊₁⟩ — loop in (T_CIR, trend) space
+      </div>
+      <div style="margin-top:4px;font-size:9px;color:#334;">${cycleDesc}</div>
+    `;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     PHASE 3B — PATH INTEGRAL DISTRIBUTION HELPER
+     Returns HTML for the Feynman K(R) return distribution bars.
+     K(R) ∝ Σ_paths exp(−S/ℏ_eff) · δ(ΣΔP − R)
+     S = Σ_steps (ΔP)²/(2σ²)   [Euclidean action]
+     ═══════════════════════════════════════════════════════════════ */
+  function _renderPathIntegral(pi) {
+    if (!pi || !pi.distribution || !pi.distribution.length) return '';
+    const nBins  = pi.distribution.length;
+    const center = nBins / 2;
+    const bars = pi.distribution.map((h, i) => {
+      const dist = Math.abs(i - center) / center;
+      const col  = dist < 0.25 ? '#00ff88' : dist < 0.50 ? '#00d4ff' : dist < 0.75 ? '#bd93f9' : '#ff4757';
+      const ht   = Math.max(1, Math.round(h * 28));
+      return `<div class="mmo-pi-bar" title="${Math.round(h*100)}%" style="height:${ht}px;background:${col};opacity:${(0.45 + h * 0.55).toFixed(2)};"></div>`;
+    }).join('');
+    const rangePct = (pi.range * 100).toFixed(1);
+    return `
+      <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">
+        <div style="font-size:9px;color:#556;margin-bottom:4px;font-family:monospace;text-transform:uppercase;">
+          Path Integral K(R) — Feynman Amplitude Distribution
+        </div>
+        <div class="mmo-pi-bars">${bars}</div>
+        <div style="display:flex;justify-content:space-between;font-size:8px;color:#334;font-family:monospace;">
+          <span>−${rangePct}%</span><span>Return</span><span>+${rangePct}%</span>
+        </div>
+        <div style="font-size:9px;color:#2a2a4a;margin-top:4px;font-style:italic;">
+          K(R) = Σ exp(−S/ℏ_eff), S=Σ(ΔP)²/2σ² · ℏ=${pi.hbar_eff}
+        </div>
+      </div>
+    `;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     PHASE 3B — QUANTUM OVERLAP MATRIX
+     |⟨ψ_A|ψ_B⟩|² = (Σ_s √(p_As · p_Bs))² for all scanner pairs.
+     Higher overlap → more similar quantum state distribution.
+     Computed once after all scanner states are loaded.
+     ═══════════════════════════════════════════════════════════════ */
+  function _computeOverlapMatrix() {
+    const tickers = Object.keys(_scanCache).filter(t => _scanCache[t] && _scanCache[t].amplitudes);
+    if (tickers.length < 2) return null;
+    const SK = ['BULL', 'BEAR', 'SIDEWAYS', 'VOLATILE', 'TRENDING'];
+    const matrix = {};
+    tickers.forEach(A => {
+      matrix[A] = {};
+      const aA = _scanCache[A].amplitudes;
+      tickers.forEach(B => {
+        if (A === B) { matrix[A][B] = 1.000; return; }
+        const aB = _scanCache[B].amplitudes;
+        const ov = SK.reduce((s, k) => s + Math.sqrt((aA[k] || 0) * (aB[k] || 0)), 0);
+        matrix[A][B] = Number((ov * ov).toFixed(3));
+      });
+    });
+    return matrix;
+  }
+
+  /* Called once all scanner tickers have been loaded/cached. */
+  function _onAllScansLoaded() {
+    _overlapMatrix = _computeOverlapMatrix();
+    if (_qState) _renderEntanglement(_qState.ticker, _qState.entanglement);
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -1367,6 +1543,13 @@ ${rows}
       qs.entanglement = ENTANGLE_TABLE[qs.ticker] || {};
     }
 
+    // Phase 3B: Berry phase + path integral — always run locally from API data
+    if (!qs.berry_phase || !qs.path_integral) {
+      const localAugment = _computeLocalQuantumState(qs.ticker || 'SPY');
+      if (!qs.berry_phase)    qs.berry_phase    = localAugment.berry_phase;
+      if (!qs.path_integral)  qs.path_integral  = localAugment.path_integral;
+    }
+
     return qs;
   }
 
@@ -1400,6 +1583,7 @@ ${rows}
     _renderHeisenberg(qs);
     _renderDecoherence(qs);
     _renderEntanglement(qs.ticker, qs.entanglement);
+    _renderBerry(qs);
     _renderFocusDetail(qs);
 
     // Update Vacuum Chamber data
@@ -1541,6 +1725,83 @@ ${rows}
       return Number(((psi_n.re * psi_next.im) - (psi_n.im * psi_next.re)) / 0.5);
     });
 
+    // ── Berry Phase γ (Phase 3B) ─────────────────────────────────────
+    // Geometric phase acquired by |ψ⟩ as parameters (T_CIR, trend) trace
+    // a closed loop in market-parameter space. γ = Im log ∏_k ⟨ψ_k|ψ_{k+1}⟩
+    // BULL_LOOP → γ > 0 (regime cycling toward bull)
+    // BEAR_LOOP → γ < 0 (regime cycling toward bear)
+    const _berryN   = 8;                               // loop waypoints
+    const _berryRT  = cir_temperature * 0.28;           // T oscillation radius
+    const _berryRtr = Math.min(char.trend * 0.18, 0.10); // trend osc. radius
+    let _gRe = 1.0, _gIm = 0.0;                        // accumulator ∏⟨ψ_k|ψ_{k+1}⟩
+    for (let bk = 0; bk < _berryN; bk++) {
+      const _mkPsi = (theta) => {
+        const T_b   = Math.max(0.01, cir_temperature + _berryRT  * Math.sin(theta));
+        const tr_b  = Math.min(0.99, Math.max(0.01, char.trend   + _berryRtr * Math.cos(theta)));
+        const beta_b = 1 / T_b;
+        const rB = {
+          BULL: tr_b * (0.30 + rng(1) * 0.40),
+          BEAR: (1 - tr_b) * (0.20 + rng(2) * 0.35),
+          SIDEWAYS: 0.15 + rng(3) * 0.20,
+          VOLATILE: (T_b / 0.6) * (0.20 + rng(4) * 0.30),
+          TRENDING: tr_b * (0.20 + rng(5) * 0.25),
+        };
+        const totB = Object.values(rB).reduce((a, v) => a + v, 0);
+        const phB  = basePhases.map((phi0, i) => phi0 + beta_b * thermalFrequencies[i] * 0.12);
+        return stateOrder.map((s, i) => {
+          const mag = Math.sqrt((rB[s] || 0.001) / totB);
+          return { re: mag * Math.cos(phB[i]), im: mag * Math.sin(phB[i]) };
+        });
+      };
+      const th_k   = (2 * Math.PI * bk)       / _berryN;
+      const th_kp1 = (2 * Math.PI * (bk + 1)) / _berryN;
+      const pk  = _mkPsi(th_k);
+      const pkp = _mkPsi(th_kp1);
+      let ovRe = 0, ovIm = 0;
+      pk.forEach((a, i) => {
+        const b = pkp[i];
+        ovRe += a.re * b.re + a.im * b.im;   // Re(⟨ψ_k|ψ_{k+1}⟩)
+        ovIm += a.re * b.im - a.im * b.re;   // Im(⟨ψ_k|ψ_{k+1}⟩)
+      });
+      const nR = _gRe * ovRe - _gIm * ovIm;
+      const nI = _gRe * ovIm + _gIm * ovRe;
+      _gRe = nR; _gIm = nI;
+    }
+    const berry_gamma = Math.atan2(_gIm, _gRe);
+    const berry_phase = {
+      gamma:        Number(berry_gamma.toFixed(4)),
+      gamma_pi:     Number((berry_gamma / Math.PI).toFixed(3)),
+      regime_cycle: berry_gamma > 0.3 ? 'BULL_LOOP' : berry_gamma < -0.3 ? 'BEAR_LOOP' : 'NEUTRAL',
+      topological:  Math.abs(berry_gamma) > Math.PI / 2,
+      winding:      Number((berry_gamma / (2 * Math.PI)).toFixed(3)),
+    };
+
+    // ── Path Integral Distribution K(R) (Phase 3B) ──────────────────
+    // K(R) ∝ Σ_paths exp(−S/ℏ_eff) · δ(Σ ΔP − R)
+    // S = Σ_steps (ΔP)²/(2σ²)  [Euclidean / Wick-rotated action]
+    const _piSteps = 5, _piPaths = 60, _piBins = 12, _piHbar = 0.2;
+    const _piSigma = Math.max(0.02, char.vol / Math.sqrt(252));  // daily σ
+    const _piRange = _piSigma * _piSteps * 2.8;
+    const _piDist  = new Array(_piBins).fill(0);
+    for (let p = 0; p < _piPaths; p++) {
+      let totalR = 0, action = 0;
+      for (let st = 0; st < _piSteps; st++) {
+        const dP  = (rng(120 + p * _piSteps + st) - 0.5) * _piSigma * 4.4;
+        action   += (dP * dP) / (2 * _piSigma * _piSigma);
+        totalR   += dP;
+      }
+      const w   = Math.exp(-action / _piHbar);
+      const bin = Math.min(_piBins - 1, Math.max(0, Math.floor((totalR + _piRange) / (2 * _piRange) * _piBins)));
+      _piDist[bin] += w;
+    }
+    const _piMax = Math.max(..._piDist, 0.001);
+    const path_integral = {
+      distribution: _piDist.map(d => Number((d / _piMax).toFixed(3))),
+      hbar_eff:     _piHbar,
+      sigma_daily:  Number(_piSigma.toFixed(5)),
+      range:        Number(_piRange.toFixed(5)),
+    };
+
     const observableAxis = [-1, -0.5, 0, 0.5, 1];
     const meanObservable = stateOrder.reduce((acc, state, index) => acc + amps[state] * observableAxis[index], 0);
     const varianceObservable = stateOrder.reduce((acc, state, index) => {
@@ -1679,6 +1940,8 @@ ${rows}
       cir_drift,
       decoherence,
       entanglement: ENTANGLE_TABLE[t] || {},
+      berry_phase,
+      path_integral,
       confidence: Number((1 - entropy).toFixed(3)),
       _local: true,
     };
@@ -1941,11 +2204,15 @@ ${rows}
 
   <div class="mmo-bottom-bar">
     <div class="mmo-card mmo-string-card">
-      <div class="mmo-card-title" style="color:#ff79c6">String Theory | Probabilistic Paths</div>
+      <div class="mmo-card-title" style="color:#ff79c6">String Theory | Paths &amp; Integral</div>
       <div id="mmo-string-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
     </div>
+    <div class="mmo-card mmo-berry-card">
+      <div class="mmo-card-title" style="color:#bd93f9">Berry Phase γ &nbsp;|&nbsp; Regime Topology</div>
+      <div id="mmo-berry-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+    </div>
     <div class="mmo-card mmo-entanglement-card">
-      <div class="mmo-card-title" style="color:#8be9fd">Entanglement Matrix</div>
+      <div class="mmo-card-title" style="color:#8be9fd">Entanglement Matrix &amp; Overlap</div>
       <div id="mmo-entanglement-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
     </div>
   </div>
