@@ -20,53 +20,55 @@
   /* ═══════════════════════════════════════════════════════════════
      STATE
      ═══════════════════════════════════════════════════════════════ */
-  let _ticker       = 'SPY';
-  let _qState       = null;      // latest quantum state
-  let _waveAnimId   = null;      // rAF id for wave canvas
-  let _collapsed    = false;     // wave function collapsed?
-  let _collapseT    = 0;         // collapse animation time
-  let _scanCache    = {};        // ticker → qState
-  let _initialized  = false;
+  let _ticker = 'SPY';
+  let _qState = null;      // latest quantum state
+  let _waveAnimId = null;      // rAF id for wave canvas
+  let _waveProbs = { BULL: 0.2, BEAR: 0.2, SIDEWAYS: 0.2, VOLATILE: 0.2, TRENDING: 0.2 };
+  let _collapsed = false;     // wave function collapsed?
+  let _collapseT = 0;         // collapse animation time
+  let _scanCache = {};        // ticker → qState
+  let _initialized = false;
+  let _focusKey = 'surface';
 
   const SCAN_TICKERS = ['SPY', 'QQQ', 'AAPL', 'MSFT', 'NVDA', 'TSLA', 'GLD', 'BTC-USD'];
 
   /* ── State visual config ──────────────────────────────────────── */
   const STATES = {
-    BULL:      { color: '#00ff88', arrow: '▲', label: 'BULL' },
-    BEAR:      { color: '#ff4757', arrow: '▼', label: 'BEAR' },
-    SIDEWAYS:  { color: '#4da6ff', arrow: '→', label: 'SIDEWAYS' },
-    VOLATILE:  { color: '#ff9500', arrow: '◈', label: 'VOLATILE' },
-    TRENDING:  { color: '#cc99ff', arrow: '↗', label: 'TRENDING' },
+    BULL: { color: '#00ff88', arrow: '▲', label: 'BULL' },
+    BEAR: { color: '#ff4757', arrow: '▼', label: 'BEAR' },
+    SIDEWAYS: { color: '#4da6ff', arrow: '→', label: 'SIDEWAYS' },
+    VOLATILE: { color: '#ff9500', arrow: '◈', label: 'VOLATILE' },
+    TRENDING: { color: '#cc99ff', arrow: '↗', label: 'TRENDING' },
   };
 
   const LAYER_CFG = [
-    { id: 'structure', label: 'GEOLOGY',    color: '#7b68ee', depth: 'FOUNDATION' },
-    { id: 'energy',    label: 'SUBSURFACE', color: '#ff6b35', depth: 'DEEP' },
-    { id: 'thermal',   label: 'STATE',      color: '#00d4ff', depth: 'MID' },
-    { id: 'surface',   label: 'OBSERVABLE', color: '#50fa7b', depth: 'SHALLOW' },
+    { id: 'structure', label: 'GEOLOGY', color: '#7b68ee', depth: 'FOUNDATION' },
+    { id: 'energy', label: 'SUBSURFACE', color: '#ff6b35', depth: 'DEEP' },
+    { id: 'thermal', label: 'STATE', color: '#00d4ff', depth: 'MID' },
+    { id: 'surface', label: 'OBSERVABLE', color: '#50fa7b', depth: 'SHALLOW' },
   ];
 
   /* ── Market character profiles ────────────────────────────────── */
   const MARKET_CHARS = {
-    'SPY':     { trend: 0.62, vol: 0.15, basePrice: 575 },
-    'QQQ':     { trend: 0.65, vol: 0.20, basePrice: 490 },
-    'AAPL':    { trend: 0.60, vol: 0.22, basePrice: 230 },
-    'MSFT':    { trend: 0.63, vol: 0.19, basePrice: 420 },
-    'NVDA':    { trend: 0.70, vol: 0.35, basePrice: 850 },
-    'TSLA':    { trend: 0.50, vol: 0.45, basePrice: 285 },
-    'GLD':     { trend: 0.55, vol: 0.12, basePrice: 195 },
+    'SPY': { trend: 0.62, vol: 0.15, basePrice: 575 },
+    'QQQ': { trend: 0.65, vol: 0.20, basePrice: 490 },
+    'AAPL': { trend: 0.60, vol: 0.22, basePrice: 230 },
+    'MSFT': { trend: 0.63, vol: 0.19, basePrice: 420 },
+    'NVDA': { trend: 0.70, vol: 0.35, basePrice: 850 },
+    'TSLA': { trend: 0.50, vol: 0.45, basePrice: 285 },
+    'GLD': { trend: 0.55, vol: 0.12, basePrice: 195 },
     'BTC-USD': { trend: 0.55, vol: 0.60, basePrice: 92000 },
   };
 
   /* ── Entanglement table (quantum correlation matrix) ──────────── */
   const ENTANGLE_TABLE = {
-    'SPY':     { 'QQQ': 0.92, 'AAPL': 0.75, 'MSFT': 0.78, 'NVDA': 0.65, 'TSLA': 0.52, 'GLD': -0.12, 'BTC-USD': 0.28 },
-    'QQQ':     { 'SPY': 0.92, 'AAPL': 0.85, 'MSFT': 0.82, 'NVDA': 0.78, 'TSLA': 0.62, 'GLD': -0.18, 'BTC-USD': 0.35 },
-    'AAPL':    { 'SPY': 0.75, 'QQQ': 0.85, 'MSFT': 0.72, 'NVDA': 0.55, 'TSLA': 0.45, 'GLD': -0.08, 'BTC-USD': 0.25 },
-    'MSFT':    { 'SPY': 0.78, 'QQQ': 0.82, 'AAPL': 0.72, 'NVDA': 0.62, 'TSLA': 0.42, 'GLD': -0.10, 'BTC-USD': 0.22 },
-    'NVDA':    { 'SPY': 0.65, 'QQQ': 0.78, 'AAPL': 0.55, 'MSFT': 0.62, 'TSLA': 0.58, 'GLD': -0.15, 'BTC-USD': 0.40 },
-    'TSLA':    { 'SPY': 0.52, 'QQQ': 0.62, 'AAPL': 0.45, 'MSFT': 0.42, 'NVDA': 0.58, 'GLD': -0.05, 'BTC-USD': 0.48 },
-    'GLD':     { 'SPY': -0.12, 'QQQ': -0.18, 'AAPL': -0.08, 'MSFT': -0.10, 'NVDA': -0.15, 'TSLA': -0.05, 'BTC-USD': 0.15 },
+    'SPY': { 'QQQ': 0.92, 'AAPL': 0.75, 'MSFT': 0.78, 'NVDA': 0.65, 'TSLA': 0.52, 'GLD': -0.12, 'BTC-USD': 0.28 },
+    'QQQ': { 'SPY': 0.92, 'AAPL': 0.85, 'MSFT': 0.82, 'NVDA': 0.78, 'TSLA': 0.62, 'GLD': -0.18, 'BTC-USD': 0.35 },
+    'AAPL': { 'SPY': 0.75, 'QQQ': 0.85, 'MSFT': 0.72, 'NVDA': 0.55, 'TSLA': 0.45, 'GLD': -0.08, 'BTC-USD': 0.25 },
+    'MSFT': { 'SPY': 0.78, 'QQQ': 0.82, 'AAPL': 0.72, 'NVDA': 0.62, 'TSLA': 0.42, 'GLD': -0.10, 'BTC-USD': 0.22 },
+    'NVDA': { 'SPY': 0.65, 'QQQ': 0.78, 'AAPL': 0.55, 'MSFT': 0.62, 'TSLA': 0.58, 'GLD': -0.15, 'BTC-USD': 0.40 },
+    'TSLA': { 'SPY': 0.52, 'QQQ': 0.62, 'AAPL': 0.45, 'MSFT': 0.42, 'NVDA': 0.58, 'GLD': -0.05, 'BTC-USD': 0.48 },
+    'GLD': { 'SPY': -0.12, 'QQQ': -0.18, 'AAPL': -0.08, 'MSFT': -0.10, 'NVDA': -0.15, 'TSLA': -0.05, 'BTC-USD': 0.15 },
     'BTC-USD': { 'SPY': 0.28, 'QQQ': 0.35, 'AAPL': 0.25, 'MSFT': 0.22, 'NVDA': 0.40, 'TSLA': 0.48, 'GLD': 0.15 },
   };
 
@@ -74,6 +76,22 @@
   const _api = {
     get: (path) => fetch(path).then(r => r.ok ? r.json() : null).catch(() => null),
   };
+
+  function _clamp(value, min = 0, max = 1) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function _formatPct(value) {
+    return typeof value === 'number' && Number.isFinite(value)
+      ? `${Math.round(value * 100)}%`
+      : '-';
+  }
+
+  function _formatMetric(value, digits = 3) {
+    return typeof value === 'number' && Number.isFinite(value)
+      ? value.toFixed(digits)
+      : '-';
+  }
 
   /* ═══════════════════════════════════════════════════════════════
      LOCAL QUANTUM STATE ENGINE
@@ -92,8 +110,8 @@
 
     // ── Amplitudes (Born rule: prob = |amplitude|²) ──────────────
     const raw = {
-      BULL:     char.trend * (0.30 + rng(1) * 0.40),
-      BEAR:     (1 - char.trend) * (0.20 + rng(2) * 0.35),
+      BULL: char.trend * (0.30 + rng(1) * 0.40),
+      BEAR: (1 - char.trend) * (0.20 + rng(2) * 0.35),
       SIDEWAYS: 0.15 + rng(3) * 0.20,
       VOLATILE: char.vol * (0.20 + rng(4) * 0.30),
       TRENDING: char.trend * (0.20 + rng(5) * 0.25),
@@ -110,25 +128,25 @@
     let dom = 'BULL', domP = 0;
     Object.entries(amps).forEach(([s, p]) => { if (p > domP) { domP = p; dom = s; } });
 
-    const collapse_prob  = Math.min(0.99, 1 - entropy);
+    const collapse_prob = Math.min(0.99, 1 - entropy);
     const tunneling_risk = Math.min(0.9, char.vol * (0.3 + rng(6) * 0.4));
 
     // ── Quantum verdict ──────────────────────────────────────────
     let quantum_verdict = 'SUPERPOSED — WAIT';
-    if (collapse_prob > 0.6 && dom === 'BULL')                    quantum_verdict = 'BUY';
-    else if (collapse_prob > 0.6 && dom === 'BEAR')               quantum_verdict = 'SELL';
-    else if (dom === 'VOLATILE' || tunneling_risk > 0.25)          quantum_verdict = 'HEDGE — VOLATILITY';
-    else if (dom === 'TRENDING' && amps.TRENDING > 0.35)           quantum_verdict = 'TREND FOLLOW';
+    if (collapse_prob > 0.6 && dom === 'BULL') quantum_verdict = 'BUY';
+    else if (collapse_prob > 0.6 && dom === 'BEAR') quantum_verdict = 'SELL';
+    else if (dom === 'VOLATILE' || tunneling_risk > 0.25) quantum_verdict = 'HEDGE — VOLATILITY';
+    else if (dom === 'TRENDING' && amps.TRENDING > 0.35) quantum_verdict = 'TREND FOLLOW';
 
     // ── Price data ───────────────────────────────────────────────
-    const last_close   = (char.basePrice * (0.95 + rng(7) * 0.10)).toFixed(2);
-    const trend_pct    = ((char.trend - 0.5) * 40 * (0.8 + rng(8) * 0.4)).toFixed(1);
+    const last_close = (char.basePrice * (0.95 + rng(7) * 0.10)).toFixed(2);
+    const trend_pct = ((char.trend - 0.5) * 40 * (0.8 + rng(8) * 0.4)).toFixed(1);
     const annual_vol_pct = (char.vol * 100 * (0.9 + rng(9) * 0.2)).toFixed(1);
 
     // ── String theory ────────────────────────────────────────────
     const string = {
-      amplitude:   Math.min(1, 0.2 + char.vol * (0.5 + rng(10) * 0.5)),
-      frequency:   Math.min(1, 0.3 + char.trend * (0.5 + rng(11) * 0.4)),
+      amplitude: Math.min(1, 0.2 + char.vol * (0.5 + rng(10) * 0.5)),
+      frequency: Math.min(1, 0.3 + char.trend * (0.5 + rng(11) * 0.4)),
       vertices_30d: Math.floor(3 + rng(12) * 10),
       nodes: [],
     };
@@ -138,10 +156,10 @@
 
     // ── Energy ───────────────────────────────────────────────────
     const energy = {
-      score:             Math.min(1, 0.3 + char.vol * 0.4 + char.trend * 0.2 + rng(15) * 0.15),
-      fatigue:           Math.min(1, rng(16) * (0.2 + (1 - char.trend) * 0.5)),
-      bubble_risk:       char.vol > 0.3 ? Math.min(1, 0.3 + rng(17) * 0.4) : Math.min(1, 0.05 + rng(17) * 0.2),
-      cooling_adequacy:  Math.min(1, 0.4 + (1 - char.vol) * 0.4 + rng(18) * 0.15),
+      score: Math.min(1, 0.3 + char.vol * 0.4 + char.trend * 0.2 + rng(15) * 0.15),
+      fatigue: Math.min(1, rng(16) * (0.2 + (1 - char.trend) * 0.5)),
+      bubble_risk: char.vol > 0.3 ? Math.min(1, 0.3 + rng(17) * 0.4) : Math.min(1, 0.05 + rng(17) * 0.2),
+      cooling_adequacy: Math.min(1, 0.4 + (1 - char.vol) * 0.4 + rng(18) * 0.15),
     };
 
     // ── Ontology ─────────────────────────────────────────────────
@@ -154,17 +172,17 @@
 
     const ontology = {
       being,
-      essence:              dom.charAt(0) + dom.slice(1).toLowerCase() + ' Momentum Field',
-      entanglement:         t === 'SPY' ? 'BROAD MARKET' : t === 'GLD' ? 'INVERSE SPY' : 'SECTOR CORR',
+      essence: dom.charAt(0) + dom.slice(1).toLowerCase() + ' Momentum Field',
+      entanglement: t === 'SPY' ? 'BROAD MARKET' : t === 'GLD' ? 'INVERSE SPY' : 'SECTOR CORR',
       structural_stability: Math.min(1, 0.4 + (1 - char.vol) * 0.5 + rng(20) * 0.1),
     };
 
     // ── Layers ───────────────────────────────────────────────────
     const layers = [
       { id: 'structure', metric: `Stability ${(ontology.structural_stability * 100).toFixed(0)}%`, value: ontology.structural_stability, health: being },
-      { id: 'energy',    metric: `E=${energy.score.toFixed(2)}`,  value: energy.score,           health: energy.fatigue > 0.5 ? 'FATIGUED' : 'ACTIVE' },
-      { id: 'thermal',   metric: `Vol ${annual_vol_pct}%`,        value: Math.min(1, char.vol * 2), health: dom },
-      { id: 'surface',   metric: `ψ=${amps[dom].toFixed(2)}`,     value: amps[dom],              health: quantum_verdict },
+      { id: 'energy', metric: `E=${energy.score.toFixed(2)}`, value: energy.score, health: energy.fatigue > 0.5 ? 'FATIGUED' : 'ACTIVE' },
+      { id: 'thermal', metric: `Vol ${annual_vol_pct}%`, value: Math.min(1, char.vol * 2), health: dom },
+      { id: 'surface', metric: `ψ=${amps[dom].toFixed(2)}`, value: amps[dom], health: quantum_verdict },
     ];
 
     // ── Heisenberg Uncertainty Principle ─────────────────────────
@@ -172,14 +190,16 @@
     // Δx = position uncertainty (proxy: inverse trend clarity)
     const delta_p = char.vol;
     const delta_x = 1 / Math.max(0.1, char.trend);
+    const u_sys = delta_p * delta_x;
     const heisenberg = {
       delta_p,
       delta_x,
-      product:            delta_p * delta_x,
-      hbar_half:          0.5,
-      compliant:          (delta_p * delta_x) >= 0.5,
+      product: u_sys,
+      hbar_half: 0.5,
+      compliant: u_sys >= 0.5,
       position_certainty: char.trend,
       momentum_certainty: Math.max(0, 1 - char.vol),
+      sizing_suggested: `Size = [Capital × α] / √(${(u_sys || 1).toFixed(2)})`
     };
 
     // ── Decoherence time τ ────────────────────────────────────────
@@ -187,9 +207,9 @@
     const tau = 1 / Math.max(0.01, char.vol * (1 + entropy));
     const decoherence = {
       tau,
-      tau_normalized:  Math.min(1, tau / 5),
-      regime:          tau < 0.5 ? 'RAPID COLLAPSE' : tau < 1.5 ? 'MODERATE DECAY' : 'STABLE SUPERPOSITION',
-      noise_factor:    Math.min(1, char.vol * (0.5 + entropy * 0.5)),
+      tau_normalized: Math.min(1, tau / 5),
+      regime: tau < 0.5 ? 'RAPID COLLAPSE' : tau < 1.5 ? 'MODERATE DECAY' : 'STABLE SUPERPOSITION',
+      noise_factor: Math.min(1, char.vol * (0.5 + entropy * 0.5)),
     };
 
     // ── Quantum Entanglement ──────────────────────────────────────
@@ -240,6 +260,7 @@
       <button class="mmo-btn-analyze"  onclick="MMO.analyze(document.getElementById('mmo-ticker-input').value)">⟩ Analyze</button>
       <button class="mmo-btn-collapse" onclick="MMO.collapse()">↯ Collapse</button>
       <button class="mmo-btn-reset"    onclick="MMO.reset()">⟳ Reset</button>
+      <button class="mmo-btn-theory"   onclick="MMO.showTheory()">📖 Theory</button>
     </div>
   </div>
 
@@ -259,113 +280,90 @@
     </div>
   </div>
 
-  <!-- MAIN BODY GRID -->
-  <div class="mmo-body">
-
-    <!-- ── LEFT COL, ROW 1: Wave function ── -->
-    <div class="mmo-card mmo-wave-card">
-      <div class="mmo-card-title">QUANTUM WAVE FUNCTION &nbsp;|&nbsp; ψ(<span id="mmo-wave-ticker">SPY</span>)
-        <span style="float:right;font-size:9px;color:#3a3a5a">Click canvas to collapse</span>
+  <!-- MAIN BODY GRID: Quantum HUD Observatory -->
+  <div class="mmo-hud-container">
+    
+    <!-- LEFT PANEL: Quantum Observables -->
+    <div class="mmo-hud-left">
+      <div class="mmo-card mmo-energy-card">
+        <div class="mmo-card-title" style="color:#ff6b35">THERMODYNAMICS &nbsp;|&nbsp; Energy & Fatigue</div>
+        <div id="mmo-energy-display"><div style="font-size:9px;color:#3a3a5a">—</div></div>
       </div>
-      <canvas id="mmo-canvas" onclick="MMO.collapse()"></canvas>
-      <div id="mmo-amplitudes"></div>
-    </div>
-
-    <!-- ── RIGHT COL, ROW 1: Quantum State ── -->
-    <div class="mmo-card mmo-state-card">
-      <div class="mmo-card-title">QUANTUM STATE</div>
-      <div id="mmo-state-display">
-        <div class="mmo-superposed-label">|ψ⟩ = Σ αᵢ|stateᵢ⟩</div>
-        <div style="font-size:9px;color:#3a3a5a;text-align:center;margin-top:8px">Awaiting analysis…</div>
+      <div class="mmo-card mmo-ontology-card">
+        <div class="mmo-card-title" style="color:#7b68ee">MARKET ONTOLOGY</div>
+        <div id="mmo-ontology-display"><div style="font-size:9px;color:#3a3a5a">—</div></div>
+      </div>
+      <div class="mmo-card mmo-entropy-card">
+        <div class="mmo-card-title" style="color:#00d4ff">SUPERPOSITION ENTROPY</div>
+        <div id="mmo-entropy-display"><div style="font-size:9px;color:#3a3a5a">—</div></div>
       </div>
     </div>
 
-    <!-- ── LEFT COL, ROW 2: String Theory ── -->
+    <!-- CENTER PANEL: Vacuum Chamber (WebGL) & Waves -->
+    <div class="mmo-hud-center">
+      <div class="mmo-vacuum-title">⟨ψ⟩ SUPERPOSITION &nbsp;|&nbsp; QUANTUM TOPOLOGY</div>
+      <div style="flex:1; display:flex; flex-direction:column; position:relative; padding-top:40px;">
+        <!-- Top: 2D Wave Canvas -->
+        <div style="flex:1; position:relative; overflow:hidden; border-bottom:1px solid rgba(124, 63, 228, 0.2);">
+          <canvas id="mmo-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+          <div style="position:absolute;top:10px;left:15px;font-size:10px;color:#9b8ee8;font-family:monospace;letter-spacing:1px;pointer-events:none;">
+             WAVE FUNCTION | ψ(<span id="mmo-wave-ticker" style="color:#fff">SPY</span>)
+          </div>
+        </div>
+        <!-- Bottom: 3D Vacuum Chamber -->
+        <div id="mmo-three-mount" style="flex:1; position:relative; overflow:hidden;"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: Collapse & Actionability -->
+    <div class="mmo-hud-right">
+      <div class="mmo-card mmo-heisenberg-card">
+        <div class="mmo-card-title" style="color:#bd93f9">HEISENBERG SIZING &nbsp;|&nbsp; Δp × Δx</div>
+        <div id="mmo-heisenberg-display"><div style="font-size:9px;color:#3a3a5a">—</div></div>
+      </div>
+      <div class="mmo-card mmo-decoherence-card">
+        <div class="mmo-card-title" style="color:#ff79c6">DECOHERENCE τ &nbsp;|&nbsp; Wave Stability</div>
+        <div id="mmo-decoherence-display"><div style="font-size:9px;color:#3a3a5a">—</div></div>
+      </div>
+      <div class="mmo-card mmo-action-card" style="flex:1;display:flex;flex-direction:column;">
+        <div class="mmo-card-title" style="color:#00ff88">EXECUTION PROTOCOLS</div>
+        <div id="mmo-action-display" style="padding:15px;flex:1;display:flex;flex-direction:column;justify-content:center;">
+          <button class="mmo-btn-action mmo-btn-breakout" onclick="console.log('Breakout prepared')">[ PREPARE TUNNEL BREAKOUT ]</button>
+          <button class="mmo-btn-action mmo-btn-hedge" onclick="console.log('Delta hedge initiated')">[ INITIATE DELTA HEDGE ]</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /mmo-hud-container -->
+
+  <!-- BOTTOM BAR: String Theory & Scanner -->
+  <div class="mmo-bottom-bar">
     <div class="mmo-card mmo-string-card">
-      <div class="mmo-card-title" style="color:#6a3a5a">STRING THEORY &nbsp;|&nbsp; Price as Vibration</div>
-      <div id="mmo-string-display">
-        <div style="font-size:9px;color:#3a3a5a">—</div>
-      </div>
+      <div class="mmo-card-title" style="color:#6a3a5a">STRING THEORY &nbsp;|&nbsp; Probabilistic Paths</div>
+      <div id="mmo-string-display"><div style="font-size:9px;color:#3a3a5a">—</div></div>
     </div>
-
-    <!-- ── RIGHT COL, ROW 2: Ontology ── -->
-    <div class="mmo-card mmo-ontology-card">
-      <div class="mmo-card-title">MARKET ONTOLOGY &nbsp;<span style="color:#2a2a4a;font-size:9px">GEOLOGY LAYER</span></div>
-      <div id="mmo-ontology-display">
-        <div style="font-size:9px;color:#3a3a5a">—</div>
-      </div>
-    </div>
-
-    <!-- ── LEFT COL, ROW 3: Energy ── -->
-    <div class="mmo-card mmo-energy-card">
-      <div class="mmo-card-title" style="color:#6a4a2a">ENERGY &amp; ENTROPY &nbsp;|&nbsp; Capital in Motion</div>
-      <div id="mmo-energy-display">
-        <div style="font-size:9px;color:#3a3a5a">—</div>
-      </div>
-    </div>
-
-    <!-- ── RIGHT COL, ROW 3: Entropy gauge ── -->
-    <div class="mmo-card mmo-entropy-card">
-      <div class="mmo-card-title">SUPERPOSITION ENTROPY</div>
-      <div id="mmo-entropy-display">
-        <div style="font-size:9px;color:#3a3a5a">—</div>
-      </div>
-    </div>
-
-    <!-- ── LEFT COL, ROW 4: Heisenberg Uncertainty ── -->
-    <div class="mmo-card mmo-heisenberg-card">
-      <div class="mmo-card-title" style="color:#bd93f9">HEISENBERG UNCERTAINTY &nbsp;|&nbsp; Δp × Δx ≥ ℏ/2</div>
-      <div id="mmo-heisenberg-display">
-        <div style="font-size:9px;color:#3a3a5a">—</div>
-      </div>
-    </div>
-
-    <!-- ── RIGHT COL, ROW 4: Decoherence Clock ── -->
-    <div class="mmo-card mmo-decoherence-card">
-      <div class="mmo-card-title" style="color:#ff79c6">DECOHERENCE &nbsp;|&nbsp; Wave Stability τ</div>
-      <div id="mmo-decoherence-display">
-        <div style="font-size:9px;color:#3a3a5a">—</div>
-      </div>
-    </div>
-
-  </div><!-- /mmo-body -->
-
-  <!-- QUANTUM SCANNER -->
-  <div class="mmo-scanner-card mmo-card">
-    <div class="mmo-card-title">QUANTUM SCANNER &nbsp;—&nbsp; Multi-Ticker Superposition</div>
-    <div class="mmo-scanner-grid" id="mmo-scanner-grid">
-      ${SCAN_TICKERS.map(t => `
-      <div class="mmo-mini-card" onclick="MMO.analyze('${t}')" id="mmo-mini-${t.replace('-','_')}">
-        <div class="mmo-mini-ticker">${t}</div>
-        <div class="mmo-mini-loading">loading…</div>
-      </div>`).join('')}
-    </div>
-  </div>
-
-  <!-- QUANTUM ENTANGLEMENT MATRIX -->
-  <div class="mmo-card mmo-entanglement-card">
-    <div class="mmo-card-title" style="color:#8be9fd">QUANTUM ENTANGLEMENT &nbsp;—&nbsp; Inter-Asset Correlation Field</div>
-    <div id="mmo-entanglement-display">
-      <div style="font-size:9px;color:#3a3a5a;text-align:center;padding:16px 0">
-        Run analysis on any ticker to reveal entanglement field…
+    <div class="mmo-scanner-card mmo-card">
+      <div class="mmo-card-title">QUANTUM SCANNER &nbsp;—&nbsp; Multi-Ticker Superposition</div>
+      <div class="mmo-scanner-grid" id="mmo-scanner-grid">
+        ${SCAN_TICKERS.map(t => `
+        <div class="mmo-mini-card" onclick="MMO.analyze('${t}')" id="mmo-mini-${t.replace('-', '_')}">
+          <div class="mmo-mini-ticker">${t}</div>
+          <div class="mmo-mini-loading">loading…</div>
+        </div>`).join('')}
       </div>
     </div>
   </div>
 
 </div><!-- /mmo-shell -->
 `;
-
     _startWaveCanvas();
+    _startVacuumChamber();
     _loadScanner();
   }
 
   /* ═══════════════════════════════════════════════════════════════
      WAVE CANVAS ANIMATION
-     Shows: individual state waves, superposition sum, |ψ|² density,
-     tunneling barrier visualization, collapse Dirac delta.
      ═══════════════════════════════════════════════════════════════ */
-  let _waveProbs = { BULL: 0.2, BEAR: 0.2, SIDEWAYS: 0.2, VOLATILE: 0.2, TRENDING: 0.2 };
-
   function _startWaveCanvas() {
     if (_waveAnimId) cancelAnimationFrame(_waveAnimId);
     const canvas = document.getElementById('mmo-canvas');
@@ -373,17 +371,15 @@
     const ctx = canvas.getContext('2d');
 
     let t = 0;
-    let _tunnelingRisk = 0.1;  // will update from state
+    let _tunnelingRisk = 0.1;
 
     function frame() {
       const W = canvas.offsetWidth;
-      const H = 190;
-      canvas.width  = W;
+      const H = canvas.offsetHeight || 150;
+      canvas.width = W;
       canvas.height = H;
 
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = '#050611';
-      ctx.fillRect(0, 0, W, H);
 
       // Subtle grid
       ctx.strokeStyle = 'rgba(255,255,255,0.03)';
@@ -391,28 +387,66 @@
       for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
       for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
 
+
+      // V(x) Potential Field Overlay (Phase 3A)
+      if (_qState && _qState.potential_field && _qState.potential_field.length > 1) {
+        const pf = _qState.potential_field;
+        const prices = pf.map(p => p.price);
+        const vvals  = pf.map(p => p.V);
+        const pMin = Math.min(...prices), pMax = Math.max(...prices);
+        const vMin = Math.min(...vvals),  vMax = Math.max(...vvals);
+        const pRng = pMax - pMin || 1;
+        const vRng = vMax - vMin || 1;
+        const vH = H * 0.25;
+        const vY0 = H - 2;
+        ctx.save();
+        ctx.globalAlpha = 0.45;
+        ctx.beginPath();
+        pf.forEach((pt, i) => {
+          const x = (pt.price - pMin) / pRng * W;
+          const y = vY0 - (pt.V - vMin) / vRng * vH;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+        ctx.lineTo(W, vY0); ctx.lineTo(0, vY0); ctx.closePath();
+        const vGrad = ctx.createLinearGradient(0, vY0 - vH, 0, vY0);
+        vGrad.addColorStop(0, 'rgba(255,149,0,0.6)');
+        vGrad.addColorStop(1, 'rgba(255,149,0,0.05)');
+        ctx.fillStyle = vGrad;
+        ctx.fill();
+        ctx.beginPath();
+        pf.forEach((pt, i) => {
+          const x = (pt.price - pMin) / pRng * W;
+          const y = vY0 - (pt.V - vMin) / vRng * vH;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+        ctx.strokeStyle = 'rgba(255,149,0,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+        ctx.restore();
+        ctx.font = '8px monospace';
+        ctx.fillStyle = 'rgba(255,149,0,0.5)';
+        ctx.textAlign = 'left';
+        ctx.fillText('V(x) potential', 4, vY0 - vH - 2);
+      }
+
       const stateKeys = ['BULL', 'BEAR', 'SIDEWAYS', 'VOLATILE', 'TRENDING'];
-      const freqs     = [1.2, 0.9, 0.5, 2.1, 1.6];
-      const phases    = [0, 0.8, 1.5, 2.3, 0.3];
-      const midY      = H * 0.42;
-      const maxAmp    = H * 0.17;
+      const freqs = [1.2, 0.9, 0.5, 2.1, 1.6];
+      const phases = [0, 0.8, 1.5, 2.3, 0.3];
+      const midY = H * 0.42;
+      const maxAmp = H * 0.17;
 
       if (!_collapsed) {
-        // ── Tunneling barrier (±1σ walls) ───────────────────────
         if (_tunnelingRisk > 0.05) {
           const barrierAlpha = Math.min(0.35, _tunnelingRisk);
           const barrierW = 4;
           const barrierTop = midY - maxAmp * 1.8;
           const barrierBot = midY + maxAmp * 1.8;
 
-          // Left barrier
           ctx.fillStyle = `rgba(255, 149, 0, ${barrierAlpha * 0.6})`;
           ctx.fillRect(W * 0.22, barrierTop, barrierW, barrierBot - barrierTop);
-          // Right barrier
           ctx.fillRect(W * 0.78, barrierTop, barrierW, barrierBot - barrierTop);
 
-          // Tunneling leak glow
-          const glowR = Math.floor(_tunnelingRisk * 255).toString(16).padStart(2,'0');
           ctx.shadowColor = '#ff9500';
           ctx.shadowBlur = 8;
           ctx.fillStyle = `rgba(255, 149, 0, ${_tunnelingRisk * 0.25})`;
@@ -426,31 +460,29 @@
           ctx.fillText(`T=${(_tunnelingRisk * 100).toFixed(0)}%`, W * 0.78 + barrierW + 12, barrierTop - 4);
         }
 
-        // ── Individual state waves ───────────────────────────────
         stateKeys.forEach((s, i) => {
           const prob = _waveProbs[s] || 0.2;
-          const amp  = Math.sqrt(prob) * maxAmp;
-          const col  = STATES[s].color;
+          const amp = Math.sqrt(prob) * maxAmp;
+          const col = STATES[s].color;
 
           ctx.beginPath();
           ctx.strokeStyle = col + '55';
           ctx.lineWidth = 1.5;
           for (let x = 0; x <= W; x += 2) {
             const nx = x / W * Math.PI * 4;
-            const y  = midY + Math.sin(nx * freqs[i] + t * (0.6 + i * 0.15) + phases[i]) * amp;
+            const y = midY + Math.sin(nx * freqs[i] + t * (0.6 + i * 0.15) + phases[i]) * amp;
             if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
           }
           ctx.stroke();
         });
 
-        // ── Superposition sum wave (interference) ───────────────
         const sumY_arr = [];
         for (let x = 0; x <= W; x += 2) {
           const nx = x / W * Math.PI * 4;
           let sumY = 0;
           stateKeys.forEach((s, i) => {
             const prob = _waveProbs[s] || 0.2;
-            const amp  = Math.sqrt(prob) * maxAmp;
+            const amp = Math.sqrt(prob) * maxAmp;
             sumY += Math.sin(nx * freqs[i] + t * (0.6 + i * 0.15) + phases[i]) * amp * 0.5;
           });
           sumY_arr.push(midY + sumY);
@@ -462,8 +494,6 @@
         sumY_arr.forEach((y, i) => { if (i === 0) ctx.moveTo(i * 2, y); else ctx.lineTo(i * 2, y); });
         ctx.stroke();
 
-        // ── |ψ|² probability density shading ───────────────────
-        // Fill between wave and axis with gradient based on amplitude
         const grad = ctx.createLinearGradient(0, midY - maxAmp * 1.5, 0, midY + maxAmp * 1.5);
         grad.addColorStop(0, 'rgba(124, 63, 228, 0.00)');
         grad.addColorStop(0.5, 'rgba(124, 63, 228, 0.08)');
@@ -477,7 +507,6 @@
         ctx.fillStyle = grad;
         ctx.fill();
 
-        // ── Label ────────────────────────────────────────────────
         ctx.font = '10px monospace';
         ctx.fillStyle = '#4a3a7a';
         ctx.textAlign = 'left';
@@ -486,12 +515,10 @@
         ctx.fillText('|ψ|² = probability density', 10, H - 22);
 
       } else {
-        // ── COLLAPSED — Dirac delta spike ────────────────────────
         _collapseT += 0.05;
-        const dominant = _getDominantState();
+        const dominant = _qState && _qState.amplitudes ? _getDominantFromAmps(_qState.amplitudes) : 'BULL';
         const col = STATES[dominant] ? STATES[dominant].color : '#cc99ff';
 
-        // Expanding rings (measurement disturbance)
         const ring = Math.abs(Math.sin(_collapseT * 3));
         for (let r = 10; r < 90; r += 20) {
           ctx.strokeStyle = col + Math.floor(ring * 50).toString(16).padStart(2, '0');
@@ -501,7 +528,6 @@
           ctx.stroke();
         }
 
-        // Delta spike with glow
         const spikeH = maxAmp * 2.5;
         ctx.shadowColor = col;
         ctx.shadowBlur = 16;
@@ -513,16 +539,14 @@
         ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // Arrowhead at tip
         ctx.fillStyle = col;
         ctx.beginPath();
-        ctx.moveTo(W / 2,    midY - spikeH);
+        ctx.moveTo(W / 2, midY - spikeH);
         ctx.lineTo(W / 2 - 6, midY - spikeH + 12);
         ctx.lineTo(W / 2 + 6, midY - spikeH + 12);
         ctx.closePath();
         ctx.fill();
 
-        // Collapsed label
         ctx.font = 'bold 13px monospace';
         ctx.fillStyle = col;
         ctx.textAlign = 'center';
@@ -530,14 +554,8 @@
         ctx.shadowBlur = 8;
         ctx.fillText('⟩ COLLAPSED → ' + dominant, W / 2, H - 14);
         ctx.shadowBlur = 0;
-
-        ctx.font = '9px monospace';
-        ctx.fillStyle = '#4a3a7a';
-        ctx.fillText('δ(state − ' + dominant + ')', W / 2, H - 26);
-        ctx.textAlign = 'left';
       }
 
-      // Axis line
       ctx.strokeStyle = 'rgba(255,255,255,0.06)';
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -550,8 +568,159 @@
     }
     frame();
 
-    // Allow external update of tunneling risk
     _startWaveCanvas._setTunneling = (v) => { _tunnelingRisk = v; };
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     VACUUM CHAMBER W/ THREE.JS
+     Shows: Entanglement Heatmap and Tunneling Risk in a 3D topology.
+     ═══════════════════════════════════════════════════════════════ */
+  let _vacuumAnimId = null;
+  let _vacuumResizeObserver = null;
+  let _vkRenderData = { tunnelingRisk: 0, amplitudes: null, vScene: null, focus: null, qState: null };
+
+  function _startVacuumChamber() {
+    if (_vacuumAnimId) cancelAnimationFrame(_vacuumAnimId);
+
+    const mount = document.getElementById('mmo-three-mount');
+    if (!mount || typeof THREE === 'undefined') return;
+    mount.innerHTML = '';
+
+    const W = mount.offsetWidth;
+    const H = mount.offsetHeight;
+
+    const scene = new THREE.Scene();
+    scene.background = null; // transparent to show HUD dark bg
+    const camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 1000);
+    camera.position.set(0, 15, 65);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    mount.appendChild(renderer.domElement);
+
+    _vkRenderData.vScene = scene;
+
+    // ── Topology Grid ──────────────────────────────────────────
+    const gridGeo = new THREE.PlaneGeometry(200, 200, 40, 40);
+    const gridMat = new THREE.MeshBasicMaterial({ color: 0x4a3a7a, wireframe: true, transparent: true, opacity: 0.15 });
+    const grid = new THREE.Mesh(gridGeo, gridMat);
+    grid.rotation.x = -Math.PI / 2;
+    grid.position.y = -15;
+    scene.add(grid);
+
+    // ── Entanglement Spheres (Other assets) ────────────────────
+    const nodes = [];
+    const colors = [0x00ff88, 0x00d4ff, 0xff79c6, 0xffb86c, 0xbd93f9];
+    for (let i = 0; i < 5; i++) {
+      const geo = new THREE.SphereGeometry(1.5, 16, 16);
+      const mat = new THREE.MeshBasicMaterial({ color: colors[i], transparent: true, opacity: 0.5 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set((Math.random() - 0.5) * 40, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 40);
+      scene.add(mesh);
+
+      // Entanglement Threads
+      const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), mesh.position]);
+      const lineMat = new THREE.LineBasicMaterial({ color: colors[i], transparent: true, opacity: 0.2 });
+      const line = new THREE.Line(lineGeo, lineMat);
+      scene.add(line);
+
+      nodes.push({ mesh, line, basePos: mesh.position.clone(), speed: Math.random() * 0.02 + 0.01 });
+    }
+
+    // ── Primary Asset Core (The Ticker) ────────────────────────
+    const coreGeo = new THREE.SphereGeometry(3, 32, 32);
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.8 });
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    scene.add(core);
+
+    const coreGlowGeo = new THREE.SphereGeometry(6, 32, 32);
+    const coreGlowMat = new THREE.MeshBasicMaterial({ color: 0xbd93f9, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false });
+    const coreGlow = new THREE.Mesh(coreGlowGeo, coreGlowMat);
+    scene.add(coreGlow);
+
+    // ── Tunneling Membrane (Resistance Plane) ──────────────────
+    const membraneGeo = new THREE.PlaneGeometry(60, 40, 20, 20);
+    const membraneMat = new THREE.MeshBasicMaterial({ color: 0xff9500, wireframe: true, transparent: true, opacity: 0.05, side: THREE.DoubleSide });
+    const membrane = new THREE.Mesh(membraneGeo, membraneMat);
+    membrane.position.z = -15;
+    scene.add(membrane);
+
+    // ── Floating Particles (Energy Flux) ───────────────────────
+    const partGeo = new THREE.BufferGeometry();
+    const partCount = 400;
+    const posInit = new Float32Array(partCount * 3);
+    for (let i = 0; i < partCount * 3; i++) posInit[i] = (Math.random() - 0.5) * 80;
+    partGeo.setAttribute('position', new THREE.BufferAttribute(posInit, 3));
+    const partMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.3, transparent: true, opacity: 0.4 });
+    const particles = new THREE.Points(partGeo, partMat);
+    scene.add(particles);
+
+    let t = 0;
+    function animate() {
+      _vacuumAnimId = requestAnimationFrame(animate);
+      t += 0.01;
+
+      const risk = _vkRenderData.tunnelingRisk || 0;
+
+      // Pulse Core
+      core.rotation.y += 0.01;
+      core.rotation.x += 0.005;
+      const pulse = 1 + Math.sin(t * 5) * 0.1;
+      core.scale.set(pulse, pulse, pulse);
+
+      // Update Nodes
+      nodes.forEach((n, idx) => {
+        n.mesh.position.y = n.basePos.y + Math.sin(t * 3 + idx) * 5;
+        const posCopy = n.mesh.position.clone();
+        n.line.geometry.setFromPoints([core.position, posCopy]);
+        n.line.material.opacity = 0.1 + Math.sin(t * 2 + idx) * 0.1;
+      });
+
+      // Tunneling Membrane Activity
+      if (risk > 0.05) {
+        membrane.material.opacity = 0.1 + risk * 0.4;
+        membrane.material.color.setHex(0xff3300);
+        membrane.position.z = -15 + Math.sin(t * 10) * risk * 5;
+        const positions = partGeo.attributes.position.array;
+        for (let i = 0; i < partCount; i++) {
+          positions[i * 3 + 2] -= (0.5 + risk * 2); // Particles fly towards membrane
+          if (positions[i * 3 + 2] < -20) {
+            positions[i * 3] = (Math.random() - 0.5) * 80;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 40;
+            positions[i * 3 + 2] = 20;
+          }
+        }
+        partGeo.attributes.position.needsUpdate = true;
+      } else {
+        membrane.material.opacity = 0.05;
+        membrane.material.color.setHex(0x4a3a7a);
+        membrane.position.z = -25;
+        const positions = partGeo.attributes.position.array;
+        for (let i = 0; i < partCount; i++) {
+          positions[i * 3 + 2] -= 0.2;
+          if (positions[i * 3 + 2] < -40) positions[i * 3 + 2] = 40;
+        }
+        partGeo.attributes.position.needsUpdate = true;
+      }
+
+      // Camera Orbit
+      camera.position.x = Math.sin(t * 0.2) * 30;
+      camera.position.z = 60 + Math.cos(t * 0.2) * 10;
+      camera.lookAt(core.position);
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Resize observer
+    const ro = new ResizeObserver(() => {
+      if (!mount || !renderer) return;
+      renderer.setSize(mount.offsetWidth, mount.offsetHeight);
+      camera.aspect = mount.offsetWidth / mount.offsetHeight;
+      camera.updateProjectionMatrix();
+    });
+    ro.observe(mount);
   }
 
   function _getDominantState() {
@@ -570,7 +739,7 @@
 
     const order = ['BULL', 'BEAR', 'SIDEWAYS', 'VOLATILE', 'TRENDING'];
     el.innerHTML = order.map(s => {
-      const p   = amplitudes[s] || 0;
+      const p = amplitudes[s] || 0;
       const pct = Math.round(p * 100);
       const col = STATES[s].color;
       const arr = STATES[s].arrow;
@@ -594,25 +763,25 @@
     const el = document.getElementById('mmo-state-display');
     if (!el || !qs) return;
 
-    const verdict  = qs.quantum_verdict || 'SUPERPOSED — WAIT';
-    const colProb  = Math.round((qs.collapse_prob || 0) * 100);
-    const tunnPct  = Math.round((qs.tunneling_risk || 0) * 100);
+    const verdict = qs.quantum_verdict || 'SUPERPOSED — WAIT';
+    const colProb = Math.round((qs.collapse_prob || 0) * 100);
+    const tunnPct = Math.round((qs.tunneling_risk || 0) * 100);
     const isCollapsed = !!qs.collapsed_state;
 
     let verdictClass = 'mmo-verdict-wait';
-    if (verdict === 'BUY')                verdictClass = 'mmo-verdict-buy';
-    else if (verdict === 'SELL')          verdictClass = 'mmo-verdict-sell';
-    else if (verdict.includes('TREND'))   verdictClass = 'mmo-verdict-trend';
-    else if (verdict.includes('HEDGE'))   verdictClass = 'mmo-verdict-hedge';
+    if (verdict === 'BUY') verdictClass = 'mmo-verdict-buy';
+    else if (verdict === 'SELL') verdictClass = 'mmo-verdict-sell';
+    else if (verdict.includes('TREND')) verdictClass = 'mmo-verdict-trend';
+    else if (verdict.includes('HEDGE')) verdictClass = 'mmo-verdict-hedge';
 
     let tunnClass = 'mmo-tunnel-low';
-    if (tunnPct > 12)     tunnClass = 'mmo-tunnel-high';
+    if (tunnPct > 12) tunnClass = 'mmo-tunnel-high';
     else if (tunnPct > 6) tunnClass = 'mmo-tunnel-mod';
 
     el.innerHTML = `
 ${isCollapsed
-  ? `<div class="mmo-collapsed-badge">⟩ WAVE COLLAPSED</div>`
-  : `<div class="mmo-superposed-label">|ψ⟩ = Σ αᵢ|stateᵢ⟩</div>`}
+        ? `<div class="mmo-collapsed-badge">⟩ WAVE COLLAPSED</div>`
+        : `<div class="mmo-superposed-label">|ψ⟩ = Σ αᵢ|stateᵢ⟩</div>`}
 
 <div class="mmo-verdict ${verdictClass}">${verdict}</div>
 
@@ -636,8 +805,8 @@ ${qs.last_close ? `
   &nbsp;<span style="color:#cc99ff;font-weight:700">$${qs.last_close}</span>
   &nbsp;&nbsp;
   <span style="color:#7a6a9a">6MO TREND</span>
-  &nbsp;<span style="color:${(qs.trend_pct||0) >= 0 ? '#00ff88' : '#ff4757'};font-weight:700">
-    ${(qs.trend_pct||0) >= 0 ? '+' : ''}${qs.trend_pct}%
+  &nbsp;<span style="color:${(qs.trend_pct || 0) >= 0 ? '#00ff88' : '#ff4757'};font-weight:700">
+    ${(qs.trend_pct || 0) >= 0 ? '+' : ''}${qs.trend_pct}%
   </span>
   &nbsp;&nbsp;
   <span style="color:#7a6a9a">VOL</span>
@@ -650,50 +819,66 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
   /* ═══════════════════════════════════════════════════════════════
      RENDER: STRING THEORY PANEL
      ═══════════════════════════════════════════════════════════════ */
-  function _renderString(str) {
+  function _renderString(d) {
     const el = document.getElementById('mmo-string-display');
-    if (!el || !str) return;
-
-    const amp   = str.amplitude || 0;
-    const freq  = str.frequency || 0;
-    const verts = str.vertices_30d || 0;
-    const nodes = str.nodes || [];
-
-    const nodeHtml = nodes.length > 0
-      ? `<div class="mmo-nodes-row">
-          <span style="font-size:9px;color:#4a3a7a;margin-right:4px">NODES</span>
-          ${nodes.map(n => `
-          <span class="mmo-node-pill mmo-node-${n.type.toLowerCase()}">
-            $${n.level}&nbsp;&nbsp;${n.type}
-          </span>`).join('')}
-        </div>`
-      : '';
-
+    if (!el) return;
+    const s = d.string || {};
+    const nodes = s.nodes || [];
+    const tNodes = d.tunneling_nodes || [];
+    const ampColor = s.amplitude > 0.6 ? '#ff4757' : s.amplitude > 0.3 ? '#f1c40f' : '#00d4ff';
+    const freqColor = s.frequency > 0.6 ? '#ff9500' : '#bd93f9';
+    const nodeHTML = nodes.map(n => {
+      const T = n.T_wkb != null ? n.T_wkb : 0.5;
+      const tColor = T > 0.5 ? '#ff4757' : T > 0.2 ? '#f1c40f' : '#00ff88';
+      const typeColor = n.type === 'RESISTANCE' ? '#ff4757' : '#00ff88';
+      return `<div class="mmo-node-row">
+        <span style="color:${typeColor};font-size:9px;min-width:24px;">${n.type === 'RESISTANCE' ? 'RES' : 'SUP'}</span>
+        <span style="font-family:monospace;font-size:11px;color:#eee;flex:1;">$${n.level}</span>
+        <span style="font-size:9px;color:#667;">T_WKB:</span>
+        <span style="font-family:monospace;font-size:11px;color:${tColor};min-width:42px;text-align:right;">${T.toFixed(3)}</span>
+        <div style="width:40px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;margin-left:4px;">
+          <div style="width:${T*100}%;height:100%;background:${tColor};border-radius:2px;"></div>
+        </div>
+      </div>`;
+    }).join('');
+    const extraNodes = tNodes.filter(n => !nodes.some(nn => Math.abs(nn.level - n.level) < 1)).slice(0, 3);
+    const extraHTML = extraNodes.map(n => {
+      const tColor = n.T_wkb > 0.5 ? '#ff4757' : n.T_wkb > 0.2 ? '#f1c40f' : '#00ff88';
+      const typeColor = n.type === 'RESISTANCE' ? '#ff4757' : '#00ff88';
+      return `<div class="mmo-node-row">
+        <span style="color:${typeColor};font-size:9px;min-width:24px;opacity:0.7;">${n.type === 'RESISTANCE' ? 'RES' : 'SUP'}</span>
+        <span style="font-family:monospace;font-size:11px;color:#aaa;flex:1;">$${n.level}</span>
+        <span style="font-size:9px;color:#667;">T:</span>
+        <span style="font-family:monospace;font-size:11px;color:${tColor};min-width:42px;text-align:right;">${n.T_wkb.toFixed(3)}</span>
+        <div style="width:40px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;margin-left:4px;">
+          <div style="width:${n.T_wkb*100}%;height:100%;background:${tColor};border-radius:2px;"></div>
+        </div>
+      </div>`;
+    }).join('');
     el.innerHTML = `
-<div class="mmo-metric-row">
-  <span class="mmo-metric-label">AMPLITUDE</span>
-  <div class="mmo-bar-track">
-    <div class="mmo-bar-fill" style="width:${Math.round(amp*100)}%;background:#ff79c6;box-shadow:0 0 6px #ff79c644"></div>
-  </div>
-  <span class="mmo-metric-val" style="color:#ff79c6">${amp.toFixed(2)}</span>
-</div>
-<div class="mmo-metric-row">
-  <span class="mmo-metric-label">FREQUENCY</span>
-  <div class="mmo-bar-track">
-    <div class="mmo-bar-fill" style="width:${Math.round(freq*100)}%;background:#9b8ee8;box-shadow:0 0 6px #9b8ee844"></div>
-  </div>
-  <span class="mmo-metric-val" style="color:#9b8ee8">${freq.toFixed(2)}</span>
-</div>
-<div style="margin-top:10px;display:flex;align-items:center;gap:10px">
-  <span style="font-size:9px;color:#4a3a7a;text-transform:uppercase;letter-spacing:.07em">Vertices (30d)</span>
-  <span class="mmo-vertex-badge">⚡ ${verts} event${verts !== 1 ? 's' : ''}</span>
-  <span style="font-size:9px;color:#2a2a4a;margin-left:4px">energy transfer points</span>
-</div>
-${nodeHtml}
-<div style="margin-top:10px;font-size:9px;color:#2a2a4a;font-style:italic">
-  charts = projection(vibration) &nbsp;·&nbsp; trend = interference pattern
-</div>
-`;
+      <div style="display:flex;gap:16px;margin-bottom:10px;">
+        <div class="mmo-heis-kpi" style="flex:1;">
+          <div class="mmo-heis-val" style="color:${ampColor}">${s.amplitude?.toFixed(3) || '—'}</div>
+          <div class="mmo-heis-label">Amplitude A</div>
+        </div>
+        <div class="mmo-heis-kpi" style="flex:1;">
+          <div class="mmo-heis-val" style="color:${freqColor}">${s.frequency?.toFixed(3) || '—'}</div>
+          <div class="mmo-heis-label">Frequency ω</div>
+        </div>
+        <div class="mmo-heis-kpi" style="flex:1;">
+          <div class="mmo-heis-val" style="color:#f1fa8c">${s.vertices_30d ?? '—'}</div>
+          <div class="mmo-heis-label">Vertices 30d</div>
+        </div>
+      </div>
+      ${nodes.length || extraNodes.length ? `
+      <div style="font-size:9px;color:#556;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">
+        Potential Nodes V(x) — WKB Tunneling T = e^(−2κa)
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        ${nodeHTML}${extraHTML}
+      </div>
+      <div style="font-size:9px;color:#334;margin-top:5px;">T→1: barrier breakout likely · T→0: wall holds</div>` : ''}
+    `;
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -703,14 +888,14 @@ ${nodeHtml}
     const el = document.getElementById('mmo-energy-display');
     if (!el || !energy) return;
 
-    const score   = energy.score           || 0;
-    const fatigue = energy.fatigue         || 0;
-    const bubble  = energy.bubble_risk     || 0;
-    const cooling = energy.cooling_adequacy|| 0;
+    const score = energy.score || 0;
+    const fatigue = energy.fatigue || 0;
+    const bubble = energy.bubble_risk || 0;
+    const cooling = energy.cooling_adequacy || 0;
 
     function _bar(val, col) {
       return `<div class="mmo-bar-track">
-        <div class="mmo-bar-fill" style="width:${Math.round(val*100)}%;background:${col};box-shadow:0 0 5px ${col}44"></div>
+        <div class="mmo-bar-fill" style="width:${Math.round(val * 100)}%;background:${col};box-shadow:0 0 5px ${col}44"></div>
       </div>`;
     }
 
@@ -749,11 +934,13 @@ ${nodeHtml}
     if (!el || !onto) return;
 
     const rows = [
-      { key: 'BEING',        val: onto.being       || '—' },
-      { key: 'ESSENCE',      val: onto.essence     || '—' },
-      { key: 'ENTANGLEMENT', val: onto.entanglement|| '—' },
-      { key: 'STABILITY',    val: typeof onto.structural_stability === 'number'
-                                   ? (onto.structural_stability * 100).toFixed(0) + '%' : '—' },
+      { key: 'BEING', val: onto.being || '—' },
+      { key: 'ESSENCE', val: onto.essence || '—' },
+      { key: 'ENTANGLEMENT', val: onto.entanglement || '—' },
+      {
+        key: 'STABILITY', val: typeof onto.structural_stability === 'number'
+          ? (onto.structural_stability * 100).toFixed(0) + '%' : '—'
+      },
     ];
 
     const beingColor = {
@@ -780,13 +967,13 @@ ${nodeHtml}
 
     let level, desc, col, cls;
     if (H < 0.25) {
-      level = 'CERTAIN';  desc = 'Collapse imminent — strong signal';   col = '#00ff88'; cls = 'entropy-certain';
+      level = 'CERTAIN'; desc = 'Collapse imminent — strong signal'; col = '#00ff88'; cls = 'entropy-certain';
     } else if (H < 0.50) {
-      level = 'LOW';      desc = 'Directional signal present';          col = '#00d4ff'; cls = 'entropy-low';
+      level = 'LOW'; desc = 'Directional signal present'; col = '#00d4ff'; cls = 'entropy-low';
     } else if (H < 0.75) {
-      level = 'MODERATE'; desc = 'Mixed signals — wait for clarity';    col = '#f1fa8c'; cls = 'entropy-moderate';
+      level = 'MODERATE'; desc = 'Mixed signals — wait for clarity'; col = '#f1fa8c'; cls = 'entropy-moderate';
     } else {
-      level = 'CHAOTIC';  desc = 'High dispersion — system fragile';   col = '#ff4757'; cls = 'entropy-chaotic';
+      level = 'CHAOTIC'; desc = 'High dispersion — system fragile'; col = '#ff4757'; cls = 'entropy-chaotic';
     }
 
     el.innerHTML = `
@@ -812,53 +999,69 @@ ${nodeHtml}
      Δx = position uncertainty (proxy: 1/trend_clarity)
      Uncertainty principle: Δp × Δx ≥ ℏ/2 = 0.5 (normalized)
      ═══════════════════════════════════════════════════════════════ */
-  function _renderHeisenberg(h) {
+  function _renderHeisenberg(d) {
     const el = document.getElementById('mmo-heisenberg-display');
-    if (!el || !h) return;
-
-    const dpPct   = Math.min(100, Math.round(h.delta_p * 100));
-    const dxPct   = Math.min(100, Math.round(Math.min(1, h.delta_x / 5) * 100));
-    const prodPct = Math.min(100, Math.round(h.product * 100));
-    const compliantCol = h.compliant ? '#00ff88' : '#ff4757';
-    const compliantLabel = h.compliant ? 'PRINCIPLE SATISFIED ✓' : 'VIOLATION DETECTED ✗';
-
+    if (!el) return;
+    const h = d.heisenberg || {};
+    const qfi = d.quantum_fisher_info || {};
+    const jDir = d.j_directional || 'NEUTRAL';
+    const jTotal = d.probability_current_J || 0;
+    const jColor = jDir === 'BULL_FLOW' ? '#00ff88' : jDir === 'BEAR_FLOW' ? '#ff4757' : '#aaa';
+    const jArrow = jDir === 'BULL_FLOW' ? '▲' : jDir === 'BEAR_FLOW' ? '▼' : '→';
+    const comply = h.compliant;
+    const cpColor = comply ? '#00ff88' : '#ff4757';
+    const qfiColor = qfi.signal_clarity === 'HIGH' ? '#00ff88' : qfi.signal_clarity === 'MEDIUM' ? '#f1c40f' : '#ff9500';
     el.innerHTML = `
-<div class="mmo-heisenberg-desc">
-  Δp = momentum uncertainty (volatility) &nbsp;·&nbsp; Δx = position uncertainty (1/trend)
-</div>
-<div class="mmo-metric-row">
-  <span class="mmo-metric-label">Δp (momentum unc.)</span>
-  <div class="mmo-bar-track">
-    <div class="mmo-bar-fill" style="width:${dpPct}%;background:#bd93f9;box-shadow:0 0 5px #bd93f944"></div>
-  </div>
-  <span class="mmo-metric-val" style="color:#bd93f9">${h.delta_p.toFixed(3)}</span>
-</div>
-<div class="mmo-metric-row">
-  <span class="mmo-metric-label">Δx (position unc.)</span>
-  <div class="mmo-bar-track">
-    <div class="mmo-bar-fill" style="width:${dxPct}%;background:#ff79c6;box-shadow:0 0 5px #ff79c644"></div>
-  </div>
-  <span class="mmo-metric-val" style="color:#ff79c6">${h.delta_x.toFixed(3)}</span>
-</div>
-<div class="mmo-metric-row">
-  <span class="mmo-metric-label">Δp × Δx</span>
-  <div class="mmo-bar-track">
-    <div class="mmo-bar-fill" style="width:${prodPct}%;background:${compliantCol};box-shadow:0 0 5px ${compliantCol}44"></div>
-  </div>
-  <span class="mmo-metric-val" style="color:${compliantCol}">${h.product.toFixed(3)}</span>
-</div>
-<div class="mmo-heisenberg-badge" style="border-color:${compliantCol}44;background:${compliantCol}08">
-  <span style="font-size:11px;color:${compliantCol};font-weight:700">${compliantLabel}</span>
-  <span style="font-size:9px;color:#4a4a6a">ℏ/2 = 0.500</span>
-  <div>
-    <div style="font-size:9px;color:#4a3a7a">position certainty: <span style="color:#cc99ff">${(h.position_certainty * 100).toFixed(0)}%</span></div>
-    <div style="font-size:9px;color:#4a3a7a">momentum certainty: <span style="color:#cc99ff">${(h.momentum_certainty * 100).toFixed(0)}%</span></div>
-  </div>
-</div>
-<div style="margin-top:8px;font-size:9px;color:#2a2a4a;font-style:italic">
-  Trading insight: you can't know BOTH direction AND timing simultaneously
-</div>
-`;
+      <div class="mmo-heis-grid">
+        <div class="mmo-heis-kpi">
+          <div class="mmo-heis-val" style="color:#bd93f9">${(h.delta_p || 0).toFixed(3)}</div>
+          <div class="mmo-heis-label">Δp momentum</div>
+        </div>
+        <div class="mmo-heis-kpi">
+          <div class="mmo-heis-val" style="color:#8be9fd">${(h.delta_x || 0).toFixed(3)}</div>
+          <div class="mmo-heis-label">Δx position</div>
+        </div>
+        <div class="mmo-heis-kpi">
+          <div class="mmo-heis-val" style="color:${cpColor}">${(h.product || 0).toFixed(3)}</div>
+          <div class="mmo-heis-label">Δp·Δx ${comply ? '≥ℏ/2 ✓' : '< ℏ/2 ⚠'}</div>
+        </div>
+      </div>
+      <div style="border-top:1px solid rgba(255,255,255,0.06);margin:8px 0;padding-top:8px;">
+        <div style="font-size:9px;color:#556;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">Quantum Fisher Info</div>
+        <div class="mmo-heis-grid">
+          <div class="mmo-heis-kpi">
+            <div class="mmo-heis-val" style="color:${qfiColor}">${(qfi.F_Q || 0).toFixed(3)}</div>
+            <div class="mmo-heis-label">F_Q Fisher</div>
+          </div>
+          <div class="mmo-heis-kpi">
+            <div class="mmo-heis-val" style="color:#f1fa8c">${(qfi.cramer_rao_bound || 0).toFixed(3)}</div>
+            <div class="mmo-heis-label">σ_min C-R</div>
+          </div>
+          <div class="mmo-heis-kpi">
+            <div class="mmo-heis-val" style="color:${qfiColor}">${qfi.signal_clarity || '—'}</div>
+            <div class="mmo-heis-label">Clarity</div>
+          </div>
+        </div>
+      </div>
+      <div style="border-top:1px solid rgba(255,255,255,0.06);margin:8px 0;padding-top:8px;">
+        <div style="font-size:9px;color:#556;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">Probability Current J</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:20px;color:${jColor};">${jArrow}</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:${jColor};font-family:monospace;">${jDir.replace('_',' ')}</div>
+            <div style="font-size:10px;color:#667;">J_total = ${jTotal.toFixed(4)}</div>
+          </div>
+          <div style="flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-left:8px;">
+            <div style="height:100%;width:${Math.min(Math.abs(jTotal)*200,100)}%;background:${jColor};border-radius:2px;transition:width 0.5s;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="border-top:1px solid rgba(255,255,255,0.06);margin:8px 0;padding-top:8px;">
+        <div style="font-size:9px;color:#556;margin-bottom:4px;font-family:monospace;text-transform:uppercase;">QFI-Adjusted Position Sizing</div>
+        <div style="font-size:11px;color:#bd93f9;font-family:monospace;">${h.qfi_sizing || '—'}</div>
+        <div style="font-size:9px;color:#556;margin-top:3px;">ψ_survival = ${(h.psi_survival || 0).toFixed(4)} · σ_CR = ${(h.cramer_rao || 0).toFixed(4)}</div>
+      </div>
+    `;
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -869,43 +1072,46 @@ ${nodeHtml}
      ═══════════════════════════════════════════════════════════════ */
   function _renderDecoherence(d) {
     const el = document.getElementById('mmo-decoherence-display');
-    if (!el || !d) return;
-
-    const tauPct  = Math.round(d.tau_normalized * 100);
-    let regimeCol = '#00ff88';
-    if (d.regime === 'RAPID COLLAPSE')        regimeCol = '#ff4757';
-    else if (d.regime === 'MODERATE DECAY')   regimeCol = '#f1fa8c';
-
-    const noisePct = Math.round(d.noise_factor * 100);
-
+    if (!el) return;
+    const tau     = d.decoherence_tau      || 0;
+    const thermal = d.thermal               || {};
+    const cirTemp = thermal.cir_temperature || 0;
+    const beta    = thermal.beta_thermal    || 0;
+    const tauNorm = Math.min(1, tau / 5);
+    const tauColor = tau < 0.5 ? '#ff4757' : tau < 1.5 ? '#f1c40f' : '#00ff88';
+    const regime  = tau < 0.5 ? 'RAPID COLLAPSE' : tau < 1.5 ? 'MODERATE DECAY' : 'STABLE SUPERPOSITION';
     el.innerHTML = `
-<div style="text-align:center;margin-bottom:12px">
-  <div class="mmo-tau-display" style="color:${regimeCol};text-shadow:0 0 20px ${regimeCol}44">
-    τ = ${d.tau.toFixed(3)}
-  </div>
-  <div style="font-size:9px;color:#4a3a7a;margin-top:3px">decoherence time (inverse-vol-entropy)</div>
-</div>
-<div class="mmo-metric-row">
-  <span class="mmo-metric-label">τ STABILITY</span>
-  <div class="mmo-bar-track">
-    <div class="mmo-bar-fill" style="width:${tauPct}%;background:${regimeCol};box-shadow:0 0 6px ${regimeCol}44"></div>
-  </div>
-  <span class="mmo-metric-val" style="color:${regimeCol}">${tauPct}%</span>
-</div>
-<div class="mmo-metric-row">
-  <span class="mmo-metric-label">NOISE FACTOR</span>
-  <div class="mmo-bar-track">
-    <div class="mmo-bar-fill" style="width:${noisePct}%;background:#ff79c6;box-shadow:0 0 5px #ff79c644"></div>
-  </div>
-  <span class="mmo-metric-val" style="color:#ff79c6">${d.noise_factor.toFixed(3)}</span>
-</div>
-<div style="margin-top:10px;padding:8px 12px;border:1px solid ${regimeCol}33;border-radius:4px;text-align:center;background:${regimeCol}06">
-  <span style="font-size:11px;font-weight:700;color:${regimeCol}">${d.regime}</span>
-</div>
-<div style="margin-top:8px;font-size:9px;color:#2a2a4a;font-style:italic;text-align:center">
-  τ ∝ 1/(σ·H) &nbsp;·&nbsp; low τ → state collapses → direction resolved
-</div>
-`;
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;">
+        <div style="text-align:center;">
+          <div style="font-size:26px;font-weight:900;color:${tauColor};font-family:monospace;">${tau.toFixed(2)}</div>
+          <div style="font-size:9px;color:#556;">τ (days)</div>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:11px;font-weight:700;color:${tauColor};margin-bottom:4px;">${regime}</div>
+          <div style="height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${tauNorm*100}%;background:${tauColor};border-radius:3px;transition:width 0.6s;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">
+        <div style="font-size:9px;color:#556;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">CIR Thermal State</div>
+        <div class="mmo-heis-grid">
+          <div class="mmo-heis-kpi">
+            <div class="mmo-heis-val" style="color:#ff79c6">${cirTemp.toFixed(4)}</div>
+            <div class="mmo-heis-label">T_CIR vol</div>
+          </div>
+          <div class="mmo-heis-kpi">
+            <div class="mmo-heis-val" style="color:#f1fa8c">${beta.toFixed(2)}</div>
+            <div class="mmo-heis-label">β = 1/T</div>
+          </div>
+          <div class="mmo-heis-kpi">
+            <div class="mmo-heis-val" style="color:#8be9fd">${(d.cir_drift || 0).toFixed(4)}</div>
+            <div class="mmo-heis-label">dr_CIR</div>
+          </div>
+        </div>
+        <div style="font-size:9px;color:#445;margin-top:6px;">τ ∝ 1/(T_CIR · H) — Phase 3A coupled</div>
+      </div>
+    `;
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -924,14 +1130,14 @@ ${nodeHtml}
     }
 
     const rows = others.map(other => {
-      const corr    = entanglement[other];
-      const absPct  = Math.round(Math.abs(corr) * 100);
-      const isNeg   = corr < 0;
-      const col     = isNeg
+      const corr = entanglement[other];
+      const absPct = Math.round(Math.abs(corr) * 100);
+      const isNeg = corr < 0;
+      const col = isNeg
         ? '#ff4757'
         : (absPct > 70 ? '#00ff88' : absPct > 40 ? '#00d4ff' : '#f1fa8c');
       const entLevel = absPct > 80 ? 'STRONG' : absPct > 50 ? 'MOD' : absPct > 20 ? 'WEAK' : 'NONE';
-      const icon     = isNeg ? '⊗' : (absPct > 70 ? '⊕' : '∿');
+      const icon = isNeg ? '⊗' : (absPct > 70 ? '⊕' : '∿');
 
       return `
 <div class="mmo-entangle-row">
@@ -964,10 +1170,10 @@ ${rows}
   function _renderLayers(layers) {
     if (!layers || !layers.length) return;
     layers.forEach(layer => {
-      const fill   = document.getElementById('mmo-lf-' + layer.id);
+      const fill = document.getElementById('mmo-lf-' + layer.id);
       const metric = document.getElementById('mmo-lm-' + layer.id);
       const health = document.getElementById('mmo-lh-' + layer.id);
-      if (fill)   fill.style.width   = Math.round((layer.value || 0.5) * 100) + '%';
+      if (fill) fill.style.width = Math.round((layer.value || 0.5) * 100) + '%';
       if (metric) metric.textContent = layer.metric || '';
       if (health) health.textContent = layer.health || '';
     });
@@ -984,7 +1190,7 @@ ${rows}
       }
       // Try API first, fall back to local computation
       _api.get('/api/mmo/quantum_state/' + t).then(d => {
-        const state = d || _computeLocalQuantumState(t);
+        const state = _normalizeQuantumState(d, t);
         _scanCache[t] = state;
         _renderMiniCard(t, state);
       });
@@ -997,17 +1203,17 @@ ${rows}
     if (!el) return;
 
     const dominant = qs.collapsed_state || _getDominantFromAmps(qs.amplitudes);
-    const verdict  = qs.quantum_verdict || '?';
-    const entropy  = qs.entropy || 0.5;
+    const verdict = qs.quantum_verdict || '?';
+    const entropy = qs.entropy || 0.5;
 
     let vCol = '#ffaa00';
-    if (verdict === 'BUY')              vCol = '#00ff88';
-    else if (verdict === 'SELL')        vCol = '#ff4757';
+    if (verdict === 'BUY') vCol = '#00ff88';
+    else if (verdict === 'SELL') vCol = '#ff4757';
     else if (verdict.includes('TREND')) vCol = '#cc99ff';
     else if (verdict.includes('HEDGE')) vCol = '#ff9500';
 
     const entFill = Math.round(entropy * 100);
-    const entCol  = entropy < 0.25 ? '#00ff88' : entropy < 0.5 ? '#00d4ff' : entropy < 0.75 ? '#f1fa8c' : '#ff4757';
+    const entCol = entropy < 0.25 ? '#00ff88' : entropy < 0.5 ? '#00d4ff' : entropy < 0.75 ? '#f1fa8c' : '#ff4757';
 
     el.innerHTML = `
 <div class="mmo-mini-ticker">${ticker}</div>
@@ -1035,35 +1241,49 @@ ${rows}
     if (!qs) return qs;
 
     // Derive vol/trend proxies from API response fields
-    const vol   = typeof qs.annual_vol_pct === 'number' ? qs.annual_vol_pct / 100 : 0.20;
-    const trend = typeof qs.trend_pct      === 'number'
+    const vol = typeof qs.annual_vol_pct === 'number' ? qs.annual_vol_pct / 100 : 0.20;
+    const trend = typeof qs.trend_pct === 'number'
       ? Math.max(0.1, Math.min(0.9, 0.5 + qs.trend_pct / 100))
       : 0.55;
 
-    // Heisenberg
+    // Heisenberg Sizing
     if (!qs.heisenberg) {
-      const delta_p = vol;
-      const delta_x = 1 / Math.max(0.1, trend);
+      // delta_p (momentum uncertainty) ∝ CIR stochastic drift or thermal temperature
+      const delta_p = typeof qs.thermal?.temperature === 'number' ? qs.thermal.temperature : vol;
+
+      // delta_x (position uncertainty) ∝ 1 / Probability Current |J|
+      let delta_x = 1 / Math.max(0.1, trend);
+      if (typeof qs.probability_current_J === 'number') {
+        delta_x = qs.probability_current_J === 0 ? 5.0 : Math.min(5.0, 1.0 / Math.max(0.01, Math.abs(qs.probability_current_J * 10)));
+      }
+
+      const u_sys = delta_p * delta_x;
       qs.heisenberg = {
         delta_p,
         delta_x,
-        product:            delta_p * delta_x,
-        hbar_half:          0.5,
-        compliant:          (delta_p * delta_x) >= 0.5,
+        product: u_sys,
+        hbar_half: 0.5,
+        compliant: u_sys >= 0.5,
         position_certainty: trend,
         momentum_certainty: Math.max(0, 1 - vol),
+        sizing_suggested: `Size = [Capital × α] / √(${(u_sys || 1).toFixed(2)})`
       };
     }
 
     // Decoherence
     if (!qs.decoherence) {
       const entropy = typeof qs.entropy === 'number' ? qs.entropy : 0.6;
-      const tau     = 1 / Math.max(0.01, vol * (1 + entropy));
+      let tau = 1 / Math.max(0.01, vol * (1 + entropy));
+      if (typeof qs.decoherence_tau === 'number') tau = qs.decoherence_tau;
+
+      let noiseFactor = Math.min(1, vol * (0.5 + entropy * 0.5));
+      if (typeof qs.cir_drift === 'number') noiseFactor = Math.min(1, Math.abs(qs.cir_drift) * 10);
+
       qs.decoherence = {
         tau,
-        tau_normalized:  Math.min(1, tau / 5),
-        regime:          tau < 0.5 ? 'RAPID COLLAPSE' : tau < 1.5 ? 'MODERATE DECAY' : 'STABLE SUPERPOSITION',
-        noise_factor:    Math.min(1, vol * (0.5 + entropy * 0.5)),
+        tau_normalized: Math.min(1, tau / 5),
+        regime: tau < 0.5 ? 'RAPID COLLAPSE' : tau < 1.5 ? 'MODERATE DECAY' : 'STABLE SUPERPOSITION',
+        noise_factor: noiseFactor,
       };
     }
 
@@ -1089,24 +1309,35 @@ ${rows}
     const inp = document.getElementById('mmo-ticker-input');
     if (inp) inp.value = qs.ticker || _ticker;
 
+    // Update wave animation probs + tunneling
+    if (qs.amplitudes && typeof _waveProbs !== 'undefined') {
+      Object.assign(_waveProbs, qs.amplitudes);
+    }
+
     // Update all panels
     _renderAmplitudes(qs.amplitudes);
     _renderQuantumState(qs);
-    _renderString(qs.string);
+    _renderString(qs);
     _renderEnergy(qs.energy);
     _renderOntology(qs.ontology);
     _renderEntropy(qs.entropy);
     _renderLayers(qs.layers);
-    _renderHeisenberg(qs.heisenberg);
-    _renderDecoherence(qs.decoherence);
+    _renderHeisenberg(qs);
+    _renderDecoherence(qs);
     _renderEntanglement(qs.ticker, qs.entanglement);
+    _renderFocusDetail(qs);
 
-    // Update wave animation probs + tunneling
-    if (qs.amplitudes) {
-      Object.assign(_waveProbs, qs.amplitudes);
+    // Update Vacuum Chamber data
+    _vkRenderData.qState = qs;
+    _vkRenderData.amplitudes = qs.amplitudes || null;
+    if (typeof qs.tunneling_risk === 'number') {
+      _vkRenderData.tunnelingRisk = qs.tunneling_risk;
+      if (typeof _startWaveCanvas._setTunneling === 'function') {
+        _startWaveCanvas._setTunneling(qs.tunneling_risk);
+      }
     }
-    if (_startWaveCanvas._setTunneling && typeof qs.tunneling_risk === 'number') {
-      _startWaveCanvas._setTunneling(qs.tunneling_risk);
+    if (typeof _startVacuumChamber._syncNodes === 'function') {
+      _startVacuumChamber._syncNodes();
     }
 
     // Auto-collapse if wave already collapsed
@@ -1132,8 +1363,7 @@ ${rows}
     if (stateEl) stateEl.innerHTML = `<div class="mmo-superposed-label" style="color:#3a3a6a">Loading ψ(${_ticker})…</div>`;
 
     _api.get('/api/mmo/quantum_state/' + _ticker).then(qs => {
-      // Fallback: compute locally if API unavailable
-      const state = qs ? _augmentWithPhysics(qs) : _computeLocalQuantumState(_ticker);
+      const state = _normalizeQuantumState(qs, _ticker);
       _qState = state;
       _renderAll(state);
     });
@@ -1152,7 +1382,7 @@ ${rows}
     _collapseT = 0;
     _renderQuantumState(Object.assign({}, _qState, {
       collapsed_state: _qState.collapsed_state || _getDominantState(),
-      quantum_verdict:  _qState.quantum_verdict,
+      quantum_verdict: _qState.quantum_verdict,
     }));
   }
 
@@ -1168,14 +1398,752 @@ ${rows}
       const el = document.getElementById('mmo-state-display');
       if (el) el.innerHTML = `<div class="mmo-superposed-label">|ψ⟩ = Σ αᵢ|stateᵢ⟩</div>`;
     }
-    // Reset wave probs to uniform
-    Object.keys(_waveProbs).forEach(k => { _waveProbs[k] = 0.2; });
-    if (_startWaveCanvas._setTunneling) _startWaveCanvas._setTunneling(0.1);
+    // Reset vacuum chamber to uniform
+    _vkRenderData.tunnelingRisk = 0.1;
+    _renderFocusDetail(_qState);
   }
 
   /* ═══════════════════════════════════════════════════════════════
      INIT
      ═══════════════════════════════════════════════════════════════ */
+  function _computeLocalQuantumState(ticker) {
+    const t = (ticker || 'SPY').toUpperCase();
+    const seed = t.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) + new Date().getDate();
+    const rng = (n) => {
+      const x = Math.sin(seed * n + n * 1.618033988) * 10000;
+      return x - Math.floor(x);
+    };
+    const complex = (mag, phase) => ({ re: mag * Math.cos(phase), im: mag * Math.sin(phase) });
+    const char = MARKET_CHARS[t] || { trend: 0.55, vol: 0.25, basePrice: 100 };
+    const raw = {
+      BULL: char.trend * (0.30 + rng(1) * 0.40),
+      BEAR: (1 - char.trend) * (0.20 + rng(2) * 0.35),
+      SIDEWAYS: 0.15 + rng(3) * 0.20,
+      VOLATILE: char.vol * (0.20 + rng(4) * 0.30),
+      TRENDING: char.trend * (0.20 + rng(5) * 0.25),
+    };
+    const total = Object.values(raw).reduce((acc, value) => acc + value, 0);
+    const amps = {};
+    Object.keys(raw).forEach(key => { amps[key] = raw[key] / total; });
+    const entropy = -Object.values(amps).reduce((acc, prob) => acc + (prob > 0 ? prob * Math.log(prob) : 0), 0) / Math.log(5);
+
+    let dom = 'BULL';
+    let domP = 0;
+    Object.entries(amps).forEach(([state, prob]) => {
+      if (prob > domP) {
+        dom = state;
+        domP = prob;
+      }
+    });
+
+    const last_close = Number((char.basePrice * (0.95 + rng(7) * 0.10)).toFixed(2));
+    const trend_pct = Number((((char.trend - 0.5) * 40) * (0.8 + rng(8) * 0.4)).toFixed(1));
+    const annual_vol_pct = Number((char.vol * 100 * (0.9 + rng(9) * 0.2)).toFixed(1));
+    const cir_temperature = Number(_clamp(char.vol * (0.85 + rng(21) * 0.45), 0.01, 0.95).toFixed(4));
+    const beta_thermal = Number((1 / Math.max(cir_temperature, 0.01)).toFixed(4));
+    const cir_drift = Number((((rng(22) - 0.5) * char.vol * 0.18)).toFixed(4));
+
+    const basePhases = [
+      char.trend * 2.6,
+      -char.trend * 2.2,
+      (rng(23) - 0.5) * 0.8,
+      char.vol * Math.PI * 1.3,
+      Math.abs(char.trend - 0.5) * 4.2,
+    ];
+    const thermalFrequencies = [0.8, 0.6, 0.2, 1.2, 1.0];
+    const phases = basePhases.map((phase, index) => phase + beta_thermal * thermalFrequencies[index] * 0.12);
+    const stateOrder = ['BULL', 'BEAR', 'SIDEWAYS', 'VOLATILE', 'TRENDING'];
+    const psiVec = stateOrder.map((state, index) => complex(Math.sqrt(amps[state]), phases[index]));
+    const orderedStates = ['BEAR', 'SIDEWAYS', 'VOLATILE', 'TRENDING', 'BULL'];
+    const orderedPsi = orderedStates.map(state => psiVec[stateOrder.indexOf(state)]);
+    const probability_current_J = orderedPsi.slice(0, -1).reduce((acc, current, index) => {
+      const next = orderedPsi[index + 1];
+      return acc + ((current.re * next.im) - (current.im * next.re)) / 0.5;
+    }, 0);
+    const j_directional = probability_current_J > 0.02 ? 'BULL_FLOW' : probability_current_J < -0.02 ? 'BEAR_FLOW' : 'NEUTRAL';
+
+    const observableAxis = [-1, -0.5, 0, 0.5, 1];
+    const meanObservable = stateOrder.reduce((acc, state, index) => acc + amps[state] * observableAxis[index], 0);
+    const varianceObservable = stateOrder.reduce((acc, state, index) => {
+      const delta = observableAxis[index] - meanObservable;
+      return acc + amps[state] * delta * delta;
+    }, 0);
+    const F_Q = Number((4 * varianceObservable).toFixed(4));
+    const cramer_rao_bound = Number((1 / Math.sqrt(Math.max(F_Q, 1e-6))).toFixed(4));
+    const signal_clarity = F_Q > 0.5 ? 'HIGH' : F_Q > 0.2 ? 'MEDIUM' : 'LOW';
+    const collapse_prob = Number(_clamp(1 - entropy + rng(24) * 0.04, 0.12, 0.99).toFixed(4));
+
+    let quantum_verdict = 'SUPERPOSED — WAIT';
+    if (collapse_prob > 0.6 && dom === 'BULL') quantum_verdict = 'BUY';
+    else if (collapse_prob > 0.6 && dom === 'BEAR') quantum_verdict = 'SELL';
+    else if (dom === 'VOLATILE') quantum_verdict = 'HEDGE — VOLATILITY';
+    else if (dom === 'TRENDING' && amps.TRENDING > 0.30) quantum_verdict = 'TREND FOLLOW';
+
+    const string = {
+      amplitude: Number(_clamp(0.2 + char.vol * (0.5 + rng(10) * 0.5), 0, 1).toFixed(3)),
+      frequency: Number(_clamp(0.3 + char.trend * (0.5 + rng(11) * 0.4), 0, 1).toFixed(3)),
+      vertices_30d: Math.floor(3 + rng(12) * 10),
+      nodes: [],
+    };
+    const basePrice = last_close;
+    if (rng(13) > 0.25) string.nodes.push({ level: Number((basePrice * (1 - char.vol * 0.35)).toFixed(2)), type: 'SUPPORT' });
+    if (rng(14) > 0.25) string.nodes.push({ level: Number((basePrice * (1 + char.vol * 0.35)).toFixed(2)), type: 'RESISTANCE' });
+    if (!string.nodes.length) string.nodes.push({ level: Number(basePrice.toFixed(2)), type: 'SUPPORT' });
+
+    const tunneling_nodes = string.nodes.map((node, index) => {
+      const distance = Math.abs(basePrice - node.level) / Math.max(basePrice, 1);
+      const barrierHeight = _clamp(0.35 + char.vol * 0.45 + rng(40 + index) * 0.25, 0.15, 0.98);
+      const T_wkb = _clamp(0.85 - distance * 3.2 + char.trend * 0.15 + rng(50 + index) * 0.08, 0.05, 0.95);
+      return { level: node.level, type: node.type, T_wkb: Number(T_wkb.toFixed(4)), V0: Number(barrierHeight.toFixed(3)) };
+    });
+    const tunneling_risk = Number(_clamp(Math.max(...tunneling_nodes.map(node => node.T_wkb), char.vol * (0.3 + rng(6) * 0.4)), 0.05, 0.98).toFixed(4));
+    string.nodes = string.nodes.map(node => {
+      const match = tunneling_nodes.find(candidate => candidate.level === node.level && candidate.type === node.type);
+      return match ? Object.assign({}, node, { T_wkb: match.T_wkb }) : node;
+    });
+
+    const fieldStart = basePrice * (1 - char.vol * 0.9);
+    const fieldEnd = basePrice * (1 + char.vol * 0.9);
+    const potential_field = Array.from({ length: 36 }, (_, index) => {
+      const price = fieldStart + (((fieldEnd - fieldStart) / 35) * index);
+      let barrier = 0.12 + char.vol * 0.25;
+      tunneling_nodes.forEach(node => {
+        const width = Math.max(basePrice * Math.max(char.vol, 0.12) * 0.18, 1);
+        const scaledDistance = (price - node.level) / width;
+        barrier += node.V0 * Math.exp(-0.5 * scaledDistance * scaledDistance) * 0.6;
+      });
+      return { price: Number(price.toFixed(2)), V: Number(_clamp(barrier, 0, 1.25).toFixed(3)) };
+    });
+
+    const energy = {
+      score: Number(_clamp(0.3 + char.vol * 0.4 + char.trend * 0.2 + rng(15) * 0.15, 0, 1).toFixed(3)),
+      fatigue: Number(_clamp(rng(16) * (0.2 + (1 - char.trend) * 0.5), 0, 1).toFixed(3)),
+      bubble_risk: Number(_clamp(char.vol > 0.3 ? 0.3 + rng(17) * 0.4 : 0.05 + rng(17) * 0.2, 0, 1).toFixed(3)),
+      cooling_adequacy: Number(_clamp(0.4 + (1 - char.vol) * 0.4 + rng(18) * 0.15, 0, 1).toFixed(3)),
+    };
+
+    const beings = ['EXPANSION', 'CONTRACTION', 'TURBULENCE', 'STASIS', 'TRANSITION'];
+    const being = char.trend > 0.6 ? (rng(19) > 0.4 ? 'EXPANSION' : 'TRANSITION') : char.trend < 0.45 ? (rng(19) > 0.4 ? 'CONTRACTION' : 'TURBULENCE') : beings[Math.floor(rng(19) * beings.length)];
+    const structural_stability = Number(_clamp(0.4 + (1 - char.vol) * 0.5 + rng(20) * 0.1, 0, 1).toFixed(3));
+    const ontology = {
+      being,
+      essence: `${dom.charAt(0) + dom.slice(1).toLowerCase()} Momentum Field`,
+      entanglement: t === 'SPY' ? 'BROAD MARKET' : t === 'GLD' ? 'INVERSE SPY' : 'SECTOR CORR',
+      structural_stability,
+    };
+
+    const tau = Number((1 / Math.max(0.01, cir_temperature * Math.max(entropy, 0.08))).toFixed(4));
+    const thermal = {
+      temperature: Number(_clamp(cir_temperature / 0.6, 0, 1).toFixed(3)),
+      cir_temperature,
+      beta_thermal,
+      overheating: cir_temperature > 0.55 && trend_pct > 2,
+      phase: cir_temperature < 0.18 ? 'COLD' : cir_temperature < 0.32 ? 'WARM' : cir_temperature < 0.5 ? 'HOT' : trend_pct > 2 ? 'OVERHEATING' : 'TURBULENT',
+    };
+    const decoherence = {
+      tau,
+      tau_normalized: Number(_clamp(tau / 5, 0, 1).toFixed(3)),
+      regime: tau < 0.5 ? 'RAPID COLLAPSE' : tau < 1.5 ? 'MODERATE DECAY' : 'STABLE SUPERPOSITION',
+      noise_factor: Number(_clamp(char.vol * (0.5 + entropy * 0.5), 0, 1).toFixed(3)),
+    };
+
+    const delta_p = Number(char.vol.toFixed(3));
+    const delta_x = Number(Math.min(5, 1 / Math.max(0.18, Math.abs(probability_current_J) * 6 + char.trend)).toFixed(3));
+    const u_sys = Number((delta_p * delta_x).toFixed(3));
+    const psi_survival = Number((Math.exp(-1 / Math.max(tau, 0.01))).toFixed(4));
+    const sizeFactor = psi_survival / (1 + u_sys + cramer_rao_bound);
+    const heisenberg = {
+      delta_p,
+      delta_x,
+      product: u_sys,
+      hbar_half: 0.5,
+      compliant: u_sys >= 0.5,
+      position_certainty: Number(char.trend.toFixed(3)),
+      momentum_certainty: Number(Math.max(0, 1 - char.vol).toFixed(3)),
+      qfi_sizing: `S = C x alpha x ${sizeFactor.toFixed(3)}`,
+      psi_survival,
+      cramer_rao: cramer_rao_bound,
+      sizing_suggested: `Size = [Capital x alpha] / sqrt(${(u_sys || 1).toFixed(2)})`,
+    };
+
+    const layers = [
+      { id: 'structure', metric: `Stability ${Math.round(structural_stability * 100)}%`, value: structural_stability, health: being },
+      { id: 'energy', metric: `E=${energy.score.toFixed(2)}`, value: energy.score, health: energy.fatigue > 0.5 ? 'FATIGUED' : 'ACTIVE' },
+      { id: 'thermal', metric: `T_CIR ${cir_temperature.toFixed(2)}`, value: thermal.temperature, health: thermal.phase },
+      { id: 'surface', metric: `psi=${amps[dom].toFixed(2)}`, value: amps[dom], health: quantum_verdict },
+    ];
+
+    return {
+      ticker: t,
+      amplitudes: amps,
+      entropy: Number(entropy.toFixed(4)),
+      collapsed_state: collapse_prob > 0.75 ? dom : null,
+      collapse_prob,
+      tunneling_risk,
+      quantum_verdict,
+      last_close,
+      trend_pct,
+      annual_vol_pct,
+      string,
+      tunneling_nodes,
+      potential_field,
+      energy,
+      thermal,
+      ontology,
+      layers,
+      heisenberg,
+      quantum_fisher_info: { F_Q, cramer_rao_bound, signal_clarity },
+      probability_current_J: Number(probability_current_J.toFixed(4)),
+      j_directional,
+      decoherence_tau: tau,
+      cir_drift,
+      decoherence,
+      entanglement: ENTANGLE_TABLE[t] || {},
+      confidence: Number((1 - entropy).toFixed(3)),
+      _local: true,
+    };
+  }
+
+  function _normalizeQuantumState(qs, ticker) {
+    if (!qs || qs.error || !qs.last_close || !qs.amplitudes) {
+      const local = _computeLocalQuantumState(ticker);
+      if (qs && qs.error) local._notice = `API fallback: ${qs.error}`;
+      return local;
+    }
+    return _augmentWithPhysics(qs);
+  }
+
+  function _buildFocusCatalog(qs) {
+    const current = qs || _qState || _computeLocalQuantumState(_ticker);
+    const structureLayer = (current.layers || []).find(layer => layer.id === 'structure') || {};
+    const energyLayer = (current.layers || []).find(layer => layer.id === 'energy') || {};
+    const thermalLayer = (current.layers || []).find(layer => layer.id === 'thermal') || {};
+    const dominant = current.collapsed_state || _getDominantFromAmps(current.amplitudes || {});
+    const topNode = (current.tunneling_nodes || []).slice().sort((a, b) => (b.T_wkb || 0) - (a.T_wkb || 0))[0];
+    return {
+      structure: {
+        key: 'structure',
+        accent: '#7b68ee',
+        vizMode: 'structure',
+        kicker: 'Layer 01 / Foundation',
+        title: 'Geology / Structural Stability',
+        description: 'Deep structure constrains everything above it. Stability is the bedrock score for the current ontology state.',
+        facts: [
+          { label: 'Stability', value: _formatPct(current.ontology?.structural_stability), accent: '#d6c7ff' },
+          { label: 'Being', value: current.ontology?.being || '-', accent: '#7b68ee' },
+          { label: 'Essence', value: current.ontology?.essence || '-', accent: '#bfa5ff' },
+          { label: 'Health', value: structureLayer.health || '-', accent: '#8be9fd' },
+        ],
+        note: 'The mini-universe raises geological pillars by structural stability. Low stability means a fractured base.'
+      },
+      energy: {
+        key: 'energy',
+        accent: '#ff6b35',
+        vizMode: 'energy',
+        kicker: 'Layer 02 / Deep Flow',
+        title: 'Subsurface / Capital Energy',
+        description: 'Energy is money in motion. Fatigue, cooling, and bubble pressure determine whether the system can keep transferring force.',
+        facts: [
+          { label: 'Energy', value: _formatMetric(current.energy?.score), accent: '#ff8b5d' },
+          { label: 'Fatigue', value: _formatMetric(current.energy?.fatigue), accent: '#f1fa8c' },
+          { label: 'Cooling', value: _formatMetric(current.energy?.cooling_adequacy), accent: '#50fa7b' },
+          { label: 'Bubble', value: _formatMetric(current.energy?.bubble_risk), accent: '#ff4757' },
+        ],
+        note: 'Particles accelerate with energy score. Bubble risk saturates the field toward red and stretches the flow membrane.'
+      },
+      thermal: {
+        key: 'thermal',
+        accent: '#00d4ff',
+        vizMode: 'thermal',
+        kicker: 'Layer 03 / State',
+        title: 'State / Thermal Regime',
+        description: 'The thermal layer couples CIR temperature into the market wave. Heat changes phase stability and collapse speed.',
+        facts: [
+          { label: 'Phase', value: current.thermal?.phase || '-', accent: '#8be9fd' },
+          { label: 'T_CIR', value: _formatMetric(current.thermal?.cir_temperature, 4), accent: '#00d4ff' },
+          { label: 'Beta', value: _formatMetric(current.thermal?.beta_thermal, 2), accent: '#f1fa8c' },
+          { label: 'Tau', value: _formatMetric(current.decoherence_tau || current.decoherence?.tau, 2), accent: '#ff79c6' },
+        ],
+        note: 'The thermal shell twists faster in hot regimes. Short tau means faster decoherence and a more unstable wave.'
+      },
+      surface: {
+        key: 'surface',
+        accent: '#50fa7b',
+        vizMode: 'surface',
+        kicker: 'Layer 04 / Observable',
+        title: 'Observable / Wave Collapse',
+        description: 'The observable layer is the projection of the state vector. Collapse probability, current flow, and verdict sit on the surface.',
+        facts: [
+          { label: 'Verdict', value: current.quantum_verdict || '-', accent: '#50fa7b' },
+          { label: 'Collapse', value: _formatPct(current.collapse_prob), accent: '#bd93f9' },
+          { label: 'Dominant', value: dominant || '-', accent: '#ffffff' },
+          { label: 'Current J', value: _formatMetric(current.probability_current_J, 4), accent: '#8be9fd' },
+        ],
+        note: 'The lower chamber draws the surface wave ring from amplitudes. Collapse probability expands the observable orbit.'
+      },
+      nodes: {
+        key: 'nodes',
+        accent: '#ff9500',
+        vizMode: 'nodes',
+        kicker: 'Barrier / WKB',
+        title: 'Potential Nodes / Tunneling',
+        description: 'Potential wells define support and resistance barriers. WKB transmission estimates which wall is most likely to break.',
+        facts: [
+          { label: 'Tunneling', value: _formatPct(current.tunneling_risk), accent: '#ff9500' },
+          { label: 'Best Node', value: topNode ? `${topNode.type} ${topNode.level}` : '-', accent: '#f1fa8c' },
+          { label: 'Best T', value: topNode ? _formatMetric(topNode.T_wkb, 3) : '-', accent: '#ff79c6' },
+          { label: 'Vertices', value: String(current.string?.vertices_30d ?? '-'), accent: '#8be9fd' },
+        ],
+        note: 'Barrier spheres orbit the core. High T_wkb pulls them closer to the breach plane and brightens the membrane.'
+      },
+    };
+  }
+
+  function _highlightFocusControls() {
+    document.querySelectorAll('.mmo-layer-row').forEach(row => {
+      row.classList.toggle('is-focus', row.dataset.layer === _focusKey);
+    });
+    document.querySelectorAll('.mmo-example-btn').forEach(btn => {
+      btn.classList.toggle('is-active', btn.dataset.focus === _focusKey);
+    });
+  }
+
+  function _renderFocusDetail(qs) {
+    const catalog = _buildFocusCatalog(qs);
+    const focus = catalog[_focusKey] || catalog.surface;
+    const detailEl = document.getElementById('mmo-layer-detail');
+    if (detailEl) {
+      detailEl.innerHTML = `
+        <div class="mmo-detail-kicker" style="color:${focus.accent}">${focus.kicker}</div>
+        <div class="mmo-detail-title">${focus.title}</div>
+        <div class="mmo-detail-desc">${focus.description}</div>
+        <div class="mmo-detail-facts">
+          ${focus.facts.map(item => `
+            <div class="mmo-detail-fact">
+              <div class="mmo-detail-fact-label">${item.label}</div>
+              <div class="mmo-detail-fact-value" style="color:${item.accent || focus.accent}">${item.value}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="mmo-detail-note">${focus.note}</div>
+      `;
+    }
+    const titleEl = document.getElementById('mmo-universe-title');
+    const readoutEl = document.getElementById('mmo-universe-readout');
+    if (titleEl) titleEl.textContent = focus.title;
+    if (readoutEl) {
+      readoutEl.innerHTML = focus.facts.map(item => `<span class="mmo-universe-chip"><strong>${item.label}</strong>${item.value}</span>`).join('');
+    }
+    _vkRenderData.focus = focus;
+    _highlightFocusControls();
+  }
+
+  function focus(key) {
+    _focusKey = ['structure', 'energy', 'thermal', 'surface', 'nodes'].includes(key) ? key : 'surface';
+    _renderFocusDetail(_qState);
+  }
+
+  function launchViz(vizKey) {
+    if (window.VizLab && typeof window.VizLab.launch === 'function') {
+      window.__MMO_CURRENT_TICKER__ = _ticker;
+      window.VizLab.launch(vizKey === 'blackhole' ? 'quantum' : 'galaxy');
+      return;
+    }
+    focus(vizKey === 'blackhole' ? 'quantum' : 'surface');
+  }
+
+  function _buildView() {
+    const el = document.getElementById('view-mmo');
+    if (!el || el.innerHTML.trim()) return;
+
+    el.innerHTML = `
+<div class="mmo-shell">
+  <div class="mmo-header">
+    <div class="mmo-brand">
+      <span class="mmo-psi">psi</span>
+      <span class="mmo-title">MMO</span>
+      <span class="mmo-sub">Mau's Market Ontology</span>
+    </div>
+    <div class="mmo-controls">
+      <input id="mmo-ticker-input" class="mmo-input" value="SPY" maxlength="10"
+             onkeydown="if(event.key==='Enter')MMO.analyze(this.value)" />
+      <button class="mmo-btn-analyze" onclick="MMO.analyze(document.getElementById('mmo-ticker-input').value)">Analyze</button>
+      <button class="mmo-btn-collapse" onclick="MMO.collapse()">Collapse</button>
+      <button class="mmo-btn-reset" onclick="MMO.reset()">Reset</button>
+      <button class="mmo-btn-theory" onclick="MMO.showTheory()">Theory</button>
+    </div>
+  </div>
+
+  <div class="mmo-layers-panel">
+    <div class="mmo-layers-title">LAYERED ECOSYSTEM - Deep Structure to Observable Surface</div>
+    <div class="mmo-layer-stack" id="mmo-layer-stack">
+      ${LAYER_CFG.map(layer => `
+      <div class="mmo-layer-row layer-${layer.id}" data-layer="${layer.id}" onclick="MMO.focus('${layer.id}')">
+        <span class="mmo-layer-id">${layer.label}</span>
+        <span class="mmo-layer-metric" id="mmo-lm-${layer.id}">-</span>
+        <div class="mmo-layer-track">
+          <div class="mmo-layer-fill" id="mmo-lf-${layer.id}" style="width:50%"></div>
+        </div>
+        <span class="mmo-layer-health" id="mmo-lh-${layer.id}">${layer.depth}</span>
+      </div>`).join('')}
+    </div>
+  </div>
+
+  <div class="mmo-hud-container">
+    <div class="mmo-hud-left">
+      <div class="mmo-card mmo-layer-detail-card">
+        <div class="mmo-card-title" style="color:#9b8ee8">Interactive Layer Explorer</div>
+        <div id="mmo-layer-detail"><div style="font-size:10px;color:#55606f;">Select a layer or example to inspect the current ontology.</div></div>
+      </div>
+      <div class="mmo-card mmo-energy-card">
+        <div class="mmo-card-title" style="color:#ff6b35">Thermodynamics | Energy & Fatigue</div>
+        <div id="mmo-energy-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+      </div>
+      <div class="mmo-card mmo-ontology-card">
+        <div class="mmo-card-title" style="color:#7b68ee">Market Ontology</div>
+        <div id="mmo-ontology-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+      </div>
+      <div class="mmo-card mmo-entropy-card">
+        <div class="mmo-card-title" style="color:#00d4ff">Superposition Entropy</div>
+        <div id="mmo-entropy-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+      </div>
+    </div>
+
+    <div class="mmo-hud-center">
+      <div class="mmo-vacuum-title">Mini Universe | Wave and Topology</div>
+      <div style="flex:1; display:flex; flex-direction:column; position:relative; padding-top:40px;">
+        <div style="flex:1; position:relative; overflow:hidden; border-bottom:1px solid rgba(124, 63, 228, 0.2);">
+          <canvas id="mmo-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+          <div style="position:absolute;top:10px;left:15px;font-size:10px;color:#9b8ee8;font-family:monospace;letter-spacing:1px;pointer-events:none;">
+             WAVE FUNCTION | psi(<span id="mmo-wave-ticker" style="color:#fff">SPY</span>)
+          </div>
+        </div>
+        <div id="mmo-three-mount" style="flex:1; position:relative; overflow:hidden;">
+          <div id="mmo-universe-hud" class="mmo-universe-hud">
+            <div id="mmo-universe-title">Observable / Wave Collapse</div>
+            <div id="mmo-universe-readout"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mmo-hud-right">
+      <div class="mmo-card mmo-state-card">
+        <div class="mmo-card-title" style="color:#50fa7b">Observable | Quantum State</div>
+        <div id="mmo-state-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+        <div id="mmo-amplitudes" style="margin-top:14px;"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+      </div>
+      <div class="mmo-card mmo-heisenberg-card">
+        <div class="mmo-card-title" style="color:#bd93f9">Heisenberg Sizing | dp x dx</div>
+        <div id="mmo-heisenberg-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+      </div>
+      <div class="mmo-card mmo-decoherence-card">
+        <div class="mmo-card-title" style="color:#ff79c6">Decoherence tau | Wave Stability</div>
+        <div id="mmo-decoherence-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+      </div>
+      <div class="mmo-card mmo-action-card" style="flex:1;display:flex;flex-direction:column;">
+        <div class="mmo-card-title" style="color:#00ff88">Examples and 3D Launchers</div>
+        <div class="mmo-example-grid">
+          <button class="mmo-example-btn" data-focus="structure" onclick="MMO.focus('structure')">Geology Stability</button>
+          <button class="mmo-example-btn" data-focus="energy" onclick="MMO.focus('energy')">Subsurface Energy</button>
+          <button class="mmo-example-btn" data-focus="thermal" onclick="MMO.focus('thermal')">State Temperature</button>
+          <button class="mmo-example-btn" data-focus="surface" onclick="MMO.focus('surface')">Observable Collapse</button>
+          <button class="mmo-example-btn" data-focus="nodes" onclick="MMO.focus('nodes')">Barrier Nodes</button>
+          <button class="mmo-example-btn" data-focus="surface" onclick="MMO.analyze(document.getElementById('mmo-ticker-input').value)">Refresh Data</button>
+        </div>
+        <div id="mmo-action-display" style="padding:0;flex:1;display:flex;flex-direction:column;justify-content:center;">
+          <button class="mmo-btn-action mmo-btn-breakout" onclick="MMO.launchViz('blackhole')">[ LIQUIDITY BLACK HOLE ]</button>
+          <button class="mmo-btn-action mmo-btn-hedge" onclick="MMO.launchViz('galaxy3d')">[ MARKET GALAXY 3D ]</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mmo-bottom-bar">
+    <div class="mmo-card mmo-string-card">
+      <div class="mmo-card-title" style="color:#ff79c6">String Theory | Probabilistic Paths</div>
+      <div id="mmo-string-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+    </div>
+    <div class="mmo-card mmo-entanglement-card">
+      <div class="mmo-card-title" style="color:#8be9fd">Entanglement Matrix</div>
+      <div id="mmo-entanglement-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+    </div>
+  </div>
+
+  <div class="mmo-scanner-card mmo-card">
+    <div class="mmo-card-title">Quantum Scanner - Multi-Ticker Superposition</div>
+    <div class="mmo-scanner-grid" id="mmo-scanner-grid">
+      ${SCAN_TICKERS.map(ticker => `
+      <div class="mmo-mini-card" onclick="MMO.analyze('${ticker}')" id="mmo-mini-${ticker.replace('-', '_')}">
+        <div class="mmo-mini-ticker">${ticker}</div>
+        <div class="mmo-mini-loading">loading...</div>
+      </div>`).join('')}
+    </div>
+  </div>
+</div>`;
+
+    _startWaveCanvas();
+    _startVacuumChamber();
+    _loadScanner();
+    _renderFocusDetail(_qState);
+  }
+
+  function _startVacuumChamber() {
+    if (_vacuumAnimId) cancelAnimationFrame(_vacuumAnimId);
+    if (_vacuumResizeObserver) {
+      _vacuumResizeObserver.disconnect();
+      _vacuumResizeObserver = null;
+    }
+
+    const mount = document.getElementById('mmo-three-mount');
+    if (!mount || typeof THREE === 'undefined') return;
+    Array.from(mount.children).forEach(child => {
+      if (child.id !== 'mmo-universe-hud') child.remove();
+    });
+
+    const W = mount.offsetWidth || 640;
+    const H = mount.offsetHeight || 320;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 1000);
+    camera.position.set(0, 12, 48);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.inset = '0';
+    mount.prepend(renderer.domElement);
+
+    _vkRenderData.vScene = scene;
+
+    const grid = new THREE.Mesh(
+      new THREE.PlaneGeometry(200, 200, 32, 32),
+      new THREE.MeshBasicMaterial({ color: 0x4a3a7a, wireframe: true, transparent: true, opacity: 0.14 })
+    );
+    grid.rotation.x = -Math.PI / 2;
+    grid.position.y = -12;
+    scene.add(grid);
+
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.88 });
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(4.5, 1), coreMat);
+    scene.add(core);
+
+    const coreGlowMat = new THREE.MeshBasicMaterial({ color: 0xbd93f9, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false });
+    const coreGlow = new THREE.Mesh(new THREE.SphereGeometry(7.2, 28, 28), coreGlowMat);
+    scene.add(coreGlow);
+
+    const structureGroup = new THREE.Group();
+    for (let i = 0; i < 12; i++) {
+      const pillar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.6, 0.9, 10, 6),
+        new THREE.MeshBasicMaterial({ color: 0x7b68ee, transparent: true, opacity: 0.32, wireframe: true })
+      );
+      const angle = (Math.PI * 2 * i) / 12;
+      pillar.position.set(Math.cos(angle) * 16, -7, Math.sin(angle) * 16);
+      pillar.userData = { angle };
+      structureGroup.add(pillar);
+    }
+    scene.add(structureGroup);
+
+    const thermalShell = new THREE.Mesh(
+      new THREE.TorusKnotGeometry(9, 1.5, 128, 12),
+      new THREE.MeshBasicMaterial({ color: 0x00d4ff, wireframe: true, transparent: true, opacity: 0.28 })
+    );
+    scene.add(thermalShell);
+
+    const membrane = new THREE.Mesh(
+      new THREE.PlaneGeometry(50, 30, 18, 18),
+      new THREE.MeshBasicMaterial({ color: 0xff9500, wireframe: true, transparent: true, opacity: 0.12, side: THREE.DoubleSide })
+    );
+    membrane.position.z = -12;
+    scene.add(membrane);
+
+    const waveSegments = 72;
+    const wavePositions = new Float32Array(waveSegments * 3);
+    const waveGeometry = new THREE.BufferGeometry();
+    waveGeometry.setAttribute('position', new THREE.BufferAttribute(wavePositions, 3));
+    const observableRing = new THREE.LineLoop(
+      waveGeometry,
+      new THREE.LineBasicMaterial({ color: 0x50fa7b, transparent: true, opacity: 0.85 })
+    );
+    scene.add(observableRing);
+
+    const particlesGeometry = new THREE.BufferGeometry();
+    const particleCount = 420;
+    const particlePositions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount * 3; i++) {
+      particlePositions[i] = (Math.random() - 0.5) * 80;
+    }
+    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    const particleMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.36, transparent: true, opacity: 0.42 });
+    const particles = new THREE.Points(particlesGeometry, particleMaterial);
+    scene.add(particles);
+
+    const nodeGroup = new THREE.Group();
+    scene.add(nodeGroup);
+
+    const entanglementNodes = [];
+    for (let i = 0; i < 5; i++) {
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(1.4, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0x8be9fd, transparent: true, opacity: 0.5 })
+      );
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0)]),
+        new THREE.LineBasicMaterial({ color: 0x8be9fd, transparent: true, opacity: 0.16 })
+      );
+      mesh.userData = { phase: i * 1.26, radius: 20 + i * 2.6 };
+      scene.add(mesh);
+      scene.add(line);
+      entanglementNodes.push({ mesh, line });
+    }
+
+    function clearGroup(group) {
+      while (group.children.length) {
+        const child = group.children.pop();
+        group.remove(child);
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (Array.isArray(child.material)) child.material.forEach(mat => mat.dispose());
+          else child.material.dispose();
+        }
+      }
+    }
+
+    function syncNodes() {
+      clearGroup(nodeGroup);
+      const nodes = (_vkRenderData.qState?.tunneling_nodes || []).slice(0, 6);
+      nodes.forEach((node, index) => {
+        const breach = node.T_wkb || 0.15;
+        const material = new THREE.MeshBasicMaterial({
+          color: node.type === 'RESISTANCE' ? 0xff4757 : 0x50fa7b,
+          transparent: true,
+          opacity: 0.35 + breach * 0.4,
+          wireframe: true,
+        });
+        const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.9 + breach * 1.1, 12, 12), material);
+        sphere.userData = {
+          radius: 12 + index * 2.2,
+          phase: index * 1.1,
+          baseY: node.type === 'RESISTANCE' ? 5 + breach * 7 : -5 - breach * 4,
+        };
+        nodeGroup.add(sphere);
+      });
+    }
+    _startVacuumChamber._syncNodes = syncNodes;
+    syncNodes();
+
+    const cameraTargets = {
+      structure: new THREE.Vector3(0, 16, 54),
+      energy: new THREE.Vector3(22, 10, 50),
+      thermal: new THREE.Vector3(-18, 16, 48),
+      surface: new THREE.Vector3(0, 10, 44),
+      nodes: new THREE.Vector3(12, 8, 40),
+    };
+
+    let tick = 0;
+    function animate() {
+      _vacuumAnimId = requestAnimationFrame(animate);
+      tick += 0.01;
+      const qs = _vkRenderData.qState || _qState || _computeLocalQuantumState(_ticker);
+      const focusState = _vkRenderData.focus || _buildFocusCatalog(qs).surface;
+      const focusMode = focusState.vizMode || 'surface';
+      const stability = qs.ontology?.structural_stability ?? 0.5;
+      const energyScore = qs.energy?.score ?? 0.5;
+      const temperature = qs.thermal?.temperature ?? 0.5;
+      const collapseProb = qs.collapse_prob ?? 0.5;
+      const risk = qs.tunneling_risk ?? 0.1;
+      const entEntries = Object.entries(qs.entanglement || {}).slice(0, entanglementNodes.length);
+
+      core.rotation.x += 0.005;
+      core.rotation.y += 0.007;
+      const pulse = 1 + Math.sin(tick * 4.5) * 0.06;
+      core.scale.set(pulse, pulse, pulse);
+      coreGlow.scale.setScalar(1 + Math.sin(tick * 2.2) * 0.03 + collapseProb * 0.14);
+      coreGlowMat.color.setStyle(focusState.accent || '#bd93f9');
+
+      structureGroup.visible = focusMode === 'structure';
+      structureGroup.children.forEach((pillar, index) => {
+        const heightScale = 0.55 + stability * 2.4 + Math.sin(tick * 2 + index) * 0.06;
+        pillar.scale.y = heightScale;
+        pillar.position.y = -12 + (heightScale * 2.1);
+      });
+
+      thermalShell.visible = focusMode === 'thermal';
+      thermalShell.rotation.x += 0.006 + temperature * 0.012;
+      thermalShell.rotation.y -= 0.004 + temperature * 0.008;
+      thermalShell.scale.setScalar(0.95 + temperature * 0.35 + Math.sin(tick * 3.5) * 0.04);
+      thermalShell.material.opacity = 0.18 + temperature * 0.36;
+
+      observableRing.visible = focusMode === 'surface' || focusMode === 'nodes';
+      const waveBuffer = waveGeometry.attributes.position.array;
+      const ampValues = [qs.amplitudes?.BULL || 0.2, qs.amplitudes?.BEAR || 0.2, qs.amplitudes?.SIDEWAYS || 0.2, qs.amplitudes?.VOLATILE || 0.2, qs.amplitudes?.TRENDING || 0.2];
+      for (let i = 0; i < waveSegments; i++) {
+        const angle = (Math.PI * 2 * i) / waveSegments;
+        const amp = ampValues[i % ampValues.length];
+        const radius = 10 + collapseProb * 7 + Math.sin(angle * 3 + tick * 2.4) * (1.2 + amp * 4);
+        waveBuffer[i * 3] = Math.cos(angle) * radius;
+        waveBuffer[i * 3 + 1] = Math.sin(angle * 4 + tick * 3.2) * (0.8 + amp * 4);
+        waveBuffer[i * 3 + 2] = Math.sin(angle) * radius;
+      }
+      waveGeometry.attributes.position.needsUpdate = true;
+
+      membrane.visible = focusMode !== 'structure';
+      membrane.position.z = focusMode === 'nodes' ? -7 + Math.sin(tick * 6) * 2.2 : -12 + Math.sin(tick * 5) * risk * 4;
+      membrane.material.opacity = 0.08 + risk * 0.26 + (focusMode === 'energy' ? 0.08 : 0);
+      membrane.material.color.setStyle(focusMode === 'energy' ? '#ff6b35' : focusMode === 'nodes' ? '#ff9500' : '#7c3fe4');
+
+      const positions = particlesGeometry.attributes.position.array;
+      const speed = 0.16 + energyScore * 0.4 + temperature * 0.26;
+      particleMaterial.color.setStyle(focusMode === 'energy' ? '#ff6b35' : focusMode === 'thermal' ? '#00d4ff' : '#ffffff');
+      for (let i = 0; i < particleCount; i++) {
+        positions[i * 3 + 2] -= speed;
+        if (positions[i * 3 + 2] < -42) {
+          positions[i * 3] = (Math.random() - 0.5) * 80;
+          positions[i * 3 + 1] = (Math.random() - 0.5) * 42;
+          positions[i * 3 + 2] = 42;
+        }
+      }
+      particlesGeometry.attributes.position.needsUpdate = true;
+
+      nodeGroup.visible = focusMode === 'nodes';
+      nodeGroup.children.forEach((sphere, index) => {
+        const phase = sphere.userData.phase + tick * (0.4 + risk * 0.9);
+        sphere.position.x = Math.cos(phase) * sphere.userData.radius;
+        sphere.position.z = Math.sin(phase) * sphere.userData.radius - 8;
+        sphere.position.y = sphere.userData.baseY + Math.sin(tick * 3 + index) * 0.9;
+      });
+
+      entanglementNodes.forEach((entry, index) => {
+        const corr = Math.abs(entEntries[index]?.[1] ?? 0.35);
+        const isInverse = (entEntries[index]?.[1] ?? 0) < 0;
+        entry.mesh.userData.phase += 0.003 + corr * 0.01;
+        entry.mesh.position.x = Math.cos(entry.mesh.userData.phase) * entry.mesh.userData.radius;
+        entry.mesh.position.y = Math.sin(tick * 2 + index) * (2 + corr * 4);
+        entry.mesh.position.z = Math.sin(entry.mesh.userData.phase) * entry.mesh.userData.radius;
+        entry.mesh.scale.setScalar(0.65 + corr * 1.3);
+        entry.mesh.material.color.setStyle(isInverse ? '#ff4757' : '#8be9fd');
+        entry.line.geometry.setFromPoints([core.position, entry.mesh.position.clone()]);
+        entry.line.material.opacity = 0.08 + corr * 0.14;
+      });
+
+      const target = cameraTargets[focusMode] || cameraTargets.surface;
+      camera.position.lerp(target, 0.03);
+      camera.lookAt(0, focusMode === 'structure' ? 2 : 0, 0);
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    _vacuumResizeObserver = new ResizeObserver(() => {
+      const width = mount.offsetWidth || 640;
+      const height = mount.offsetHeight || 320;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    });
+    _vacuumResizeObserver.observe(mount);
+  }
+
   function _init() {
     if (_initialized) return;
     _initialized = true;
@@ -1196,8 +2164,99 @@ ${rows}
     }
   }
 
-  // Expose globally
-  window.MMO = { analyze, collapse, reset };
+  // Theory Modal
+  function showTheory() {
+    let modal = document.getElementById('mmo-theory-modal');
+    if (modal) { modal.style.display = 'flex'; return; }
+    modal = document.createElement('div');
+    modal.id = 'mmo-theory-modal';
+    modal.className = 'mmo-theory-overlay';
+    modal.innerHTML = `
+      <div class="mmo-theory-panel">
+        <div class="mmo-theory-header">
+          <span class="mmo-theory-title">⟨ψ⟩ MMO — Física Cuántica Aplicada a Mercados</span>
+          <button class="mmo-theory-close" onclick="document.getElementById('mmo-theory-modal').style.display='none'">✕</button>
+        </div>
+        <div class="mmo-theory-body">
+
+          <div class="mmo-theory-section">
+            <div class="mmo-theory-section-title">§1 · Amplitudes Complejas y Regla de Born</div>
+            <div class="mmo-theory-formula">|ψ⟩ = ψ_BULL + ψ_BEAR + ψ_SIDEWAYS + ψ_VOLATILE + ψ_TRENDING</div>
+            <div class="mmo-theory-text">
+              Cada componente: <code>ψᵢ = Aᵢ · e^(iφᵢ)</code>. Regla de Born: P_i = |ψᵢ|²
+            </div>
+          </div>
+
+          <div class="mmo-theory-section">
+            <div class="mmo-theory-section-title">§2 · Acoplamiento Térmico CIR → Fases (Phase 3A)</div>
+            <div class="mmo-theory-formula">dr = k(θ − r)dt + σ√r · dW</div>
+            <div class="mmo-theory-formula">φᵢ(T) = φ₀ᵢ + β · ωᵢ · dt · 2π</div>
+            <div class="mmo-theory-text">β = 1/T_CIR. Mercados calientes → β pequeño → fases más estáticas.</div>
+          </div>
+
+          <div class="mmo-theory-section">
+            <div class="mmo-theory-section-title">§3 · Corriente de Probabilidad J</div>
+            <div class="mmo-theory-formula">J = (iℏ/2m)(ψ∇ψ* − ψ*∇ψ)</div>
+            <div class="mmo-theory-formula">J_{n→n+1} = Im(ψₙ* · ψₙ₊₁) / ℏ_market</div>
+            <div class="mmo-theory-text">J_total &gt; 0: flujo hacia BULL · J_total &lt; 0: flujo hacia BEAR</div>
+          </div>
+
+          <div class="mmo-theory-section">
+            <div class="mmo-theory-section-title">§4 · Pozos de Potencial V(x) y Tunneling WKB</div>
+            <div class="mmo-theory-formula">T = exp(−2κa)   κ = √(2m_eff(V₀ − E)) / ℏ_eff</div>
+            <div class="mmo-theory-text">ℏ_eff = ATR(14)/2 · m_eff = 1/(1+T_CIR) · E = ½·trend²/σ<br>T→1: breakout inminente · T→0: nivel sólido</div>
+          </div>
+
+          <div class="mmo-theory-section">
+            <div class="mmo-theory-section-title">§5 · Información de Fisher Cuántica y Cramér-Rao</div>
+            <div class="mmo-theory-formula">F_Q = 4(⟨Â²⟩ − ⟨Â⟩²)   σ_min = 1/√F_Q</div>
+            <div class="mmo-theory-formula">S = Capital × α × ψ_survival / (1 + Δp·Δx + σ_CR)</div>
+          </div>
+
+          <div class="mmo-theory-section">
+            <div class="mmo-theory-section-title">§6 · Decoherencia τ y Reloj de Colapso</div>
+            <div class="mmo-theory-formula">τ ∝ 1/(T_CIR · H)   H = entropía de Shannon normalizada</div>
+            <div class="mmo-theory-text">Cuando τ &lt; 0.5 días: prepararse para movimiento fuerte.</div>
+          </div>
+
+          <div class="mmo-theory-section">
+            <div class="mmo-theory-section-title">§7 · Principio de Incerteza de Heisenberg</div>
+            <div class="mmo-theory-formula">Δp · Δx ≥ ℏ/2</div>
+            <div class="mmo-theory-text">Δp = σ_anual · Δx = 1/ADX_proxy<br>Si Δp·Δx &lt; 0.5: inconsistencia, reducir posición.</div>
+          </div>
+
+          <div class="mmo-theory-section">
+            <div class="mmo-theory-section-title">§8 · Mapa de Capas — Deep Structure → Observable</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+              <div class="mmo-theory-layer-card" style="border-color:#7b68ee33">
+                <div style="color:#7b68ee;font-weight:700;margin-bottom:4px;">GEOLOGY (Foundation)</div>
+                <div style="font-size:10px;color:#889;">Tendencia largo plazo. Semanas/meses.</div>
+              </div>
+              <div class="mmo-theory-layer-card" style="border-color:#ff6b3533">
+                <div style="color:#ff6b35;font-weight:700;margin-bottom:4px;">SUBSURFACE (Energy)</div>
+                <div style="font-size:10px;color:#889;">Flujo de capital, fatiga, burbuja. Días.</div>
+              </div>
+              <div class="mmo-theory-layer-card" style="border-color:#00d4ff33">
+                <div style="color:#00d4ff;font-weight:700;margin-bottom:4px;">STATE (Thermal)</div>
+                <div style="font-size:10px;color:#889;">T_CIR: COLD/WARM/HOT/OVERHEATING.</div>
+              </div>
+              <div class="mmo-theory-layer-card" style="border-color:#50fa7b33">
+                <div style="color:#50fa7b;font-weight:700;margin-bottom:4px;">OBSERVABLE (Surface)</div>
+                <div style="font-size:10px;color:#889;">Función de onda colapsada. Tiempo real.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+  }
+
+    // Expose globally
+  window.MMO = { analyze, collapse, reset, showTheory, focus, launchViz };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', _init);

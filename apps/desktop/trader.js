@@ -154,6 +154,37 @@ const AriaTrader = (() => {
         <div id="t-factor-heatmap"></div>
       </div>
 
+      <!-- Fundamentals card -->
+      <div class="trader-card" id="trader-fundamental-card" style="display:none;">
+        <div class="trader-card-title">💰 Fundamentals</div>
+        <div id="t-fundamental-grid"></div>
+      </div>
+
+      <!-- DCF Valuation card -->
+      <div class="trader-card" id="trader-dcf-card" style="display:none;">
+        <div class="trader-card-title">🏛 DCF Valuation</div>
+        <div id="t-dcf-content"></div>
+      </div>
+
+      <!-- Chaos & Entropy card -->
+      <div class="trader-card" id="trader-chaos-card" style="display:none;">
+        <div class="trader-card-title">🌀 Chaos & Entropy</div>
+        <div id="t-chaos-content"></div>
+      </div>
+
+      <!-- Discrepancy card (on-demand) -->
+      <div class="trader-card" id="trader-discrepancy-card" style="display:none;">
+        <div class="trader-card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>🔍 Strategy Discrepancy</span>
+          <button class="trader-btn-mini" id="t-disc-btn" onclick="AriaTrader.loadDiscrepancy()">Run Analysis</button>
+        </div>
+        <div id="t-discrepancy-content">
+          <div style="font-size:11px;color:#556;font-family:monospace;padding:12px 0;">
+            Click "Run Analysis" to compare all 5 strategy engines and reveal signal disagreements.
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- RIGHT: Radar + Watchlist + Screener -->
@@ -233,6 +264,10 @@ const AriaTrader = (() => {
       // Fire parallel enrichment calls (non-blocking)
       _loadBacktest(ticker);
       _loadFactorHeatmap(ticker);
+      _loadFundamentals(ticker);
+      _loadDCF(ticker);
+      _loadChaos(ticker);
+      _showDiscrepancyTrigger();
     } catch (err) {
       _showError(ticker, err.message);
     } finally {
@@ -696,6 +731,226 @@ const AriaTrader = (() => {
     `;
   }
 
+  // ─── Fundamentals ────────────────────────────────────────────────────────
+  async function _loadFundamentals(ticker) {
+    const card = document.getElementById('trader-fundamental-card');
+    const el   = document.getElementById('t-fundamental-grid');
+    if (!card || !el) return;
+    el.innerHTML = `<div style="color:#556;font-family:monospace;font-size:11px;padding:8px 0;">Loading fundamentals…</div>`;
+    card.style.display = 'block';
+    try {
+      const resp = await fetch(`${CONFIG.serverUrl}/api/fundamental/${ticker}`);
+      if (!resp.ok) throw new Error(resp.status);
+      const d = await resp.json();
+      _renderFundamentals(d, el);
+    } catch (e) {
+      el.innerHTML = `<div style="color:#e74c3c;font-size:11px;font-family:monospace;padding:8px 0;">Fundamentals unavailable: ${e.message}</div>`;
+    }
+  }
+
+  function _renderFundamentals(d, el) {
+    const pct  = v => v != null ? `${(v * 100).toFixed(1)}%` : '—';
+    const num  = v => v != null ? parseFloat(v).toFixed(2) : '—';
+    const big  = v => v != null ? (v >= 1e9 ? `$${(v/1e9).toFixed(1)}B` : v >= 1e6 ? `$${(v/1e6).toFixed(0)}M` : `$${v}`) : '—';
+
+    const rows = [
+      ['Sector',        d.sector||'—',           'Industry',      d.industry||'—'],
+      ['Market Cap',    big(d.market_cap),         'EV',            big(d.enterprise_value)],
+      ['P/E',           num(d.pe_ratio),           'Fwd P/E',       num(d.forward_pe)],
+      ['PEG',           num(d.peg_ratio),          'P/B',           num(d.pb_ratio)],
+      ['P/S',           num(d.ps_ratio),           'EV/EBITDA',     num(d.ev_ebitda)],
+      ['Profit Margin', pct(d.profit_margin),      'Op Margin',     pct(d.operating_margin)],
+      ['ROE',           pct(d.roe),                'ROA',           pct(d.roa)],
+      ['Rev Growth',    pct(d.revenue_growth),     'EPS Growth',    pct(d.earnings_growth)],
+      ['D/E Ratio',     num(d.debt_to_equity),     'Current Ratio', num(d.current_ratio)],
+      ['Div Yield',     pct(d.dividend_yield),     'Beta',          num(d.beta)],
+      ['52W High',      `$${num(d['52w_high'])}`,  '52W Low',       `$${num(d['52w_low'])}`],
+      ['Target Price',  `$${num(d.target_price)}`, 'Analyst Rec',   (d.recommendation||'—').toUpperCase()],
+    ];
+
+    const cells = rows.map(([l1,v1,l2,v2]) => `
+      <div class="tfund-cell"><span class="tfund-label">${l1}</span><span class="tfund-val">${v1}</span></div>
+      <div class="tfund-cell"><span class="tfund-label">${l2}</span><span class="tfund-val">${v2}</span></div>
+    `).join('');
+
+    el.innerHTML = `
+      <div class="tfund-header">${d.name || d.ticker} · <span style="color:#556;">${d.sector||''}</span></div>
+      <div class="tfund-grid">${cells}</div>
+    `;
+  }
+
+  // ─── DCF Valuation ────────────────────────────────────────────────────────
+  async function _loadDCF(ticker) {
+    const card = document.getElementById('trader-dcf-card');
+    const el   = document.getElementById('t-dcf-content');
+    if (!card || !el) return;
+    el.innerHTML = `<div style="color:#556;font-family:monospace;font-size:11px;padding:8px 0;">Computing DCF…</div>`;
+    card.style.display = 'block';
+    try {
+      const resp = await fetch(`${CONFIG.serverUrl}/api/dcf/${ticker}`);
+      if (!resp.ok) throw new Error(resp.status);
+      const d = await resp.json();
+      _renderDCF(d, el);
+    } catch (e) {
+      el.innerHTML = `<div style="color:#e74c3c;font-size:11px;font-family:monospace;padding:8px 0;">DCF unavailable: ${e.message}</div>`;
+    }
+  }
+
+  function _renderDCF(d, el) {
+    if (d.error) {
+      el.innerHTML = `<div style="color:#f1c40f;font-size:11px;font-family:monospace;padding:8px 0;">⚠ ${d.error}</div>`;
+      return;
+    }
+    const mos = d.margin_of_safety != null ? d.margin_of_safety : null;
+    const mosPct = mos != null ? `${(mos * 100).toFixed(1)}%` : '—';
+    const mosColor = mos == null ? '#888' : mos > 0.20 ? '#2ecc71' : mos > -0.10 ? '#f1c40f' : '#e74c3c';
+    const assessColor = { 'UNDERVALUED': '#2ecc71', 'FAIRLY VALUED': '#f1c40f', 'OVERVALUED': '#e74c3c' }[d.assessment] || '#888';
+
+    el.innerHTML = `
+      <div class="tdcf-hero">
+        <div class="tdcf-hero-row">
+          <div class="tdcf-price-block">
+            <div class="tdcf-label">Current Price</div>
+            <div class="tdcf-price">$${d.current_price}</div>
+          </div>
+          <div class="tdcf-arrow">→</div>
+          <div class="tdcf-price-block">
+            <div class="tdcf-label">Intrinsic Value</div>
+            <div class="tdcf-price" style="color:${mosColor};">$${d.intrinsic_value}</div>
+          </div>
+        </div>
+        <div class="tdcf-assessment" style="background:${assessColor}22;border-color:${assessColor}55;color:${assessColor};">
+          ${d.assessment} · Margin of Safety: <strong>${mosPct}</strong>
+        </div>
+      </div>
+      <div class="tdcf-details">
+        <div class="tdcf-row"><span>PV of FCF (${d.inputs?.projection_years}yr)</span><span>$${(d.pv_of_fcf/1e9).toFixed(1)}B</span></div>
+        <div class="tdcf-row"><span>Terminal Value PV</span><span>$${(d.terminal_value_pv/1e9).toFixed(1)}B</span></div>
+        <div class="tdcf-row"><span>WACC</span><span>${(d.inputs?.wacc*100).toFixed(1)}%</span></div>
+        <div class="tdcf-row"><span>Growth Rate (Y1–5)</span><span>${((d.inputs?.growth_rate_y1_5||0)*100).toFixed(1)}%</span></div>
+        <div class="tdcf-row"><span>Terminal Growth</span><span>${((d.inputs?.terminal_growth||0)*100).toFixed(1)}%</span></div>
+      </div>
+    `;
+  }
+
+  // ─── Chaos & Entropy ─────────────────────────────────────────────────────
+  async function _loadChaos(ticker) {
+    const card = document.getElementById('trader-chaos-card');
+    const el   = document.getElementById('t-chaos-content');
+    if (!card || !el) return;
+    el.innerHTML = `<div style="color:#556;font-family:monospace;font-size:11px;padding:8px 0;">Analysing chaos dynamics…</div>`;
+    card.style.display = 'block';
+    try {
+      const resp = await fetch(`${CONFIG.serverUrl}/api/chaos/${ticker}`);
+      if (!resp.ok) throw new Error(resp.status);
+      const d = await resp.json();
+      _renderChaos(d, el);
+    } catch (e) {
+      el.innerHTML = `<div style="color:#e74c3c;font-size:11px;font-family:monospace;padding:8px 0;">Chaos API unavailable: ${e.message}</div>`;
+    }
+  }
+
+  function _renderChaos(d, el) {
+    const chaos  = d.chaos   || {};
+    const ent    = d.entropy || {};
+    const vol    = d.volatility || {};
+
+    const hurst = chaos.hurst_exponent ?? chaos.hurst ?? null;
+    const hurstColor = hurst == null ? '#888' : hurst > 0.55 ? '#2ecc71' : hurst < 0.45 ? '#e74c3c' : '#f1c40f';
+    const hurstLabel = hurst == null ? '—' : hurst > 0.55 ? 'Trending' : hurst < 0.45 ? 'Mean-Reverting' : 'Random Walk';
+
+    const fractal   = chaos.fractal_dimension ?? chaos.fractal_dim ?? null;
+    const lyapunov  = chaos.lyapunov_exponent ?? chaos.lyapunov ?? null;
+    const sampleEnt = ent.sample_entropy ?? ent.approx_entropy ?? null;
+    const permEnt   = ent.permutation_entropy ?? null;
+    const realized  = vol.realized_vol_ann ?? vol.realized_vol ?? null;
+    const regime    = d.chaos_regime || '—';
+
+    const regimeColor = {
+      'TRENDING': '#2ecc71', 'MEAN_REVERTING': '#3498db',
+      'RANDOM_WALK': '#f1c40f', 'CHAOTIC': '#e74c3c',
+    }[regime] || '#888';
+
+    const stat = (label, val, color='#ccc', extra='') => val != null
+      ? `<div class="tchaos-stat">
+           <div class="tchaos-stat-label">${label}</div>
+           <div class="tchaos-stat-val" style="color:${color};">${typeof val === 'number' ? val.toFixed(4) : val}${extra}</div>
+         </div>`
+      : '';
+
+    el.innerHTML = `
+      <div class="tchaos-regime" style="background:${regimeColor}22;border-color:${regimeColor}55;color:${regimeColor};">
+        ${regime.replace(/_/g,' ')}
+      </div>
+      <div class="tchaos-grid">
+        ${stat('Hurst Exponent', hurst, hurstColor, ` (${hurstLabel})`)}
+        ${stat('Fractal Dim', fractal)}
+        ${stat('Lyapunov Proxy', lyapunov)}
+        ${stat('Sample Entropy', sampleEnt)}
+        ${stat('Permutation Entropy', permEnt)}
+        ${stat('Realized Vol (ann)', realized)}
+      </div>
+      ${d.synthetic ? '<div style="font-size:9px;color:#556;font-family:monospace;margin-top:6px;">⚠ Synthetic data</div>' : ''}
+    `;
+  }
+
+  // ─── Discrepancy (on-demand) ──────────────────────────────────────────────
+  function _showDiscrepancyTrigger() {
+    const card = document.getElementById('trader-discrepancy-card');
+    if (card) card.style.display = 'block';
+  }
+
+  async function loadDiscrepancy() {
+    const el = document.getElementById('t-discrepancy-content');
+    const btn = document.getElementById('t-disc-btn');
+    if (!el) return;
+    if (btn) btn.textContent = 'Running…';
+    el.innerHTML = `<div style="color:#556;font-family:monospace;font-size:11px;padding:8px 0;">Running 5 strategy engines…</div>`;
+    try {
+      const resp = await fetch(`${CONFIG.serverUrl}/api/discrepancy/${_currentTicker}`);
+      if (!resp.ok) throw new Error(resp.status);
+      const d = await resp.json();
+      _renderDiscrepancy(d, el);
+    } catch (e) {
+      el.innerHTML = `<div style="color:#e74c3c;font-size:11px;font-family:monospace;padding:8px 0;">Discrepancy API error: ${e.message}</div>`;
+    } finally {
+      if (btn) btn.textContent = 'Re-Run';
+    }
+  }
+
+  function _renderDiscrepancy(d, el) {
+    const signals = d.signals || d.strategy_signals || {};
+    const consensus = d.consensus || d.composite_signal || null;
+    const agreement = d.agreement_score ?? d.agreement ?? null;
+
+    const SIGNAL_COLOR = { BUY: '#2ecc71', STRONG_BUY: '#00ff88', SELL: '#e74c3c',
+      STRONG_SELL: '#ff4444', HOLD: '#f1c40f', NEUTRAL: '#3498db' };
+
+    const rows = Object.entries(signals).map(([strat, sig]) => {
+      const s    = typeof sig === 'object' ? (sig.signal || sig.verdict || '—') : String(sig);
+      const conf = typeof sig === 'object' ? (sig.confidence ?? sig.score ?? null) : null;
+      const col  = SIGNAL_COLOR[s.replace(' ','_').toUpperCase()] || '#888';
+      return `
+        <div class="tdisc-row">
+          <span class="tdisc-strat">${strat}</span>
+          <span class="tdisc-signal" style="color:${col};border-color:${col}44;">${s}</span>
+          ${conf != null ? `<span class="tdisc-conf">${(conf*100).toFixed(0)}%</span>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    const agreeColor = agreement == null ? '#888' : agreement >= 0.8 ? '#2ecc71' : agreement >= 0.5 ? '#f1c40f' : '#e74c3c';
+
+    el.innerHTML = `
+      ${agreement != null ? `
+        <div class="tdisc-header">
+          Agreement: <strong style="color:${agreeColor};">${(agreement*100).toFixed(0)}%</strong>
+          ${consensus ? `· Consensus: <strong style="color:#ccc;">${consensus}</strong>` : ''}
+        </div>` : ''}
+      <div class="tdisc-list">${rows || '<div style="color:#556;font-size:11px;font-family:monospace;">No signal data returned.</div>'}</div>
+    `;
+  }
+
   // ─── Backtest Chart ───────────────────────────────────────────────────────
   async function _loadBacktest(ticker) {
     const card = document.getElementById('trader-backtest-card');
@@ -886,7 +1141,8 @@ const AriaTrader = (() => {
   }
 
   function _hideResult() {
-    ['trader-predict-card','trader-insights-card'].forEach(id => {
+    ['trader-predict-card','trader-insights-card','trader-fundamental-card',
+     'trader-dcf-card','trader-chaos-card','trader-discrepancy-card'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
@@ -960,7 +1216,7 @@ const AriaTrader = (() => {
   }
 
   // ─── Public API ───────────────────────────────────────────────────────────
-  return { init, analyze, loadWatchlist, openScreener, runScreener, askARIA };
+  return { init, analyze, loadWatchlist, openScreener, runScreener, askARIA, loadDiscrepancy };
 })();
 
 // Auto-init when DOM ready, but only if view exists

@@ -57,6 +57,8 @@ window.VizLab = (() => {
       _threeRenderer = null; _threeScene = null; _threeCamera = null;
     }
     if (_ctx && _canvas) { _ctx.clearRect(0, 0, _canvas.width, _canvas.height); }
+    const threeMount = document.getElementById('viz-three-mount');
+    if (threeMount) threeMount.innerHTML = '';
     _activeViz = null;
   }
 
@@ -75,13 +77,13 @@ window.VizLab = (() => {
     if (title) title.textContent = VIZ_META[vizName]?.label || vizName;
 
     // Mount-based vizzes use #viz-three-mount; local-Three vizzes create their own renderer.
-    const isGlobalThree = vizName === 'particle' || vizName === 'livemonitor';
+    const isGlobalThree = vizName === 'particle' || vizName === 'livemonitor' || vizName === 'brain';
     const isLocalThree = _LOCAL_THREE.has(vizName);
     const hideCanvas = isGlobalThree || isLocalThree;
 
     const threeMount = document.getElementById('viz-three-mount');
     const c = document.getElementById('viz-canvas');
-    if (threeMount) threeMount.style.display = isGlobalThree ? 'block' : 'none';
+    if (threeMount) threeMount.style.display = (isGlobalThree || isLocalThree) ? 'block' : 'none';
     if (c) {
       c.style.display = hideCanvas ? 'none' : 'block';
       if (!hideCanvas) {
@@ -382,224 +384,307 @@ window.VizLab = (() => {
      Animated force-directed graph of ARIA's modules.
   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
   function vizBrain() {
-    const { canvas, ctx } = _getCanvas2D();
-    if (!canvas || !ctx) return;
-    const W = canvas.width, H = canvas.height;
+    const container = document.getElementById('viz-canvas-container') || document.getElementById('viz-overlay');
+    if (!container || typeof THREE === 'undefined') { _fallback2D('brain'); return; }
 
-    const MODULES = [
-      { id: 'data', label: 'Data Layer', x: W * 0.5, y: H * 0.15, color: '#00aaff', size: 28, activity: 0 },
-      { id: 'indicators', label: 'Indicators', x: W * 0.25, y: H * 0.3, color: '#00ddff', size: 22, activity: 0 },
-      { id: 'market', label: 'Market State', x: W * 0.75, y: H * 0.3, color: '#00ddff', size: 22, activity: 0 },
-      { id: 'features', label: 'Features', x: W * 0.2, y: H * 0.5, color: '#4488ff', size: 20, activity: 0 },
-      { id: 'signal', label: 'Signal Engine', x: W * 0.5, y: H * 0.42, color: '#8844ff', size: 25, activity: 0 },
-      { id: 'ml', label: 'ML Engine', x: W * 0.35, y: H * 0.65, color: '#cc44ff', size: 22, activity: 0 },
-      { id: 'rl', label: 'RL Agent', x: W * 0.65, y: H * 0.65, color: '#ff44cc', size: 22, activity: 0 },
-      { id: 'risk', label: 'Risk Engine', x: W * 0.78, y: H * 0.5, color: '#ff8800', size: 24, activity: 0 },
-      { id: 'mc', label: 'Monte Carlo', x: W * 0.22, y: H * 0.75, color: '#ffaa00', size: 20, activity: 0 },
-      { id: 'backtest', label: 'Backtest', x: W * 0.5, y: H * 0.82, color: '#44cc88', size: 20, activity: 0 },
-      { id: 'exec', label: 'Execution', x: W * 0.78, y: H * 0.8, color: '#00ff88', size: 22, activity: 0 },
-      { id: 'aria', label: 'ARIA', x: W * 0.5, y: H * 0.5, color: '#ffffff', size: 35, activity: 1 },
-    ];
+    const W = container.clientWidth, H = container.clientHeight - 50;
 
-    const EDGES = [
-      ['data', 'indicators'], ['data', 'market'], ['data', 'features'],
-      ['indicators', 'signal'], ['market', 'signal'], ['features', 'signal'],
-      ['signal', 'ml'], ['signal', 'rl'], ['signal', 'aria'],
-      ['ml', 'aria'], ['rl', 'aria'], ['risk', 'aria'],
-      ['signal', 'risk'], ['mc', 'signal'], ['mc', 'aria'],
-      ['backtest', 'aria'], ['exec', 'aria'], ['exec', 'backtest'],
-    ];
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x060610);
+    const camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 1000);
+    camera.position.set(0, 0, 120);
 
-    // Force-directed â€” gentle spring physics
-    let vx = MODULES.map(() => 0), vy = MODULES.map(() => 0);
-    const idMap = Object.fromEntries(MODULES.map((m, i) => [m.id, i]));
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Pulses on edges
-    const pulses = [];
+    const mount = document.getElementById('viz-three-mount');
+    if (!mount) return;
+    mount.innerHTML = '';
+    mount.appendChild(renderer.domElement);
 
-    function spawnPulse() {
-      const edge = EDGES[Math.floor(Math.random() * EDGES.length)];
-      pulses.push({ edge, t: 0, speed: rand(0.008, 0.02), color: MODULES[idMap[edge[0]]].color });
-    }
+    _threeRenderer = renderer;
+    _threeScene = scene;
+    _threeCamera = camera;
 
-    // â”€â”€ Live brain state from /api/vizlab/brain â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // We will build nodes and edges dynamically via API fetch
+    const nodeMaterials = {};
+    const nodeMeshes = {};
+    const edgeLines = [];
+    const labels = [];
+
+    // Group to hold graph to rotate
+    const graphGroup = new THREE.Group();
+    scene.add(graphGroup);
+
+    // Some base physics configuration
+    let nodesData = [];
+    let edgesData = [];
+
+    const typeColors = {
+      "data": 0x00aaff,
+      "analytics": 0x00ddff,
+      "engine": 0x8844ff,
+      "risk": 0xff8800,
+      "sim": 0xffaa00,
+      "eval": 0x44cc88,
+      "exec": 0x00ff88,
+      "ai": 0xffffff,
+      "ui": 0xcc44ff,
+      "app": 0xff44cc,
+    };
+
     fetchBrainState().then(d => {
       if (!d || !d.nodes) return;
-      d.nodes.forEach(node => {
-        const m = MODULES[idMap[node.id]];
-        if (!m) return;
-        // Highlight active nodes with brighter glow; dim inactive (ML/RL)
-        if (node.active === false) { m.color = m.color.replace('ff44cc', '886699').replace('cc44ff', '9944aa'); }
-        else { m.activity = Math.max(m.activity, 0.6); }
+      nodesData = d.nodes.map(n => {
+        // Initialize random 3D position
+        const phi = Math.acos(2 * Math.random() - 1);
+        const theta = Math.random() * Math.PI * 2;
+        const r = 40 + Math.random() * 20;
+        n.x = r * Math.sin(phi) * Math.cos(theta);
+        n.y = r * Math.sin(phi) * Math.sin(theta);
+        n.z = r * Math.cos(phi);
+        n.vx = 0; n.vy = 0; n.vz = 0;
+        n.activity = n.active ? 1.0 : 0.2;
+        n.color = typeColors[n.type] || 0xffffff;
+
+        if (n.id === 'aria') {
+          n.x = 0; n.y = 0; n.z = 0; // Fix ARIA near center
+          n.size = 6;
+        } else {
+          n.size = 2.5 + Math.random();
+        }
+        return n;
       });
-    }).catch(() => { });
+      edgesData = d.edges;
 
-    // ── Star field (generated once) ──────────────────────────────────────
-    const _brainStars = Array.from({ length: 140 }, () => ({
-      x: Math.random() * W, y: Math.random() * H,
-      r: Math.random() * 1.3 + 0.15,
-      a: Math.random() * 0.5 + 0.05,
-      da: (Math.random() - 0.5) * 0.003
-    }));
+      initGraphGeometry();
+    }).catch(e => console.error(e));
 
-    let lastPulse = 0, frame = 0;
+    function initGraphGeometry() {
+      // Create Node Spheres
+      nodesData.forEach(n => {
+        const geo = new THREE.SphereGeometry(n.size, 16, 16);
+        const mat = new THREE.MeshBasicMaterial({
+          color: n.color,
+          transparent: true,
+          opacity: n.active ? 0.9 : 0.3
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+
+        // Add outer glow / halo
+        const haloGeo = new THREE.SphereGeometry(n.size * 2.2, 16, 16);
+        const haloMat = new THREE.MeshBasicMaterial({
+          color: n.color,
+          transparent: true,
+          opacity: n.active ? 0.2 : 0.05,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        const halo = new THREE.Mesh(haloGeo, haloMat);
+        mesh.add(halo);
+
+        mesh.position.set(n.x, n.y, n.z);
+        graphGroup.add(mesh);
+        nodeMeshes[n.id] = { mesh, halo, data: n };
+
+        // Create CSS 2D Label manually or using primitive canvas sprites
+        const sprite = makeTextSprite(n.label, n.color);
+        sprite.position.set(n.x, n.y - n.size - 2, n.z);
+        graphGroup.add(sprite);
+        labels.push({ sprite, id: n.id });
+      });
+
+      // Create Edges
+      const lineMat = new THREE.LineBasicMaterial({
+        color: 0x445588,
+        transparent: true,
+        opacity: 0.4,
+        linewidth: 1
+      });
+
+      edgesData.forEach(e => {
+        const geo = new THREE.BufferGeometry();
+        const fromNode = nodeMeshes[e.from];
+        const toNode = nodeMeshes[e.to];
+        if (fromNode && toNode) {
+          geo.setFromPoints([fromNode.mesh.position, toNode.mesh.position]);
+          const line = new THREE.Line(geo, lineMat.clone());
+          // Color line based on fromNode
+          line.material.color.setHex(fromNode.data.color);
+          graphGroup.add(line);
+          edgeLines.push({ line, from: e.from, to: e.to });
+        }
+      });
+    }
+
+    // Canvas Text Sprite helper
+    function makeTextSprite(message, colorHex) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 256; canvas.height = 64;
+
+      ctx.font = 'bold 24px monospace';
+      ctx.fillStyle = '#' + colorHex.toString(16).padStart(6, '0');
+      ctx.textAlign = 'center';
+      ctx.fillText(message, 128, 32);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(30, 7.5, 1);
+      return sprite;
+    }
+
+    // ── Star field (3D) ─────────────────────────────────────────
+    const starGeo = new THREE.BufferGeometry();
+    const starCount = 300;
+    const starPos = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount * 3; i++) {
+      starPos[i] = (Math.random() - 0.5) * 400;
+    }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+    const starMat = new THREE.PointsMaterial({ color: 0xaaaaaa, size: 0.5, transparent: true, opacity: 0.6 });
+    const stars = new THREE.Points(starGeo, starMat);
+    scene.add(stars);
+
+    // Mouse Controls
+    let rotY = 0, rotX = 0;
+    let dragStart = null;
+    renderer.domElement.addEventListener('mousedown', e => { dragStart = { x: e.clientX, y: e.clientY, rotY, rotX }; });
+    renderer.domElement.addEventListener('mousemove', e => {
+      if (!dragStart) return;
+      rotY = dragStart.rotY + (e.clientX - dragStart.x) * 0.005;
+      rotX = dragStart.rotX + (e.clientY - dragStart.y) * 0.005;
+    });
+    renderer.domElement.addEventListener('mouseup', () => { dragStart = null; });
+    renderer.domElement.addEventListener('mouseleave', () => { dragStart = null; });
+
+    let frame = 0;
     function animate() {
       _animFrameId = requestAnimationFrame(animate);
       frame++;
-      ctx.clearRect(0, 0, W, H);
 
-      // Background — deep space gradient
-      const bgGrd = ctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.7);
-      bgGrd.addColorStop(0, '#0b0b1e');
-      bgGrd.addColorStop(1, '#040410');
-      ctx.fillStyle = bgGrd;
-      ctx.fillRect(0, 0, W, H);
-
-      // Twinkle stars
-      for (const s of _brainStars) {
-        s.a += s.da;
-        if (s.a > 0.55 || s.a < 0.04) s.da *= -1;
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(180,210,255,${s.a.toFixed(3)})`;
-        ctx.fill();
-      }
-
-      // Force physics
-      for (let i = 0; i < MODULES.length; i++) {
-        for (let j = i + 1; j < MODULES.length; j++) {
-          const dx = MODULES[j].x - MODULES[i].x;
-          const dy = MODULES[j].y - MODULES[i].y;
-          const d = Math.sqrt(dx * dx + dy * dy) + 1;
-          // Repulsion
-          const rep = 1800 / (d * d);
-          vx[i] -= dx / d * rep; vy[i] -= dy / d * rep;
-          vx[j] += dx / d * rep; vy[j] += dy / d * rep;
-        }
-        // Gravity toward center
-        vx[i] += (W * 0.5 - MODULES[i].x) * 0.0008;
-        vy[i] += (H * 0.5 - MODULES[i].y) * 0.0008;
-        // Damping
-        vx[i] *= 0.88; vy[i] *= 0.88;
-        MODULES[i].x = clamp(MODULES[i].x + vx[i], 40, W - 40);
-        MODULES[i].y = clamp(MODULES[i].y + vy[i], 40, H - 40);
-      }
-
-      // Spring forces along edges
-      for (const [a, b] of EDGES) {
-        const ai = idMap[a], bi = idMap[b];
-        const dx = MODULES[bi].x - MODULES[ai].x;
-        const dy = MODULES[bi].y - MODULES[ai].y;
-        const d = Math.sqrt(dx * dx + dy * dy) + 1;
-        const rest = 130, k = 0.006;
-        const f = (d - rest) * k;
-        vx[ai] += dx / d * f; vy[ai] += dy / d * f;
-        vx[bi] -= dx / d * f; vy[bi] -= dy / d * f;
-      }
-
-      // Spawn pulses
-      if (frame - lastPulse > 18) { spawnPulse(); lastPulse = frame; }
-
-      // Draw edges — gradient from source to target color
-      for (const [a, b] of EDGES) {
-        const ma = MODULES[idMap[a]], mb = MODULES[idMap[b]];
-        const grd = ctx.createLinearGradient(ma.x, ma.y, mb.x, mb.y);
-        grd.addColorStop(0, ma.color + '35');
-        grd.addColorStop(0.5, 'rgba(120,130,255,0.22)');
-        grd.addColorStop(1, mb.color + '35');
-        ctx.beginPath();
-        ctx.moveTo(ma.x, ma.y);
-        ctx.lineTo(mb.x, mb.y);
-        ctx.strokeStyle = grd;
-        ctx.lineWidth = 1.4;
-        ctx.stroke();
-      }
-
-      // Draw pulses
-      for (let i = pulses.length - 1; i >= 0; i--) {
-        const p = pulses[i];
-        const ma = MODULES[idMap[p.edge[0]]], mb = MODULES[idMap[p.edge[1]]];
-        const px = lerp(ma.x, mb.x, p.t), py = lerp(ma.y, mb.y, p.t);
-        const grd = ctx.createRadialGradient(px, py, 0, px, py, 8);
-        grd.addColorStop(0, p.color);
-        grd.addColorStop(1, 'transparent');
-        ctx.beginPath();
-        ctx.arc(px, py, 6, 0, Math.PI * 2);
-        ctx.fillStyle = grd;
-        ctx.fill();
-        p.t += p.speed;
-        if (p.t >= 1) pulses.splice(i, 1);
-      }
-
-      // Draw nodes — premium multi-layer glow
-      for (const m of MODULES) {
-        m.activity = Math.max(0, m.activity - 0.015);
-        const glow = m.size + m.activity * 14;
-        const isAria = m.id === 'aria';
-
-        // Outer corona halo
-        const corona = ctx.createRadialGradient(m.x, m.y, glow * 0.3, m.x, m.y, glow * 3.8);
-        corona.addColorStop(0, m.color + '22');
-        corona.addColorStop(0.5, m.color + '0a');
-        corona.addColorStop(1, 'transparent');
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, glow * 3.8, 0, Math.PI * 2);
-        ctx.fillStyle = corona;
-        ctx.fill();
-
-        // Mid glow
-        const grd = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, glow * 1.9);
-        grd.addColorStop(0, m.color + 'cc');
-        grd.addColorStop(0.45, m.color + '55');
-        grd.addColorStop(1, 'transparent');
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, glow * 1.9, 0, Math.PI * 2);
-        ctx.fillStyle = grd;
-        ctx.fill();
-
-        // Dark core
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, m.size * 0.55, 0, Math.PI * 2);
-        ctx.fillStyle = '#050512';
-        ctx.fill();
-
-        // Outer ring
-        ctx.strokeStyle = m.color;
-        ctx.lineWidth = isAria ? 2.5 : 1.8;
-        ctx.stroke();
-
-        // ARIA: second inner ring
-        if (isAria) {
-          ctx.beginPath();
-          ctx.arc(m.x, m.y, m.size * 0.35, 0, Math.PI * 2);
-          ctx.strokeStyle = m.color + '70';
-          ctx.lineWidth = 1;
-          ctx.stroke();
+      // Update Physics (Force layout)
+      if (nodesData.length > 0) {
+        // Repulsion
+        for (let i = 0; i < nodesData.length; i++) {
+          for (let j = i + 1; j < nodesData.length; j++) {
+            const a = nodesData[i], b = nodesData[j];
+            const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+            let d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+            const force = 3000 / (d * d); // Repulsion config
+            const fx = (dx / d) * force, fy = (dy / d) * force, fz = (dz / d) * force;
+            a.vx -= fx; a.vy -= fy; a.vz -= fz;
+            b.vx += fx; b.vy += fy; b.vz += fz;
+          }
+          // Gravity to center
+          const a = nodesData[i];
+          if (a.id === 'aria') {
+            a.vx += (0 - a.x) * 0.05;
+            a.vy += (0 - a.y) * 0.05;
+            a.vz += (0 - a.z) * 0.05;
+          } else {
+            a.vx += (0 - a.x) * 0.002;
+            a.vy += (0 - a.y) * 0.002;
+            a.vz += (0 - a.z) * 0.002;
+          }
         }
 
-        // Label with glow
-        ctx.shadowBlur = isAria ? 10 : 5;
-        ctx.shadowColor = m.color;
-        ctx.font = `${isAria ? 'bold 13' : '9'}px monospace`;
-        ctx.fillStyle = m.color;
-        ctx.textAlign = 'center';
-        ctx.fillText(m.label, m.x, m.y + m.size + 14);
-        ctx.shadowBlur = 0;
+        // Springs (Edges)
+        edgesData.forEach(e => {
+          const a = nodeMeshes[e.from]?.data;
+          const b = nodeMeshes[e.to]?.data;
+          if (a && b) {
+            const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+            let d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+            const rest = 30;
+            const k = 0.02;
+            const f = (d - rest) * k;
+            const fx = (dx / d) * f, fy = (dy / d) * f, fz = (dz / d) * f;
+            a.vx += fx; a.vy += fy; a.vz += fz;
+            b.vx -= fx; b.vy -= fy; b.vz -= fz;
+          }
+        });
+
+        // Apply forces and update meshes
+        nodesData.forEach(n => {
+          n.vx *= 0.85; n.vy *= 0.85; n.vz *= 0.85; // Damping
+          n.x += n.vx; n.y += n.vy; n.z += n.vz;
+
+          const obj = nodeMeshes[n.id];
+          if (obj) {
+            obj.mesh.position.set(n.x, n.y, n.z);
+
+            // Pulse activity
+            if (n.active) {
+              const pulse = Math.sin(frame * 0.05 + n.x) * 0.3 + 0.7; // 0.4 to 1.0
+              obj.halo.material.opacity = 0.2 * pulse;
+              obj.halo.scale.setScalar(1 + 0.1 * pulse);
+            }
+          }
+        });
+
+        // Update Lines
+        edgeLines.forEach(edge => {
+          const fromN = nodeMeshes[edge.from];
+          const toN = nodeMeshes[edge.to];
+          if (fromN && toN) {
+            const posAtt = edge.line.geometry.attributes.position;
+            posAtt.setXYZ(0, fromN.mesh.position.x, fromN.mesh.position.y, fromN.mesh.position.z);
+            posAtt.setXYZ(1, toN.mesh.position.x, toN.mesh.position.y, toN.mesh.position.z);
+            posAtt.needsUpdate = true;
+
+            // Pulse line opacity
+            if (fromN.data.active && toN.data.active) {
+              edge.line.material.opacity = 0.3 + 0.3 * Math.sin(frame * 0.1 + fromN.data.x);
+            }
+          }
+        });
+
+        // Update Labels
+        labels.forEach(lbl => {
+          const nd = nodeMeshes[lbl.id];
+          if (nd) {
+            lbl.sprite.position.set(nd.data.x, nd.data.y - nd.data.size - 2, nd.data.z);
+          }
+        });
       }
 
-      // Heartbeat for ARIA node
-      if (frame % 55 === 0) {
-        const ariaNode = MODULES[idMap['aria']];
-        ariaNode.activity = 1;
-      }
+      // Rotate entire graph
+      if (!dragStart) { rotY += 0.0015; }
+      graphGroup.rotation.y = rotY;
+      graphGroup.rotation.x = clamp(rotX, -0.8, 0.8);
 
-      // Scanlines overlay (subtle CRT effect)
-      for (let scanY = 0; scanY < H; scanY += 4) {
-        ctx.fillStyle = 'rgba(0,0,0,0.055)';
-        ctx.fillRect(0, scanY, W, 1.5);
-      }
+      renderer.render(scene, camera);
     }
+
     animate();
+
+    return () => {
+      // Cleanup for WebGL memory
+      try {
+        scene.remove(graphGroup);
+        scene.remove(stars);
+        graphGroup.clear();
+        starGeo.dispose();
+        starMat.dispose();
+        Object.values(nodeMeshes).forEach(n => {
+          n.mesh.geometry.dispose();
+          n.mesh.material.dispose();
+          n.halo.geometry.dispose();
+          n.halo.material.dispose();
+        });
+        edgeLines.forEach(e => {
+          e.line.geometry.dispose();
+          e.line.material.dispose();
+        });
+        labels.forEach(l => {
+          l.sprite.material.map.dispose();
+          l.sprite.material.dispose();
+        });
+      } catch (e) { }
+    };
   }
 
   /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -728,10 +813,10 @@ window.VizLab = (() => {
           const corr = getCorr(ASSETS[i].id, ASSETS[j].id);
           if (corr < 0.4) continue;
           const a = ASSETS[i], b = ASSETS[j];
-          const ea = Math.round((corr - 0.4) * 220).toString(16).padStart(2,'0');
+          const ea = Math.round((corr - 0.4) * 220).toString(16).padStart(2, '0');
           const edgeGrd = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
           edgeGrd.addColorStop(0, a.color + ea);
-          edgeGrd.addColorStop(0.5, `rgba(100,210,255,${((corr-0.4)*0.5).toFixed(2)})`);
+          edgeGrd.addColorStop(0.5, `rgba(100,210,255,${((corr - 0.4) * 0.5).toFixed(2)})`);
           edgeGrd.addColorStop(1, b.color + ea);
           ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
           ctx.strokeStyle = edgeGrd;
@@ -911,15 +996,15 @@ window.VizLab = (() => {
       const endIdx = Math.min(end, STEPS);
       const pricesNow = paths.map(p => p.path[Math.min(endIdx, p.path.length - 1)]).sort((a, b) => a - b);
       const PN = pricesNow.length;
-      const p5  = pricesNow[Math.floor(PN * 0.05)];
+      const p5 = pricesNow[Math.floor(PN * 0.05)];
       const p95 = pricesNow[Math.floor(PN * 0.95)];
       const p25 = pricesNow[Math.floor(PN * 0.25)];
       const p75 = pricesNow[Math.floor(PN * 0.75)];
       const p50 = pricesNow[Math.floor(PN * 0.5)];
-      const ex  = 50 + end * xScale;
+      const ex = 50 + end * xScale;
 
       // Track percentile paths across all steps for band fill
-      const y5  = yBase - (p5  - pMin) * yScale;
+      const y5 = yBase - (p5 - pMin) * yScale;
       const y95 = yBase - (p95 - pMin) * yScale;
       const y25 = yBase - (p25 - pMin) * yScale;
       const y75 = yBase - (p75 - pMin) * yScale;
@@ -5656,18 +5741,18 @@ window.VizLab = (() => {
     if (!mount) return;
 
     // â”€â”€ Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const TICKERS      = ['AAPL','MSFT','NVDA','BTC-USD','SPY','QQQ','TSLA','AMZN'];
-    const QUOTE_MS     = 15000;   // refresh all quotes
-    const SIG_ROTATE   = 8000;    // check one signal at a time
-    let quoteTimer     = null;
-    let signalTimer    = null;
-    let uptimeTimer    = null;
-    let sigIdx         = 0;
-    let signals        = {};   // { SYM: { action, confidence, score } }
-    let quoteData      = {};   // { SYM: { price, change_pct, volume } }
-    let actLog         = [];
-    let sigFeed        = [];
-    let uptime         = 0;
+    const TICKERS = ['AAPL', 'MSFT', 'NVDA', 'BTC-USD', 'SPY', 'QQQ', 'TSLA', 'AMZN'];
+    const QUOTE_MS = 15000;   // refresh all quotes
+    const SIG_ROTATE = 8000;    // check one signal at a time
+    let quoteTimer = null;
+    let signalTimer = null;
+    let uptimeTimer = null;
+    let sigIdx = 0;
+    let signals = {};   // { SYM: { action, confidence, score } }
+    let quoteData = {};   // { SYM: { price, change_pct, volume } }
+    let actLog = [];
+    let sigFeed = [];
+    let uptime = 0;
 
     // â”€â”€ Inject HTML shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     mount.style.cssText = 'position:relative;width:100%;height:100%;overflow:hidden;background:#06080f';
@@ -5724,10 +5809,10 @@ window.VizLab = (() => {
 </div>`;
 
     // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    function _ts() { return new Date().toLocaleTimeString('en',{hour12:false}); }
-    function _clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+    function _ts() { return new Date().toLocaleTimeString('en', { hour12: false }); }
+    function _clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
-    function _log(msg, color='#334455') {
+    function _log(msg, color = '#334455') {
       actLog.unshift({ ts: _ts(), msg, color });
       if (actLog.length > 50) actLog.pop();
       const el = document.getElementById('lm-log');
@@ -5738,19 +5823,19 @@ window.VizLab = (() => {
     }
 
     const SIG_COLORS = {
-      'STRONG BUY':'#1abc9c','BUY':'#2ecc71',
-      'HOLD':'#f1c40f','AVOID':'#e67e22',
-      'SELL':'#e74c3c','STRONG SELL':'#c0392b'
+      'STRONG BUY': '#1abc9c', 'BUY': '#2ecc71',
+      'HOLD': '#f1c40f', 'AVOID': '#e67e22',
+      'SELL': '#e74c3c', 'STRONG SELL': '#c0392b'
     };
 
     // â”€â”€ Uptime clock â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     uptimeTimer = setInterval(() => {
       uptime++;
-      const h = String(Math.floor(uptime/3600)).padStart(2,'0');
-      const m = String(Math.floor((uptime%3600)/60)).padStart(2,'0');
-      const s = String(uptime%60).padStart(2,'0');
-      const el = document.getElementById('lm-up'); if(el) el.textContent=`${h}:${m}:${s}`;
-      const ts = document.getElementById('lm-ts'); if(ts) ts.textContent=_ts();
+      const h = String(Math.floor(uptime / 3600)).padStart(2, '0');
+      const m = String(Math.floor((uptime % 3600) / 60)).padStart(2, '0');
+      const s = String(uptime % 60).padStart(2, '0');
+      const el = document.getElementById('lm-up'); if (el) el.textContent = `${h}:${m}:${s}`;
+      const ts = document.getElementById('lm-ts'); if (ts) ts.textContent = _ts();
     }, 1000);
 
     // â”€â”€ Render ticker grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -5760,22 +5845,22 @@ window.VizLab = (() => {
       grid.innerHTML = TICKERS.map(sym => {
         const d = quoteData[sym] || {};
         const price = d.price != null
-          ? `$${Number(d.price).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:4})}`
+          ? `$${Number(d.price).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
           : 'â€”';
-        const chg   = d.change_pct;
-        const chgTx = chg != null ? (chg>=0?`+${chg.toFixed(2)}%`:`${chg.toFixed(2)}%`) : 'â€”';
-        const chgC  = chg==null?'#445': chg>0?'#2ecc71':chg<0?'#e74c3c':'#f1c40f';
-        const cls   = chg==null?'': chg>0?'up':'dn';
+        const chg = d.change_pct;
+        const chgTx = chg != null ? (chg >= 0 ? `+${chg.toFixed(2)}%` : `${chg.toFixed(2)}%`) : 'â€”';
+        const chgC = chg == null ? '#445' : chg > 0 ? '#2ecc71' : chg < 0 ? '#e74c3c' : '#f1c40f';
+        const cls = chg == null ? '' : chg > 0 ? 'up' : 'dn';
 
         const sig = signals[sym];
-        let badge='', bar='';
+        let badge = '', bar = '';
         if (sig) {
-          const sc = SIG_COLORS[sig.action]||'#888';
-          const cf = sig.confidence!=null?` ${Math.round(sig.confidence*100)}%`:'';
+          const sc = SIG_COLORS[sig.action] || '#888';
+          const cf = sig.confidence != null ? ` ${Math.round(sig.confidence * 100)}%` : '';
           badge = `<div style="margin-top:4px;font-size:9px;font-weight:bold;color:${sc};border:1px solid ${sc}40;border-radius:3px;padding:1px 4px;display:inline-block">${sig.action}${cf}</div>`;
           if (sig.score != null) {
-            const pct = Math.round(_clamp(sig.score/100*50+50,2,98));
-            const bc  = sig.score>20?'#2ecc71':sig.score<-20?'#e74c3c':'#f1c40f';
+            const pct = Math.round(_clamp(sig.score / 100 * 50 + 50, 2, 98));
+            const bc = sig.score > 20 ? '#2ecc71' : sig.score < -20 ? '#e74c3c' : '#f1c40f';
             bar = `<div style="margin-top:4px;height:3px;background:#1a2a3a;border-radius:2px"><div style="width:${pct}%;height:100%;background:${bc};border-radius:2px;transition:width .6s"></div></div>`;
           }
         }
@@ -5795,18 +5880,18 @@ window.VizLab = (() => {
         const r = await fetch(`${CONFIG.serverUrl}/api/monitor/tick?tickers=${TICKERS.join(',')}`);
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const d = await r.json();
-        (d.tickers||[]).forEach(t => { if(t.symbol) quoteData[t.symbol]=t; });
+        (d.tickers || []).forEach(t => { if (t.symbol) quoteData[t.symbol] = t; });
         _renderGrid();
-        const ping = Date.now()-t0;
+        const ping = Date.now() - t0;
         const el = document.getElementById('lm-ping');
-        if (el){ el.textContent=ping; el.style.color=ping<2000?'#2ecc71':'#f1c40f'; }
+        if (el) { el.textContent = ping; el.style.color = ping < 2000 ? '#2ecc71' : '#f1c40f'; }
         const dot = document.getElementById('lm-dot');
-        if (dot) dot.style.background='#2ecc71';
+        if (dot) dot.style.background = '#2ecc71';
         _log(`Market data refreshed (${d.server_ms}ms server)`, '#1a3a2a');
-      } catch(e) {
+      } catch (e) {
         _log(`Quote fetch failed: ${e.message}`, '#4a1a1a');
         const dot = document.getElementById('lm-dot');
-        if (dot){ dot.style.background='#e74c3c'; dot.style.animation='none'; }
+        if (dot) { dot.style.background = '#e74c3c'; dot.style.animation = 'none'; }
       }
     }
 
@@ -5818,17 +5903,17 @@ window.VizLab = (() => {
         const r = await fetch(`${CONFIG.serverUrl}/api/strategy/analyze/${sym}?period=3mo`);
         if (!r.ok) return;
         const d = await r.json();
-        const action     = d.consensus?.action ?? d.action ?? 'HOLD';
+        const action = d.consensus?.action ?? d.action ?? 'HOLD';
         const confidence = d.consensus?.confidence ?? d.confidence ?? null;
-        const score      = d.composite_score ?? d.consensus?.net_score ?? null;
+        const score = d.composite_score ?? d.consensus?.net_score ?? null;
         signals[sym] = { action, confidence, score };
 
         // Push to signal feed
-        const col = SIG_COLORS[action]||'#888';
-        const cf  = confidence!=null?`${Math.round(confidence*100)}%`:'';
-        const sc  = score!=null?` | score ${Math.round(score)}`:'';
-        sigFeed.unshift({ ts:_ts(), sym, action, col, cf, sc });
-        if (sigFeed.length>30) sigFeed.pop();
+        const col = SIG_COLORS[action] || '#888';
+        const cf = confidence != null ? `${Math.round(confidence * 100)}%` : '';
+        const sc = score != null ? ` | score ${Math.round(score)}` : '';
+        sigFeed.unshift({ ts: _ts(), sym, action, col, cf, sc });
+        if (sigFeed.length > 30) sigFeed.pop();
         const el = document.getElementById('lm-sigs');
         if (el) el.innerHTML = sigFeed.map(s =>
           `<div class="lm-sig-row" style="border-left-color:${s.col}40">
@@ -5839,8 +5924,8 @@ window.VizLab = (() => {
           </div>`
         ).join('');
         _renderGrid();
-        _log(`Signal: ${sym} â†’ ${action}${cf?' ('+cf+')':''}`, '#1a2a3a');
-      } catch(_e){ /* silent */ }
+        _log(`Signal: ${sym} â†’ ${action}${cf ? ' (' + cf + ')' : ''}`, '#1a2a3a');
+      } catch (_e) { /* silent */ }
     }
 
     // â”€â”€ Boot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -5849,7 +5934,7 @@ window.VizLab = (() => {
     _renderGrid();                           // show empty skeletons
     _fetchQuotes();                          // first quote batch immediately
     setTimeout(_fetchSignal, 1800);          // first signal after 1.8s
-    quoteTimer  = setInterval(_fetchQuotes, QUOTE_MS);
+    quoteTimer = setInterval(_fetchQuotes, QUOTE_MS);
     signalTimer = setInterval(_fetchSignal, SIG_ROTATE);
 
     // â”€â”€ Cleanup (called by _stop when user closes overlay) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

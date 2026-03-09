@@ -33,7 +33,7 @@ let recognition = null;
 
 // ── ARIA Local Model State ─────────────────────────────────────────────────
 // 100% local — all inference runs via Ollama. No external APIs, no keys needed.
-let _ariaActiveModel  = localStorage.getItem('aria_model') || '';
+let _ariaActiveModel = localStorage.getItem('aria_model') || '';
 let _ariaActiveProvider = _ariaActiveModel || 'ollama'; // kept for compat
 let _ariaModels = [];    // populated from /api/aria/models
 let _ariaProviders = _ariaModels; // alias
@@ -89,11 +89,11 @@ async function _refreshDashboardStats() {
   if (!v1 || !v2) return;
 
   try {
-    const res  = await fetch('/api/vizlab/system_status');
+    const res = await fetch('/api/vizlab/system_status');
     if (!res.ok) throw new Error('status fetch failed');
     const data = await res.json();
 
-    const mods  = data.modules || {};
+    const mods = data.modules || {};
     const total = Object.keys(mods).length;
     const online = Object.values(mods).filter(Boolean).length;
 
@@ -221,20 +221,20 @@ function setStatus(state, text) {
 
   // Update Dashboard Card
   const dashStatus = document.getElementById('status-text-display');
-  const dashCard   = document.querySelector('.status-card');
+  const dashCard = document.querySelector('.status-card');
   if (dashStatus && dashCard) {
     if (state === 'connected') {
       dashStatus.textContent = "All systems operational";
-      dashCard.style.background = "#C5E0A5";
-      dashCard.style.borderColor = "";
+      dashCard.style.background = "rgba(0, 255, 136, 0.1)";
+      dashCard.style.borderColor = "rgba(0, 255, 136, 0.3)";
     } else if (state === 'listening') {
       dashStatus.textContent = "Listening…";
-      dashCard.style.background = "#D0E8F0";
-      dashCard.style.borderColor = "";
+      dashCard.style.background = "rgba(0, 240, 255, 0.1)";
+      dashCard.style.borderColor = "rgba(0, 240, 255, 0.3)";
     } else {
       dashStatus.textContent = "System Offline — Start server";
-      dashCard.style.background = "#F2CECE";
-      dashCard.style.borderColor = "";
+      dashCard.style.background = "rgba(255, 51, 102, 0.1)";
+      dashCard.style.borderColor = "rgba(255, 51, 102, 0.3)";
     }
   }
 }
@@ -278,7 +278,7 @@ async function _loadProviders() {
     const res = await fetch('/api/aria/models');
     if (!res.ok) return;
     const data = await res.json();
-    _ariaModels    = data.models || [];
+    _ariaModels = data.models || [];
     _ariaProviders = _ariaModels;
     _ariaActiveModel = data.active_model || _ariaActiveModel;
     _ariaActiveProvider = _ariaActiveModel;
@@ -298,8 +298,8 @@ function _renderProviderPills() {
 
   // If no models loaded, show single "Local" pill
   const models = _ariaModels.length > 0 ? _ariaModels : [{
-    id:     _ariaActiveModel || 'llama3.2:1b',
-    label:  _ariaActiveModel || 'llama3.2:1b',
+    id: _ariaActiveModel || 'llama3.2:1b',
+    label: _ariaActiveModel || 'llama3.2:1b',
     active: true,
   }];
 
@@ -307,10 +307,10 @@ function _renderProviderPills() {
     const isActive = m.id === _ariaActiveModel || m.active;
     const pill = document.createElement('button');
     // Short label: use first 2 segments of model name
-    const shortId = m.id.split(':')[0].replace('deepseek-r1','ds-r1').replace('codellama','code');
-    const tag     = m.id.includes(':') ? m.id.split(':')[1] : '';
+    const shortId = m.id.split(':')[0].replace('deepseek-r1', 'ds-r1').replace('codellama', 'code');
+    const tag = m.id.includes(':') ? m.id.split(':')[1] : '';
     pill.textContent = tag ? `${shortId} · ${tag}` : shortId;
-    pill.title       = m.label || m.id;
+    pill.title = m.label || m.id;
     if (isActive) pill.classList.add('active-pill');
     pill.onclick = () => _setProvider(m.id);
     container.appendChild(pill);
@@ -333,7 +333,7 @@ async function _setProvider(modelName) {
       body: JSON.stringify({ model: modelName }),
     });
     if (!res.ok) return;
-    _ariaActiveModel    = modelName;
+    _ariaActiveModel = modelName;
     _ariaActiveProvider = modelName;
     localStorage.setItem('aria_model', modelName);
     // Update active pill styling
@@ -388,7 +388,7 @@ function _onInputKeyDown(e) {
   if (e.key === 'Tab' && input.value.startsWith('/')) {
     e.preventDefault();
     // Cycle through slash commands on Tab
-    const cmds = ['/providers','/model ','/audit','/debug ','/review ','/help'];
+    const cmds = ['/providers', '/model ', '/audit', '/debug ', '/review ', '/help'];
     const cur = input.value;
     const match = cmds.find(c => c.startsWith(cur) && c !== cur);
     if (match) { input.value = match; input.dispatchEvent(new Event('input')); }
@@ -412,7 +412,7 @@ function _renderMarkdown(text) {
   if (!text) return '';
   // Escape HTML first
   let h = text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   // Code blocks (``` ... ```)
   h = h.replace(/```[\w]*\n?([\s\S]*?)```/g,
@@ -425,17 +425,17 @@ function _renderMarkdown(text) {
   h = h.replace(/\*([^*]+)\*/g, '<em>$1</em>');
   // ### Headers
   h = h.replace(/^###\s+(.+)$/gm, '<div style="font-size:12px;font-weight:700;color:#f0a500;margin:8px 0 2px;">$1</div>');
-  h = h.replace(/^##\s+(.+)$/gm,  '<div style="font-size:13px;font-weight:700;color:#ddd;margin:8px 0 2px;">$1</div>');
-  h = h.replace(/^#\s+(.+)$/gm,   '<div style="font-size:14px;font-weight:700;color:#fff;margin:8px 0 2px;">$1</div>');
+  h = h.replace(/^##\s+(.+)$/gm, '<div style="font-size:13px;font-weight:700;color:#ddd;margin:8px 0 2px;">$1</div>');
+  h = h.replace(/^#\s+(.+)$/gm, '<div style="font-size:14px;font-weight:700;color:#fff;margin:8px 0 2px;">$1</div>');
   // Tables (pipe-separated) — naive but functional
   h = h.replace(/(\|.+\|\n)((?:\|[-: ]+\|\n)+)((?:\|.+\|\n?)+)/g, (m) => {
     const rows = m.trim().split('\n').filter(r => r.trim() && !r.match(/^\|[-: |]+\|$/));
     if (rows.length < 2) return m;
-    const toRow = (r, tag='td') =>
-      '<tr>' + r.split('|').slice(1,-1).map(c =>
+    const toRow = (r, tag = 'td') =>
+      '<tr>' + r.split('|').slice(1, -1).map(c =>
         `<${tag} style="padding:4px 8px;border:1px solid #333;">${c.trim()}</${tag}>`
       ).join('') + '</tr>';
-    return `<table style="border-collapse:collapse;font-size:11px;margin:6px 0;">${toRow(rows[0],'th')}${rows.slice(1).map(r=>toRow(r)).join('')}</table>`;
+    return `<table style="border-collapse:collapse;font-size:11px;margin:6px 0;">${toRow(rows[0], 'th')}${rows.slice(1).map(r => toRow(r)).join('')}</table>`;
   });
   // Checkboxes
   h = h.replace(/- \[ \] (.+)/g, '<div style="color:#666;">☐ $1</div>');
@@ -471,7 +471,7 @@ function addMessage(role, content, timestamp = null, metadata = null) {
   // Provider + latency badge for ARIA messages
   if (role === 'assistant' && metadata && metadata.provider && metadata.provider !== 'system') {
     const prov = metadata.provider;
-    const lat  = metadata.latency_ms;
+    const lat = metadata.latency_ms;
     const color = lat < 500 ? '#4ade80' : lat < 2000 ? '#f0a500' : '#f87171';
     const provBadge = document.createElement('span');
     provBadge.style.cssText = `
@@ -528,8 +528,8 @@ async function sendMessage(text) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message:    text,
-        device_id:  CONFIG.deviceId,
+        message: text,
+        device_id: CONFIG.deviceId,
         session_id: CONFIG.sessionId,
       }),
     });
@@ -552,7 +552,7 @@ async function sendMessage(text) {
 
     // Add ARIA response with metadata badge
     addMessage('assistant', data.response, data.timestamp, {
-      provider:   data.provider,
+      provider: data.provider,
       latency_ms: data.latency_ms,
     });
 

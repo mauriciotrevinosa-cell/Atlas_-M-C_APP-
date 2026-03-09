@@ -2020,23 +2020,50 @@ def vizlab_brain():
         {"id": "features",   "label": "Features",      "type": "analytics", "active": True},
         {"id": "signal",     "label": "Signal Engine", "type": "engine",    "active": True},
         {"id": "ml",         "label": "ML Engine",     "type": "engine",    "active": False},
-        {"id": "rl",         "label": "RL Agent",      "type": "engine",    "active": False},
+        {"id": "rl",         "label": "RL Lab",        "type": "engine",    "active": True},
         {"id": "risk",       "label": "Risk Engine",   "type": "risk",      "active": True},
         {"id": "mc",         "label": "Monte Carlo",   "type": "sim",       "active": True},
+        {"id": "thermo",     "label": "Thermo Dynamics","type":"analytics", "active": True},
         {"id": "backtest",   "label": "Backtest",      "type": "eval",      "active": True},
+        {"id": "paper",      "label": "Paper Trading", "type": "eval",      "active": True},
+        {"id": "options",    "label": "Options",       "type": "eval",      "active": True},
         {"id": "exec",       "label": "Execution",     "type": "exec",      "active": True},
-        {"id": "aria",       "label": "ARIA",          "type": "ai",        "active": True},
+        {"id": "aria",       "label": "ARIA Core",     "type": "ai",        "active": True},
+        {"id": "ai_agents",  "label": "AI Agents",     "type": "ai",        "active": True},
+        {"id": "vizlab",     "label": "Viz Lab",       "type": "ui",        "active": True},
+        {"id": "playroom",   "label": "Playroom",      "type": "ui",        "active": False},
+        {"id": "mmo",        "label": "Quantum MMO",   "type": "app",       "active": True},
+        {"id": "thought",    "label": "Thought Map",   "type": "app",       "active": True},
     ]
     edges = [
+        # Data to analytics
         {"from": "data",     "to": "indicators"}, {"from": "data",   "to": "market"},
-        {"from": "data",     "to": "features"},   {"from": "indicators","to": "signal"},
-        {"from": "market",   "to": "signal"},     {"from": "features", "to": "signal"},
-        {"from": "signal",   "to": "ml"},         {"from": "signal",   "to": "rl"},
-        {"from": "signal",   "to": "aria"},       {"from": "ml",       "to": "aria"},
-        {"from": "rl",       "to": "aria"},       {"from": "risk",     "to": "aria"},
-        {"from": "signal",   "to": "risk"},       {"from": "mc",       "to": "signal"},
-        {"from": "mc",       "to": "aria"},       {"from": "backtest", "to": "aria"},
-        {"from": "exec",     "to": "aria"},       {"from": "exec",     "to": "backtest"},
+        {"from": "data",     "to": "features"},   {"from": "data",   "to": "thermo"},
+        
+        # Analytics to Signal
+        {"from": "indicators","to": "signal"},    {"from": "market", "to": "signal"},
+        {"from": "features", "to": "signal"},     {"from": "thermo", "to": "signal"},
+        
+        # Signal to advanced engines
+        {"from": "signal",   "to": "ml"},         {"from": "signal", "to": "rl"},
+        {"from": "signal",   "to": "risk"},       {"from": "signal", "to": "options"},
+        
+        # Sim to Signal/ARIA
+        {"from": "mc",       "to": "signal"},     {"from": "mc",     "to": "aria"},
+        
+        # All feed into ARIA Core
+        {"from": "signal",   "to": "aria"},       {"from": "ml",     "to": "aria"},
+        {"from": "rl",       "to": "aria"},       {"from": "risk",   "to": "aria"},
+        
+        # ARIA connects to AI Agents and Apps
+        {"from": "aria",     "to": "ai_agents"},  {"from": "aria",   "to": "thought"},
+        {"from": "aria",     "to": "mmo"},        {"from": "aria",   "to": "vizlab"},
+        {"from": "aria",     "to": "playroom"},
+        
+        # Evaluation & Execution
+        {"from": "signal",   "to": "backtest"},   {"from": "signal", "to": "paper"},
+        {"from": "backtest", "to": "exec"},       {"from": "paper",  "to": "exec"},
+        {"from": "exec",     "to": "aria"},
     ]
     return {"nodes": nodes, "edges": edges, "version": "Atlas v0.6.0-alpha"}
 
@@ -4929,16 +4956,73 @@ def mmo_quantum_state(ticker: str):
         conf     = getattr(strat, "confidence",  0.5) if strat else 0.5
         disagree = abs(buy_w - sell_w)
 
-        # ── QUANTUM LAYER ────────────────────────────────────────────────
+        # ── STOCHASTIC CIR DRIFT (Cox-Ingersoll-Ross) ───────────────────
+        # Simulate market 'temperature' via CIR: dr = k(θ - r)dt + σ√r dW
+        theta_CIR = float(vol_6mo)                     
+        k_CIR     = 5.0                                
+        dt_CIR    = 1.0 / 252.0                        
+        
+        # Proper GARCH-style innovation instead of bare return
+        sigma_t   = float(np.std(returns[-5:]) * np.sqrt(252)) if len(returns) >= 5 else vol_3mo
+        dW        = float(returns[-1]) / max(sigma_t, 0.001) * np.sqrt(dt_CIR) if len(returns) else 0.0
+        
+        sigma_CIR = float(np.std(returns[-20:]) * np.sqrt(252)) if len(returns) >= 20 else vol_3mo
+        r_t = vol_3mo 
+        dr_CIR = k_CIR * (theta_CIR - r_t) * dt_CIR + sigma_CIR * np.sqrt(max(r_t, 1e-6)) * dW
+        cir_temperature = max(0.01, r_t + dr_CIR)
+        beta_thermal = 1.0 / max(cir_temperature, 0.01)
+
+        # ── QUANTUM LAYER (Complex Amplitudes & Born Rule) ────────────────
         a_bull     = max(0.0, buy_w  * (1 + adx_proxy * 0.3))
         a_bear     = max(0.0, sell_w * (1 + adx_proxy * 0.3))
         a_sideways = max(0.0, (1 - disagree) * (1 - min(vol_3mo / 0.3, 1)) * 0.8)
         a_volatile = max(0.0, min(vol_3mo / 0.3, 1) * (1 - disagree * 0.5))
         a_trending = max(0.0, adx_proxy * disagree * 0.9)
 
-        raw  = np.maximum(np.array([a_bull, a_bear, a_sideways, a_volatile, a_trending]), 0.01)
-        norm = raw / np.linalg.norm(raw)
-        probs = norm ** 2  # Born rule: P_i = |α_i|²
+        raw = np.maximum(np.array([a_bull, a_bear, a_sideways, a_volatile, a_trending]), 0.01)
+        amp_mags = np.sqrt(raw / np.linalg.norm(raw))  
+
+        phase_velocity = trend * 10.0
+        base_phases = np.array([
+            phase_velocity * 1.0,  
+            phase_velocity * -1.0, 
+            0.0,                   
+            vol_3mo * np.pi,       
+            abs(phase_velocity)    
+        ])
+        
+        # Phase 3A: Thermal Phase Coupling
+        omega_i = np.array([0.8, 0.6, 0.2, 1.2, 1.0])
+        thermal_phase_correction = beta_thermal * omega_i * dt_CIR * 2 * np.pi
+        phases = base_phases + thermal_phase_correction
+
+        psi = amp_mags * np.exp(1j * phases)
+        
+        probs = np.abs(psi)**2
+        probs /= np.sum(probs)  
+
+        # ── RIGOROUS PROBABILITY CURRENT (J) ─────────────────────────────
+        ordered_indices = [1, 2, 3, 4, 0] # BEAR, SIDEWAYS, VOLATILE, TRENDING, BULL
+        psi_ordered = np.array([psi[i] for i in ordered_indices])
+        hbar_market = 0.5
+        J_flows = []
+        for n in range(len(psi_ordered) - 1):
+            J_n = float(np.imag(np.conj(psi_ordered[n]) * psi_ordered[n+1])) / hbar_market
+            J_flows.append(J_n)
+        
+        J_total = sum(J_flows)
+        j_directional = "BULL_FLOW" if J_total > 0.02 else "BEAR_FLOW" if J_total < -0.02 else "NEUTRAL"
+        current_J = J_total
+
+        # ── QUANTUM FISHER INFORMATION ───────────────────────────────────
+        N_states = len(probs)
+        A_vals = np.linspace(-1, 1, N_states)
+        mean_A = np.sum(probs * A_vals)
+        var_A  = np.sum(probs * (A_vals - mean_A)**2)
+        F_Q = float(4.0 * var_A)
+        
+        cramer_rao_bound = 1.0 / np.sqrt(max(F_Q, 1e-10))
+        signal_clarity = "HIGH" if F_Q > 0.5 else "MEDIUM" if F_Q > 0.2 else "LOW"
 
         states     = ["BULL", "BEAR", "SIDEWAYS", "VOLATILE", "TRENDING"]
         amplitudes = {s: float(probs[i]) for i, s in enumerate(states)}
@@ -4946,9 +5030,32 @@ def mmo_quantum_state(ticker: str):
         dominant   = states[int(np.argmax(probs))]
         entropy    = float(-np.sum(probs * np.log(probs + 1e-10)) / np.log(5))
 
-        # Tunneling risk: tail-event probability (rare discontinuous transition)
-        sigma_5d      = vol_3mo / max(np.sqrt(52), 1e-6)
-        tunneling_risk = round(float(min(2.0 * np.exp(-4.5 * sigma_5d), 0.25)), 4)
+        decoherence_tau = float(1.0 / (cir_temperature * max(entropy, 0.01)))
+
+        # ── HEISENBERG UNCERTAINTY ───────────────────────────────────────
+        delta_p = float(vol_6mo)
+        delta_x = 1.0 / max(abs(trend), 0.01)
+        u_product = delta_p * delta_x
+        psi_survival = float(np.exp(-1.0 / max(decoherence_tau, 0.01)))
+        size_factor = psi_survival / (1.0 + u_product + cramer_rao_bound)
+        qfi_sizing = f"S = C × α × {size_factor:.3f}"
+
+        heisenberg_data = {
+            "delta_p": delta_p,
+            "delta_x": delta_x,
+            "product": u_product,
+            "hbar_half": 0.5,
+            "compliant": u_product >= 0.5,
+            "qfi_sizing": qfi_sizing,
+            "psi_survival": psi_survival,
+            "cramer_rao": float(cramer_rao_bound)
+        }
+        
+        quantum_fisher = {
+            "F_Q": float(F_Q),
+            "cramer_rao_bound": float(cramer_rao_bound),
+            "signal_clarity": signal_clarity
+        }
 
         collapsed_state = dominant if max_prob > 0.50 else None
         if   collapsed_state == "BULL":     quantum_verdict = "BUY"
@@ -4956,6 +5063,58 @@ def mmo_quantum_state(ticker: str):
         elif collapsed_state == "TRENDING": quantum_verdict = "FOLLOW TREND"
         elif collapsed_state == "VOLATILE": quantum_verdict = "HEDGE / REDUCE"
         else:                               quantum_verdict = "SUPERPOSED — WAIT"
+
+        # ── V(x) POTENTIAL WELLS & WKB TUNNELING (Phase 3A) ─────────────
+        price_nodes = []
+        tunneling_nodes = []
+        potential_field = []
+        try:
+            from scipy.stats import gaussian_kde
+            from scipy.signal import find_peaks
+            
+            p_min, p_max = closes.min(), closes.max()
+            kde = gaussian_kde(closes, weights=volumes / volumes.sum(), bw_method=0.1)
+            p_grid = np.linspace(p_min, p_max, 50)
+            v_dens = kde(p_grid)
+            v_max = v_dens.max() if v_dens.max() > 0 else 1.0
+            V_x = 1.0 - v_dens / v_max
+            
+            potential_field = [{"price": float(p), "V": float(v)} for p, v in zip(p_grid, V_x)]
+            
+            peaks, props = find_peaks(V_x, prominence=0.15, distance=3)
+            
+            atr = float(np.std(closes[-14:])) if len(closes) >= 14 else (closes[-1]*0.02)
+            hbar_eff = max(atr / 2.0, 1e-6)
+            m_eff    = 1.0 / (1.0 + cir_temperature)
+            E_kin    = 0.5 * (trend ** 2) / max(vol_3mo, 0.01)
+            
+            t_risks = []
+            for pk in peaks:
+                lvl = float(p_grid[pk])
+                v0  = float(V_x[pk])
+                ntype = "RESISTANCE" if lvl > closes[-1] else "SUPPORT"
+                p_node = {"level": round(lvl, 2), "type": ntype, "strength": int(v0 * 100)}
+                
+                d = abs(closes[-1] - lvl)
+                a = d / max(atr, 1e-6)
+                if v0 <= E_kin:
+                    T_wkb = 1.0
+                else:
+                    kappa = np.sqrt(2 * m_eff * (v0 - E_kin)) / hbar_eff
+                    T_wkb = float(np.exp(-2 * kappa * a))
+                
+                t_node = {"level": round(lvl, 2), "type": ntype, "T_wkb": round(T_wkb, 4), "V0": round(v0, 3)}
+                p_node["T_wkb"] = round(T_wkb, 4)
+                
+                price_nodes.append(p_node)
+                tunneling_nodes.append(t_node)
+                t_risks.append(T_wkb)
+            
+            tunneling_risk = round(float(max(t_risks)), 4) if t_risks else 0.05
+            
+        except ImportError:
+            # Fallback if scipy is missing
+            tunneling_risk = round(float(min(abs(current_J) * 1.5 + abs(dr_CIR) * 2.0 + 0.05, 0.99)), 4)
 
         # ── STRING THEORY LAYER ──────────────────────────────────────────
         # Amplitude = trend strength (how hard the string is plucked)
@@ -4968,15 +5127,6 @@ def mmo_quantum_state(ticker: str):
             r30 = returns[-30:]
             sig = float(np.std(r30)) + 1e-10
             vertices_30d = int(np.sum(np.abs(r30) > 1.5 * sig))
-        # Nodes = most-visited price levels (standing waves / structural boundaries)
-        price_nodes = []
-        if len(closes) >= 20:
-            counts, edges = np.histogram(closes, bins=10)
-            top_bins = np.argsort(counts)[-3:][::-1]
-            for b in top_bins:
-                level = float((edges[b] + edges[b + 1]) / 2)
-                node_type = "SUPPORT" if level < closes[-1] else "RESISTANCE"
-                price_nodes.append({"level": round(level, 2), "type": node_type, "strength": int(counts[b])})
 
         # ── ENERGY LAYER ─────────────────────────────────────────────────
         r20   = returns[-20:] if len(returns) >= 20 else returns
@@ -4998,7 +5148,7 @@ def mmo_quantum_state(ticker: str):
             cooling = float(max(0.0, min(1.0, (vol_6mo - vol_3mo) / (vol_6mo + 1e-6))))
 
         # ── THERMAL LAYER ────────────────────────────────────────────────
-        temperature = float(min(vol_3mo / 0.40, 1.0))
+        temperature = float(min(cir_temperature / 0.40, 1.0))
         overheating = bool(temperature > 0.75 and trend > 0.05)
         if   temperature < 0.25:  thermal_phase = "COLD"
         elif temperature < 0.50:  thermal_phase = "WARM"
@@ -5052,12 +5202,21 @@ def mmo_quantum_state(ticker: str):
             "entropy":          round(entropy, 3),
             "quantum_verdict":  quantum_verdict,
             "tunneling_risk":   tunneling_risk,
+            "probability_current_J": round(current_J, 4),
+            "j_flows":          [round(j, 4) for j in J_flows],
+            "j_directional":    j_directional,
+            "quantum_fisher_info": quantum_fisher,
+            "heisenberg":       heisenberg_data,
+            "decoherence_tau":  round(decoherence_tau, 4),
+            "cir_drift":        round(float(dr_CIR), 4),
             "string": {
                 "amplitude":    round(string_amplitude, 3),
                 "frequency":    round(string_frequency, 3),
                 "vertices_30d": vertices_30d,
                 "nodes":        price_nodes,
             },
+            "tunneling_nodes":  tunneling_nodes,
+            "potential_field":  potential_field,
             "energy": {
                 "score":            round(energy_score, 3),
                 "fatigue":          round(fatigue, 3),
@@ -5066,6 +5225,8 @@ def mmo_quantum_state(ticker: str):
             },
             "thermal": {
                 "temperature": round(temperature, 3),
+                "cir_temperature": round(cir_temperature, 4),
+                "beta_thermal": round(beta_thermal, 4),
                 "overheating": overheating,
                 "phase":       thermal_phase,
             },

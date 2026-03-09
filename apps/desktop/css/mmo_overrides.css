@@ -1,5 +1,9 @@
 /* MMO Mini-Render Overlay Styles */
 
+.mmo-shell {
+    overflow-x: hidden;
+}
+
 .mmo-render-overlay {
     position: absolute;
     top: 10px;
@@ -75,4 +79,498 @@
     position: relative;
     width: 100%;
     height: 100%;
+}
+
+/* ────────────────────────────────────────────────────────────
+   QUANTUM HUD OBSERVATORY LAYOUT
+   ──────────────────────────────────────────────────────────── */
+.mmo-hud-container {
+    display: flex;
+    align-items: stretch;
+    gap: 15px;
+    height: 55vh;
+    min-height: 480px;
+    min-width: 0;
+}
+
+.mmo-hud-container>*,
+.mmo-bottom-bar>* {
+    min-width: 0;
+    min-height: 0;
+}
+
+.mmo-hud-left,
+.mmo-hud-right {
+    width: 25%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.mmo-hud-left::-webkit-scrollbar,
+.mmo-hud-right::-webkit-scrollbar {
+    display: none;
+}
+
+.mmo-hud-center {
+    width: 50%;
+    border-radius: 8px;
+    background: #030408;
+    border: 1px solid rgba(124, 63, 228, 0.2);
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    isolation: isolate;
+    box-shadow: 0 0 30px rgba(124, 63, 228, 0.05) inset;
+}
+
+.mmo-vacuum-title {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 12px 15px;
+    background: linear-gradient(180deg, rgba(5, 6, 12, 0.95) 0%, rgba(5, 6, 12, 0) 100%);
+    color: #9b8ee8;
+    font-size: 11px;
+    font-family: var(--ff-mono);
+    letter-spacing: 2px;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.mmo-btn-action {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 12px;
+    border: none;
+    border-radius: 4px;
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+}
+
+.mmo-btn-breakout {
+    background: rgba(0, 255, 136, 0.1);
+    color: #00ff88;
+    border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.mmo-btn-breakout:hover {
+    background: rgba(0, 255, 136, 0.2);
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+}
+
+.mmo-btn-hedge {
+    background: rgba(255, 149, 0, 0.1);
+    color: #ff9500;
+    border: 1px solid rgba(255, 149, 0, 0.3);
+}
+
+.mmo-btn-hedge:hover {
+    background: rgba(255, 149, 0, 0.2);
+    box-shadow: 0 0 15px rgba(255, 149, 0, 0.2);
+}
+
+.mmo-bottom-bar {
+    margin-top: 15px;
+    display: flex;
+    align-items: stretch;
+    gap: 15px;
+    min-width: 0;
+}
+
+.mmo-bottom-bar>.mmo-card {
+    flex: 1;
+    margin: 0;
+}
+
+.mmo-layer-row {
+    cursor: pointer;
+}
+
+.mmo-layer-row.is-focus {
+    border-color: rgba(124, 63, 228, 0.38);
+    background: linear-gradient(90deg, rgba(124, 63, 228, 0.16), rgba(124, 63, 228, 0.02));
+    box-shadow: inset 0 0 0 1px rgba(124, 63, 228, 0.12);
+}
+
+.mmo-shell .mmo-state-card {
+    border-color: rgba(80, 250, 123, 0.18);
+}
+
+.mmo-shell .mmo-card,
+.mmo-shell .mmo-layers-panel,
+.mmo-shell .mmo-scanner-card {
+    position: relative;
+    isolation: isolate;
+}
+
+.mmo-shell .mmo-scanner-card {
+    margin: 15px 0 0;
+}
+
+.mmo-layer-detail-card {
+    min-height: 220px;
+}
+
+.mmo-detail-kicker {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.mmo-detail-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #f5f3ff;
+    margin-bottom: 8px;
+}
+
+.mmo-detail-desc {
+    font-size: 12px;
+    line-height: 1.55;
+    color: #9aa0c4;
+    margin-bottom: 14px;
+}
+
+.mmo-detail-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.mmo-detail-fact {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    min-width: 0;
+}
+
+.mmo-detail-fact-label {
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #66708e;
+    margin-bottom: 4px;
+}
+
+.mmo-detail-fact-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    word-break: break-word;
+}
+
+.mmo-detail-note {
+    margin-top: 12px;
+    font-size: 10px;
+    color: #6d7394;
+    line-height: 1.45;
+}
+
+.mmo-example-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.mmo-example-btn {
+    border: 1px solid rgba(124, 63, 228, 0.22);
+    background: rgba(10, 12, 24, 0.82);
+    color: #cfd2f7;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-family: var(--ff-mono, monospace);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.mmo-example-btn:hover,
+.mmo-example-btn.is-active {
+    border-color: rgba(124, 63, 228, 0.5);
+    background: rgba(124, 63, 228, 0.14);
+    transform: translateY(-1px);
+}
+
+.mmo-universe-hud {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 12px;
+    z-index: 3;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    background: linear-gradient(180deg, rgba(8, 10, 18, 0.65), rgba(8, 10, 18, 0.92));
+    border: 1px solid rgba(124, 63, 228, 0.16);
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+    pointer-events: none;
+}
+
+#mmo-universe-title {
+    font-size: 11px;
+    color: #f6f4ff;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+#mmo-universe-readout {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    font-size: 10px;
+    color: #b9bedb;
+}
+
+.mmo-universe-chip {
+    white-space: nowrap;
+}
+
+.mmo-universe-chip strong {
+    color: #ffffff;
+    margin-right: 4px;
+    font-weight: 700;
+}
+
+.mmo-heis-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.mmo-heis-kpi {
+    min-width: 0;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mmo-heis-val {
+    font-size: 21px;
+    line-height: 1;
+    font-weight: 700;
+    font-family: var(--ff-mono, monospace);
+    margin-bottom: 6px;
+}
+
+.mmo-heis-label {
+    font-size: 9px;
+    color: #66708e;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.mmo-node-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 38px 50px 44px;
+    gap: 6px;
+    align-items: center;
+}
+
+@media (max-width: 1200px) {
+    .mmo-detail-facts,
+    .mmo-heis-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .mmo-hud-container,
+    .mmo-bottom-bar {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .mmo-hud-left,
+    .mmo-hud-right,
+    .mmo-hud-center {
+        width: 100%;
+    }
+
+    .mmo-universe-hud {
+        position: relative;
+        left: auto;
+        right: auto;
+        bottom: auto;
+        margin: 12px;
+        pointer-events: auto;
+        flex-direction: column;
+    }
+
+    #mmo-universe-readout {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 640px) {
+    .mmo-detail-facts,
+    .mmo-example-grid,
+    .mmo-heis-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mmo-node-row {
+        grid-template-columns: 28px 1fr 32px 48px;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   THEORY MODAL
+   Full-screen overlay showing quantum physics derivations.
+   Opened by MMO.showTheory() — classes used by mmo.js innerHTML.
+══════════════════════════════════════════════════════════════════ */
+.mmo-theory-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(2, 2, 15, 0.92);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 12px 40px;
+    overflow-y: auto;
+}
+
+.mmo-theory-panel {
+    width: 100%;
+    max-width: 740px;
+    background: #080814;
+    border: 1px solid #2a1a55;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 60px #5522cc33, 0 0 0 1px #5522cc22;
+    flex-shrink: 0;
+}
+
+.mmo-theory-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: linear-gradient(90deg, #0e0820 0%, #130a30 100%);
+    border-bottom: 1px solid #2a1a55;
+}
+
+.mmo-theory-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    color: #cc99ff;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.mmo-theory-close {
+    background: transparent;
+    border: 1px solid #3a2a66;
+    color: #888;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+}
+.mmo-theory-close:hover {
+    background: #2a1a55;
+    color: #fff;
+}
+
+.mmo-theory-body {
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.mmo-theory-section {
+    background: #0d0820;
+    border: 1px solid #1e1040;
+    border-radius: 8px;
+    padding: 14px 16px;
+}
+
+.mmo-theory-section-title {
+    font-family: monospace;
+    font-size: 11px;
+    color: #aa77ff;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #1e1040;
+}
+
+.mmo-theory-formula {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: #e0ccff;
+    background: #060412;
+    border: 1px solid #2a1555;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    letter-spacing: 0.3px;
+    overflow-x: auto;
+}
+
+.mmo-theory-text {
+    font-size: 11px;
+    color: #889;
+    line-height: 1.6;
+    font-family: monospace;
+}
+
+.mmo-theory-text code {
+    color: #cc99ff;
+    background: #0e0820;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+.mmo-theory-layer-card {
+    background: #0a0818;
+    border: 1px solid #1e1040;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 11px;
+    font-family: monospace;
+}
+
+@media (max-width: 560px) {
+    .mmo-theory-overlay {
+        padding: 12px 6px 24px;
+    }
+    .mmo-theory-panel {
+        border-radius: 8px;
+    }
+    .mmo-theory-formula {
+        font-size: 11px;
+    }
 }

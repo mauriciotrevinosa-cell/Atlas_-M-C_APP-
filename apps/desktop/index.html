@@ -7,7 +7,8 @@
   <title>Atlas — Quantitative Trading Platform</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=ui-premium-1">
+  <link rel="stylesheet" href="css/mmo_overrides.css?v=2026.03.09-quantum-v2">
   <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 
@@ -198,8 +199,7 @@
         <!-- Derivatives Module -->
         <div class="module-card derivatives-card" onclick="switchView('derivatives')">
           <div class="notification-dot deriv-pulse"></div>
-          <div class="module-icon analysis"
-            style="background:linear-gradient(135deg,#1e0a30,#0a0a30);border-color:#7c3aed;">
+          <div class="module-icon analysis" style="background:var(--glass-lg);border-color:#7c3aed;">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2">
               <path d="M12 2L2 7l10 5 10-5-10-5z" />
               <path d="M2 17l10 5 10-5" />
@@ -213,8 +213,7 @@
         <!-- Decision Center Module -->
         <div class="module-card decision-card" onclick="switchView('decision')">
           <div class="notification-dot decision-pulse"></div>
-          <div class="module-icon finance"
-            style="background:linear-gradient(135deg,#0a1a10,#052010);border-color:#10b981;">
+          <div class="module-icon finance" style="background:var(--glass-lg);border-color:#10b981;">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
               <path d="M9 11l3 3L22 4" />
               <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
@@ -226,10 +225,9 @@
 
         <!-- ARIA Trader Module -->
         <div class="module-card" onclick="switchView('trader')"
-          style="background:linear-gradient(135deg,#0d1020,#0a0e1a); border-color:rgba(52,152,219,0.3);">
+          style="background:var(--glass-lg); border-color:rgba(52,152,219,0.3);">
           <div class="notification-dot" style="background:#3498db;"></div>
-          <div class="module-icon"
-            style="background:linear-gradient(135deg,#0a1020,#061228); border:1px solid rgba(52,152,219,0.4);">
+          <div class="module-icon" style="background:var(--glass-lg); border:1px solid rgba(52,152,219,0.4);">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="#3498db">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
             </svg>
@@ -240,39 +238,36 @@
 
         <!-- Playroom -->
         <div class="module-card" onclick="switchView('playroom')"
-          style="background:linear-gradient(135deg,#101018,#080810); border-color:rgba(241,196,15,0.28);">
-          <div class="module-icon"
-            style="background:linear-gradient(135deg,#181820,#101018); border:1px solid rgba(241,196,15,0.36);">
+          style="background:var(--glass-lg); border-color:rgba(241,196,15,0.28);">
+          <div class="module-icon" style="background:var(--glass-lg); border:1px solid rgba(241,196,15,0.36);">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f1c40f" stroke-width="1.6">
               <rect x="4" y="4" width="16" height="16" rx="2" />
               <path d="M9 9h6v6H9z" />
               <path d="M12 2v2M12 20v2M2 12h2M20 12h2" />
             </svg>
           </div>
-          <div class="module-title" style="color:#fbf6dd;">Playroom</div>
+          <div class="module-title" style="color:var(--text-primary);">Playroom</div>
           <div class="module-sub" style="color:#f1c40f;">Experimental Sandbox</div>
         </div>
 
         <!-- MMO -->
         <div class="module-card" onclick="switchView('mmo')"
-          style="background:linear-gradient(135deg,#0a0520,#05030f);border-color:rgba(124,63,228,0.35);">
-          <div class="module-icon"
-            style="background:linear-gradient(135deg,#0f0530,#08021a);border:1px solid rgba(124,63,228,0.45);">
+          style="background:var(--glass-lg);border-color:rgba(124,63,228,0.35);">
+          <div class="module-icon" style="background:var(--glass-lg);border:1px solid rgba(124,63,228,0.45);">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#bd93f9" stroke-width="1.5">
               <path d="M2 12 Q5 5 8 12 Q11 19 14 12 Q17 5 20 12 Q22 8 23 8" stroke-linecap="round"
                 stroke-linejoin="round" />
               <circle cx="14" cy="12" r="1.5" fill="#bd93f9" stroke="none" />
             </svg>
           </div>
-          <div class="module-title" style="color:#e8e0ff;">Quantum Market</div>
+          <div class="module-title" style="color:var(--text-primary);">Quantum Market</div>
           <div class="module-sub" style="color:#bd93f9;">Mau's Market Ontology</div>
         </div>
 
         <!-- Paper Trading -->
         <div class="module-card" onclick="switchView('paper')"
-          style="background:linear-gradient(135deg,#050f10,#020a08);border-color:rgba(0,255,136,0.25);">
-          <div class="module-icon"
-            style="background:linear-gradient(135deg,#041210,#020a08);border:1px solid rgba(0,255,136,0.35);">
+          style="background:var(--glass-lg);border-color:rgba(0,255,136,0.25);">
+          <div class="module-icon" style="background:var(--glass-lg);border:1px solid rgba(0,255,136,0.35);">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="1.5">
               <rect x="5" y="2" width="14" height="20" rx="2" />
               <line x1="9" y1="7" x2="15" y2="7" />
@@ -280,44 +275,41 @@
               <line x1="9" y1="15" x2="13" y2="15" />
             </svg>
           </div>
-          <div class="module-title" style="color:#e0fff0;">Paper Trading</div>
+          <div class="module-title" style="color:var(--text-primary);">Paper Trading</div>
           <div class="module-sub" style="color:#00ff88;">$100K Sim Account</div>
         </div>
 
         <!-- Indicator Lab -->
         <div class="module-card" onclick="switchView('indicators')"
-          style="background:linear-gradient(135deg,#060610,#030310);border-color:rgba(77,166,255,0.25);">
-          <div class="module-icon"
-            style="background:linear-gradient(135deg,#060815,#030510);border:1px solid rgba(77,166,255,0.35);">
+          style="background:var(--glass-lg);border-color:rgba(77,166,255,0.25);">
+          <div class="module-icon" style="background:var(--glass-lg);border:1px solid rgba(77,166,255,0.35);">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4da6ff" stroke-width="1.5">
               <path d="M3 3v18h18" />
               <path d="M7 16l4-4 4 4 4-8" />
             </svg>
           </div>
-          <div class="module-title" style="color:#e0f0ff;">Indicator Lab</div>
+          <div class="module-title" style="color:var(--text-primary);">Indicator Lab</div>
           <div class="module-sub" style="color:#4da6ff;">Visual TA Terminal</div>
         </div>
 
         <!-- RL Lab -->
         <div class="module-card" onclick="switchView('rl')"
-          style="background:linear-gradient(135deg,#061018,#03080f);border-color:rgba(77,200,255,0.25);">
-          <div class="module-icon"
-            style="background:linear-gradient(135deg,#041220,#020a15);border:1px solid rgba(77,200,255,0.35);">
+          style="background:var(--glass-lg);border-color:rgba(77,200,255,0.25);">
+          <div class="module-icon" style="background:var(--glass-lg);border:1px solid rgba(77,200,255,0.35);">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4dc8ff" stroke-width="1.5">
               <circle cx="12" cy="12" r="3" />
               <path
                 d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
             </svg>
           </div>
-          <div class="module-title" style="color:#d0f4ff;">RL Lab</div>
+          <div class="module-title" style="color:var(--text-primary);">RL Lab</div>
           <div class="module-sub" style="color:#4dc8ff;">Agent Training Sandbox</div>
         </div>
 
         <!-- Thought Map -->
         <div class="module-card" onclick="switchView('thought')"
-          style="background:linear-gradient(135deg,#0f0f12,#08090c);border-color:rgba(243,156,18,0.3);">
-          <div class="module-icon"
-            style="background:linear-gradient(135deg,#14161a,#0c0d11);border:1px solid rgba(243,156,18,0.35);">
+          style="background:var(--glass-lg);border-color:rgba(243,156,18,0.3);">
+          <div class="module-icon" style="background:var(--glass-lg);border:1px solid rgba(243,156,18,0.35);">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f39c12" stroke-width="1.7">
               <circle cx="6" cy="12" r="2" />
               <circle cx="12" cy="6" r="2" />
@@ -329,29 +321,28 @@
               <path d="M10.5 16.5l-3-3" />
             </svg>
           </div>
-          <div class="module-title" style="color:#f6e9d4;">Thought Map</div>
+          <div class="module-title" style="color:var(--text-primary);">Thought Map</div>
           <div class="module-sub" style="color:#f39c12;">Module Registry + Connectivity</div>
         </div>
 
         <!-- AI Agents -->
         <div class="module-card" onclick="switchView('agents')"
-          style="background:linear-gradient(135deg,#080f18,#030810);border-color:rgba(120,80,255,0.28);">
-          <div class="module-icon"
-            style="background:linear-gradient(135deg,#0a0820,#050310);border:1px solid rgba(120,80,255,0.4);">
+          style="background:var(--glass-lg);border-color:rgba(120,80,255,0.28);">
+          <div class="module-icon" style="background:var(--glass-lg);border:1px solid rgba(120,80,255,0.4);">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7850ff" stroke-width="1.5">
-              <rect x="3" y="11" width="18" height="10" rx="2"/>
-              <circle cx="12" cy="5" r="2"/>
-              <path d="M12 7v4"/>
-              <path d="M8 15h.01M12 15h.01M16 15h.01"/>
+              <rect x="3" y="11" width="18" height="10" rx="2" />
+              <circle cx="12" cy="5" r="2" />
+              <path d="M12 7v4" />
+              <path d="M8 15h.01M12 15h.01M16 15h.01" />
             </svg>
           </div>
-          <div class="module-title" style="color:#e8e0ff;">AI Agents</div>
+          <div class="module-title" style="color:var(--text-primary);">AI Agents</div>
           <div class="module-sub" style="color:#7850ff;">Planner · Reviewer · Docs</div>
         </div>
 
         <!-- Info Module -->
         <div class="module-card" onclick="switchView('info')">
-          <div class="module-icon terminal" style="background:linear-gradient(135deg,#1a1030,#0a0a20);">
+          <div class="module-icon terminal" style="background:var(--glass-lg);">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
@@ -453,18 +444,20 @@
       <div id="re-3d-output-container" class="scenario-card" style="margin-top:12px; display:block;">
         <h3>Real Estate Render Output</h3>
         <div id="re-three-output"
-          style="width:100%; height:400px; border-radius:6px; overflow:hidden; position:relative; cursor:grab; background:#0b0f1a; border:1px solid #1f2a44;">
+          style="width:100%; height:400px; border-radius:6px; overflow:hidden; position:relative; cursor:grab; background:var(--card-bg); border:1px solid var(--bdr-strong);">
         </div>
         <div id="re-3d-legend"
-          style="display:none; padding:8px 12px; font-size:10px; color:#778; text-align:left; border-top:1px solid #1f2a44; margin-top:8px;">
+          style="display:none; padding:8px 12px; font-size:10px; color:var(--text-secondary); text-align:left; border:1px solid var(--bdr-strong); margin-top:8px;">
         </div>
         <div id="re-correlation-panel"
-          style="display:none; border-top:1px solid #1f2a44; margin-top:8px; padding:10px; text-align:left;">
-          <div style="font-size:11px; color:#9ab; margin-bottom:8px;">Portfolio Correlation Matrix</div>
+          style="display:none; border:1px solid var(--bdr-strong); margin-top:8px; padding:10px; text-align:left;">
+          <div style="font-size:11px; color:var(--text-secondary); margin-bottom:8px;">Portfolio Correlation Matrix
+          </div>
           <canvas id="re-correlation-canvas" width="640" height="320"
-            style="width:100%; height:320px; background:#0f1523; border:1px solid #1f2a44; border-radius:6px;"></canvas>
+            style="width:100%; height:320px; background:var(--card-bg); border:1px solid var(--bdr-strong); border-radius:6px;"></canvas>
         </div>
-        <div id="re-3d-render-status" style="margin-top:8px; font-size:11px; color:#aaa;">Ready to render.</div>
+        <div id="re-3d-render-status" style="margin-top:8px; font-size:11px; color:var(--text-secondary);">Ready to
+          render.</div>
       </div>
     </div>
 
@@ -477,7 +470,7 @@
 
       <div class="scenario-controls">
         <input type="text" id="sim-ticker" placeholder="Ticker" value="SPY"
-          style="padding:10px; width:80px; border-radius:8px; border:1px solid #555; background:#222; color:white;">
+          style="padding:10px; width:80px; border-radius:8px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary);">
         <button id="start-scenario-btn" class="btn primary">Start Sim</button>
         <button id="restart-scenario-btn" class="btn secondary" disabled>Restart</button>
         <button id="auto-play-btn" class="btn secondary" disabled>&#9654; Auto Play</button>
@@ -520,11 +513,11 @@
           </div>
 
           <!-- Scenario Positions Table -->
-          <div class="scenario-card" style="padding: 10px; border-top: 1px solid #333;">
-            <h4 style="margin:0 0 10px 0; font-size:12px; color:#888;">Active Positions</h4>
-            <table style="width:100%; text-align:left; font-size:12px; color:#ccc;">
+          <div class="scenario-card" style="padding: 10px; border:1px solid var(--border-color);">
+            <h4 style="margin:0 0 10px 0; font-size:12px; color:var(--text-secondary);">Active Positions</h4>
+            <table style="width:100%; text-align:left; font-size:12px; color:var(--text-primary);">
               <thead>
-                <tr style="border-bottom:1px solid #444;">
+                <tr style="border:1px solid var(--border-color);">
                   <th>Ticker</th>
                   <th>Qty</th>
                   <th>Avg Price</th>
@@ -541,17 +534,19 @@
           <!-- Decision Analytics -->
           <div
             style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-top:12px;">
-            <div class="scenario-card" style="padding:10px; border-top:1px solid #333;">
-              <h4 style="margin:0 0 8px 0; font-size:12px; color:#888;">Backtest + Monte Carlo</h4>
+            <div class="scenario-card" style="padding:10px; border:1px solid var(--border-color);">
+              <h4 style="margin:0 0 8px 0; font-size:12px; color:var(--text-secondary);">Backtest + Monte Carlo</h4>
               <canvas id="scen-mc-canvas" width="620" height="220"
-                style="width:100%; height:220px; background:#101828; border:1px solid #22304a; border-radius:6px;"></canvas>
-              <div id="scen-mc-stats" style="margin-top:8px; font-size:11px; color:#9ab;">Waiting for data...</div>
+                style="width:100%; height:220px; background:var(--card-bg); border:1px solid var(--bdr-strong); border-radius:6px;"></canvas>
+              <div id="scen-mc-stats" style="margin-top:8px; font-size:11px; color:var(--text-secondary);">Waiting for
+                data...</div>
             </div>
-            <div class="scenario-card" style="padding:10px; border-top:1px solid #333;">
-              <h4 style="margin:0 0 8px 0; font-size:12px; color:#888;">Decision Factors</h4>
+            <div class="scenario-card" style="padding:10px; border:1px solid var(--border-color);">
+              <h4 style="margin:0 0 8px 0; font-size:12px; color:var(--text-secondary);">Decision Factors</h4>
               <canvas id="scen-decision-canvas" width="620" height="220"
-                style="width:100%; height:220px; background:#101828; border:1px solid #22304a; border-radius:6px;"></canvas>
-              <div id="scen-decision-breakdown" style="margin-top:8px; font-size:11px; color:#9ab;">Waiting for first
+                style="width:100%; height:220px; background:var(--card-bg); border:1px solid var(--bdr-strong); border-radius:6px;"></canvas>
+              <div id="scen-decision-breakdown" style="margin-top:8px; font-size:11px; color:var(--text-secondary);">
+                Waiting for first
                 decision...</div>
             </div>
           </div>
@@ -570,10 +565,10 @@
 
           <!-- Historical News -->
           <div
-            style="flex:1; display:flex; flex-direction:column; overflow:hidden; border-top:1px solid #333; padding-top:10px;">
+            style="flex:1; display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--border-color); padding-top:10px;">
             <h3>News Vault (Historical)</h3>
-            <div class="reasoning-log" id="scen-news-log" style="background:#111;">
-              <div class="log-entry" style="color:#aaa;">No news loaded.</div>
+            <div class="reasoning-log" id="scen-news-log" style="background:var(--card-bg);">
+              <div class="log-entry" style="color:var(--text-secondary);">No news loaded.</div>
             </div>
           </div>
 
@@ -584,31 +579,33 @@
       <div class="scenario-card" style="margin-top:24px; gap:14px;">
         <div class="scenario-controls" style="margin-bottom:0; flex-wrap:wrap;">
           <select id="desktop-sim-mode"
-            style="padding:10px; border-radius:8px; border:1px solid #555; background:#222; color:white;">
+            style="padding:10px; border-radius:8px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary);">
             <option value="stock">Stock Simulation</option>
             <option value="portfolio">Portfolio Simulation</option>
           </select>
           <input type="text" id="desktop-sim-ticker" value="SPY" placeholder="Ticker"
-            style="padding:10px; width:100px; border-radius:8px; border:1px solid #555; background:#222; color:white;">
-          <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#999;">
+            style="padding:10px; width:100px; border-radius:8px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary);">
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary);">
             <input type="checkbox" id="desktop-sim-use-portfolio" checked>
             Use local portfolio
           </label>
           <input type="number" id="desktop-sim-interval" min="1" max="10" value="1"
-            style="padding:10px; width:84px; border-radius:8px; border:1px solid #555; background:#222; color:white;">
+            style="padding:10px; width:84px; border-radius:8px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary);">
           <button id="desktop-sim-start-btn" class="btn primary" type="button">Start Sim</button>
           <button id="desktop-sim-stop-btn" class="btn secondary" type="button">Stop</button>
           <button id="desktop-sim-apply-btn" class="btn secondary" type="button">Apply Config</button>
-          <span id="desktop-sim-status" style="font-size:12px; color:#888;">Idle</span>
+          <span id="desktop-sim-status" style="font-size:12px; color:var(--text-secondary);">Idle</span>
         </div>
 
         <div style="display:grid; grid-template-columns:240px 1fr; gap:24px; min-height:420px;">
-          <div style="border:1px solid #333; border-radius:10px; padding:16px; background:#111;">
+          <div
+            style="border:1px solid var(--border-color); border-radius:10px; padding:16px; background:var(--card-bg);">
             <div
-              style="font-size:11px; color:#999; text-transform:uppercase; margin-bottom:12px; font-weight:600; letter-spacing:0.5px;">
+              style="font-size:11px; color:var(--text-secondary); text-transform:uppercase; margin-bottom:12px; font-weight:600; letter-spacing:0.5px;">
               Module Visibility</div>
             <div id="desktop-sim-module-toggles" style="display:flex; flex-direction:column; gap:10px;"></div>
-            <div style="font-size:11px; color:#777; margin-top:16px; line-height:1.4;">Closing panels hides UI only.
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:16px; line-height:1.4;">Closing panels
+              hides UI only.
               Modules keep running.</div>
           </div>
           <div style="display:flex; flex-direction:column; gap:20px;">
@@ -631,15 +628,20 @@
               </div>
             </div>
 
-            <div style="border:1px solid #333; border-radius:10px; padding:16px; background:#0f1523;">
-              <div style="font-size:11px; color:#9ab; margin-bottom:10px; font-weight:600;">Global Timeline</div>
+            <div
+              style="border:1px solid var(--border-color); border-radius:10px; padding:16px; background:var(--card-bg);">
+              <div style="font-size:11px; color:var(--text-secondary); margin-bottom:10px; font-weight:600;">Global
+                Timeline</div>
               <svg id="desktop-sim-timeline" width="100%" height="140"
-                style="display:block; background:#0b101d; border-radius:8px;"></svg>
+                style="display:block; background:var(--card-bg); border-radius:8px;"></svg>
             </div>
 
-            <div style="border:1px solid #333; border-radius:10px; padding:16px; background:#0f1523;">
-              <div style="font-size:11px; color:#9ab; margin-bottom:10px; font-weight:600;">Recent Alerts</div>
-              <div id="desktop-sim-alerts" style="max-height:120px; overflow:auto; font-size:12px; color:#ccc;"></div>
+            <div
+              style="border:1px solid var(--border-color); border-radius:10px; padding:16px; background:var(--card-bg);">
+              <div style="font-size:11px; color:var(--text-secondary); margin-bottom:10px; font-weight:600;">Recent
+                Alerts</div>
+              <div id="desktop-sim-alerts"
+                style="max-height:120px; overflow:auto; font-size:12px; color:var(--text-primary);"></div>
             </div>
 
             <div id="desktop-sim-module-panels" style="display:flex; flex-direction:column; gap:20px;"></div>
@@ -685,8 +687,8 @@
 
           <h3 style="margin-top:20px;">Quick Trade</h3>
           <div style="display:flex; gap:10px;">
-            <button class="btn" style="background:#2ecc71; color:white; flex:1;">BUY</button>
-            <button class="btn" style="background:#e74c3c; color:white; flex:1;">SELL</button>
+            <button class="btn" style="background:#2ecc71; color:var(--text-primary); flex:1;">BUY</button>
+            <button class="btn" style="background:#e74c3c; color:var(--text-primary); flex:1;">SELL</button>
           </div>
         </div>
       </div>
@@ -700,29 +702,32 @@
       </div>
 
       <div id="aria-core-bar"
-        style="display:flex;align-items:center;gap:14px;padding:8px 16px;background:#07070f;border-bottom:1px solid #111128;">
+        style="display:flex;align-items:center;gap:14px;padding:8px 16px;background:var(--bg-surface);border:1px solid var(--bdr-strong);">
         <div id="aria-core-mount"
-          style="width:72px;height:72px;border-radius:50%;overflow:hidden;flex-shrink:0;background:#070710;"></div>
+          style="width:72px;height:72px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg-surface);">
+        </div>
         <div style="flex:1;">
           <div
-            style="font-size:13px;font-weight:700;font-family:monospace;color:#e8eaf6;letter-spacing:.05em;">ARIA Core</div>
-          <div id="aria-core-state"
-            style="font-size:11px;font-family:monospace;color:#4488ff;margin-top:2px;">IDLE - All systems nominal</div>
+            style="font-size:13px;font-weight:700;font-family:monospace;color:var(--text-primary);letter-spacing:.05em;">
+            ARIA Core</div>
+          <div id="aria-core-state" style="font-size:11px;font-family:monospace;color:#4488ff;margin-top:2px;">IDLE -
+            All systems nominal</div>
           <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;" id="aria-core-metrics">
             <span
-              style="background:#111128;border:1px solid #1a1a40;padding:2px 8px;border-radius:10px;font-size:10px;font-family:monospace;color:#778;">Swarm:
+              style="background:var(--card-bg);border:1px solid var(--bdr-strong);padding:2px 8px;border-radius:10px;font-size:10px;font-family:monospace;color:var(--text-secondary);">Swarm:
               Online</span>
             <span
-              style="background:#111128;border:1px solid #1a1a40;padding:2px 8px;border-radius:10px;font-size:10px;font-family:monospace;color:#778;">NLP:
+              style="background:var(--card-bg);border:1px solid var(--bdr-strong);padding:2px 8px;border-radius:10px;font-size:10px;font-family:monospace;color:var(--text-secondary);">NLP:
               Ready</span>
             <span
-              style="background:#111128;border:1px solid #1a1a40;padding:2px 8px;border-radius:10px;font-size:10px;font-family:monospace;color:#778;">Risk:
+              style="background:var(--card-bg);border:1px solid var(--bdr-strong);padding:2px 8px;border-radius:10px;font-size:10px;font-family:monospace;color:var(--text-secondary);">Risk:
               Monitoring</span>
           </div>
         </div>
         <div style="text-align:right;">
           <div id="aria-core-status-icon" style="font-size:22px;">AI</div>
-          <div id="aria-core-clock" style="font-size:10px;font-family:monospace;color:#334;margin-top:2px;"></div>
+          <div id="aria-core-clock" style="font-size:10px;font-family:monospace;color:var(--txt-muted);margin-top:2px;">
+          </div>
         </div>
       </div>
 
@@ -793,10 +798,10 @@
           </h3>
 
           <div
-            style="margin-top:20px; border:1px solid #333; border-radius:10px; max-height:420px; overflow-y:auto; overflow-x:hidden;">
-            <table style="width:100%; text-align:left; border-collapse:collapse; color:#ccc;">
+            style="margin-top:20px; border:1px solid var(--border-color); border-radius:10px; max-height:420px; overflow-y:auto; overflow-x:hidden;">
+            <table style="width:100%; text-align:left; border-collapse:collapse; color:var(--text-primary);">
               <thead
-                style="border-bottom:1px solid #333; color:#888; font-size:11px; text-transform:uppercase; position:sticky; top:0; background:var(--card-bg); z-index:2;">
+                style="border:1px solid var(--border-color); color:var(--text-secondary); font-size:11px; text-transform:uppercase; position:sticky; top:0; background:var(--card-bg); z-index:2;">
                 <tr>
                   <th style="padding:10px;">Ticker</th>
                   <th style="padding:10px;">Shares</th>
@@ -809,7 +814,8 @@
               <tbody id="portfolio-table-body">
                 <!-- Dynamic Rows -->
                 <tr>
-                  <td colspan="6" style="padding:20px; text-align:center; color:#555;">No active positions</td>
+                  <td colspan="6" style="padding:20px; text-align:center; color:var(--txt-muted);">No active positions
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -822,7 +828,8 @@
       <div class="scenario-grid" style="height:auto; align-items:start;">
         <div class="scenario-card side">
           <h3>Project Visualization Lab</h3>
-          <p style="font-size:12px; color:#888; margin-bottom:15px;">Generate real-time project renders from your
+          <p style="font-size:12px; color:var(--text-secondary); margin-bottom:15px;">Generate real-time project renders
+            from your
             simulation inputs.</p>
 
           <div style="display:flex; flex-direction:column; gap:10px;">
@@ -831,22 +838,24 @@
             <button class="btn secondary" onclick="generate3D('risk')">Risk Landscape</button>
           </div>
 
-          <div id="3d-render-status" style="margin-top:15px; font-size:11px; color:#aaa;">Ready to render project.</div>
+          <div id="3d-render-status" style="margin-top:15px; font-size:11px; color:var(--text-secondary);">Ready to
+            render project.</div>
         </div>
 
         <div id="3d-output-container" class="scenario-card"
-          style="text-align:center; background:#0b0f1a; border:1px solid #1f2a44; display:block;">
+          style="text-align:center; background:var(--card-bg); border:1px solid var(--bdr-strong); display:block;">
           <h3 style="color:#667; margin-bottom:10px;">Project Render Output</h3>
           <div id="three-output"
             style="width:100%; height:400px; border-radius:6px; overflow:hidden; position:relative; cursor:grab;"></div>
           <div id="3d-legend"
-            style="display:none; padding:8px 12px; font-size:10px; color:#778; text-align:left; border-top:1px solid #1f2a44; margin-top:8px;">
+            style="display:none; padding:8px 12px; font-size:10px; color:var(--text-secondary); text-align:left; border:1px solid var(--bdr-strong); margin-top:8px;">
           </div>
           <div id="correlation-panel"
-            style="display:none; border-top:1px solid #1f2a44; margin-top:8px; padding:10px; text-align:left;">
-            <div style="font-size:11px; color:#9ab; margin-bottom:8px;">Portfolio Correlation Matrix</div>
+            style="display:none; border:1px solid var(--bdr-strong); margin-top:8px; padding:10px; text-align:left;">
+            <div style="font-size:11px; color:var(--text-secondary); margin-bottom:8px;">Portfolio Correlation Matrix
+            </div>
             <canvas id="correlation-canvas" width="640" height="320"
-              style="width:100%; height:320px; background:#0f1523; border:1px solid #1f2a44; border-radius:6px;"></canvas>
+              style="width:100%; height:320px; background:var(--card-bg); border:1px solid var(--bdr-strong); border-radius:6px;"></canvas>
           </div>
         </div>
       </div>
@@ -854,7 +863,8 @@
       <div class="scenario-grid" style="margin-top:20px; height:auto; align-items:start;">
         <div class="scenario-card main">
           <h3>Simulation Inputs</h3>
-          <p style="font-size:12px; color:#888; margin-bottom:15px;">Add positions to build a scenario and power the
+          <p style="font-size:12px; color:var(--text-secondary); margin-bottom:15px;">Add positions to build a scenario
+            and power the
             project render models.</p>
           <form id="portfolio-form" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <input id="portfolio-ticker" type="text" placeholder="Ticker (e.g. NVDA)" required
@@ -867,19 +877,21 @@
           </form>
           <div id="portfolio-error" style="display:none; color:#e74c3c; font-size:12px; margin-top:8px;"></div>
           <div style="margin-top:16px; padding-top:12px; border-top:1px solid #222;">
-            <label style="font-size:11px; color:#aaa;">Import Portfolio Package (JSON)</label>
+            <label style="font-size:11px; color:var(--text-secondary);">Import Portfolio Package (JSON)</label>
             <div style="display:flex; gap:8px; margin-top:6px;">
               <input id="portfolio-upload" type="file" accept="application/json">
               <button class="btn secondary" id="portfolio-upload-btn" type="button">Upload</button>
             </div>
-            <div id="portfolio-upload-status" style="margin-top:6px; font-size:11px; color:#aaa;"></div>
+            <div id="portfolio-upload-status" style="margin-top:6px; font-size:11px; color:var(--text-secondary);">
+            </div>
           </div>
         </div>
         <div class="scenario-card side">
           <h3>Project Simulation Lab</h3>
-          <p style="font-size:12px; color:#888; margin-bottom:15px;">Run a day-by-day simulation that evolves the
+          <p style="font-size:12px; color:var(--text-secondary); margin-bottom:15px;">Run a day-by-day simulation that
+            evolves the
             project render model based on your decisions.</p>
-          <label style="font-size:11px; color:#aaa;">Decision</label>
+          <label style="font-size:11px; color:var(--text-secondary);">Decision</label>
           <select id="sim-decision" style="margin:8px 0 12px; width:100%;">
             <option value="hold">Hold</option>
             <option value="risk_on">Risk On</option>
@@ -892,7 +904,8 @@
             <button class="btn secondary" id="sim-auto-btn" type="button" disabled>Auto Sim</button>
             <button class="btn secondary" id="sim-restart-btn" type="button">Restart</button>
           </div>
-          <div id="sim-status" style="margin-top:12px; font-size:11px; color:#aaa;">Simulation idle.</div>
+          <div id="sim-status" style="margin-top:12px; font-size:11px; color:var(--text-secondary);">Simulation idle.
+          </div>
         </div>
       </div>
 
@@ -904,7 +917,8 @@
         <!-- Input + Controls -->
         <div class="scenario-card side">
           <h3>Strategy Scanner</h3>
-          <p style="font-size:12px; color:#888; margin-bottom:14px;">Run all 5 rule-based engines on any ticker and get
+          <p style="font-size:12px; color:var(--text-secondary); margin-bottom:14px;">Run all 5 rule-based engines on
+            any ticker and get
             a weighted consensus signal.</p>
           <div style="display:flex; gap:8px; margin-bottom:12px;">
             <input id="strat-ticker" type="text" placeholder="Ticker (e.g. AAPL)" value="AAPL"
@@ -916,17 +930,19 @@
             </select>
           </div>
           <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <button class="btn primary" id="strat-run-btn" type="button" onclick="runStrategyAnalysis()">Analyze</button>
+            <button class="btn primary" id="strat-run-btn" type="button"
+              onclick="runStrategyAnalysis()">Analyze</button>
             <button class="btn secondary" id="strat-train-btn" type="button" onclick="trainMLModels()"
               title="Train XGBoost + RandomForest ML engines on historical data"
               style="font-size:12px; padding:6px 14px;">🤖 Train Models</button>
           </div>
-          <div id="strat-status" style="margin-top:10px; font-size:11px; color:#aaa;"></div>
+          <div id="strat-status" style="margin-top:10px; font-size:11px; color:var(--text-secondary);"></div>
 
           <!-- Consensus box -->
           <div id="strat-consensus"
-            style="display:none; margin-top:16px; padding:14px; border-radius:8px; border:1px solid #333; background:#0d1020; text-align:center;">
-            <div style="font-size:11px; color:#778; margin-bottom:4px; letter-spacing:1px; text-transform:uppercase;">
+            style="display:none; margin-top:16px; padding:14px; border-radius:8px; border:1px solid var(--border-color); background:#0d1020; text-align:center;">
+            <div
+              style="font-size:11px; color:var(--text-secondary); margin-bottom:4px; letter-spacing:1px; text-transform:uppercase;">
               Consensus</div>
             <div id="strat-action" style="font-size:26px; font-weight:700; font-family:monospace; letter-spacing:2px;">
             </div>
@@ -934,7 +950,7 @@
               style="margin:10px 0 4px; height:6px; border-radius:3px; background:#1a2030; overflow:hidden;">
               <div id="strat-conf-bar" style="height:100%; border-radius:3px; transition:width 0.5s;"></div>
             </div>
-            <div id="strat-conf-label" style="font-size:11px; color:#aaa;"></div>
+            <div id="strat-conf-label" style="font-size:11px; color:var(--text-secondary);"></div>
             <div id="strat-reason" style="font-size:11px; color:#667; margin-top:8px; font-style:italic;"></div>
           </div>
         </div>
@@ -955,13 +971,13 @@
           <!-- Backtest mini -->
           <div style="margin-top:20px; padding-top:14px; border-top:1px solid #222;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-              <span style="font-size:12px; color:#aaa;">Quick Backtest (walk-forward)</span>
+              <span style="font-size:12px; color:var(--text-secondary);">Quick Backtest (walk-forward)</span>
               <button class="btn secondary" style="font-size:11px; padding:4px 10px;"
                 onclick="runStrategyBacktest()">Run</button>
             </div>
-            <div id="strat-bt-result" style="font-size:11px; color:#aaa;"></div>
+            <div id="strat-bt-result" style="font-size:11px; color:var(--text-secondary);"></div>
             <canvas id="strat-equity-chart" width="400" height="100"
-              style="display:none; width:100%; margin-top:8px; border-radius:4px; background:#0b0f1a;"></canvas>
+              style="display:none; width:100%; margin-top:8px; border-radius:4px; background:var(--card-bg);"></canvas>
           </div>
         </div>
 
@@ -976,18 +992,20 @@
         <!-- Market Structure -->
         <div class="scenario-card side">
           <h3>Market Structure</h3>
-          <p style="font-size:12px; color:#888; margin-bottom:12px;">Rolling correlation regime + diversification score
+          <p style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Rolling correlation regime +
+            diversification score
             across a basket.</p>
           <input id="struct-tickers" type="text" placeholder="Comma-separated tickers"
             value="SPY,QQQ,IWM,GLD,TLT,HYG,EEM,XLF" style="font-size:12px; margin-bottom:10px;" />
           <button class="btn primary" type="button" onclick="runStructureAnalysis()">Analyze Structure</button>
-          <div id="struct-result" style="margin-top:14px; font-size:12px; color:#aaa;"></div>
+          <div id="struct-result" style="margin-top:14px; font-size:12px; color:var(--text-secondary);"></div>
         </div>
 
         <!-- Asset Clustering -->
         <div class="scenario-card side">
           <h3>Asset Clustering</h3>
-          <p style="font-size:12px; color:#888; margin-bottom:12px;">Group assets by return similarity (Ward
+          <p style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Group assets by return similarity
+            (Ward
             hierarchical).</p>
           <input id="cluster-tickers" type="text" placeholder="Comma-separated tickers"
             value="AAPL,MSFT,GOOG,AMZN,NVDA,META,JPM,GS,GLD,TLT" style="font-size:12px; margin-bottom:6px;" />
@@ -996,28 +1014,30 @@
               style="width:70px; font-size:12px;" />
             <button class="btn primary" type="button" style="flex:1;" onclick="runClusterAnalysis()">Cluster</button>
           </div>
-          <div id="cluster-result" style="font-size:12px; color:#aaa;"></div>
+          <div id="cluster-result" style="font-size:12px; color:var(--text-secondary);"></div>
         </div>
 
         <!-- Pairs Trading -->
         <div class="scenario-card side">
           <h3>Pairs Trading</h3>
-          <p style="font-size:12px; color:#888; margin-bottom:12px;">Find cointegrated pairs + current z-score signals.
+          <p style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Find cointegrated pairs + current
+            z-score signals.
           </p>
           <input id="pairs-tickers" type="text" placeholder="Comma-separated tickers"
             value="AAPL,MSFT,GOOG,AMZN,META,NVDA" style="font-size:12px; margin-bottom:10px;" />
           <button class="btn primary" type="button" onclick="runPairsAnalysis()">Find Pairs</button>
-          <div id="pairs-result" style="margin-top:10px; font-size:12px; color:#aaa;"></div>
+          <div id="pairs-result" style="margin-top:10px; font-size:12px; color:var(--text-secondary);"></div>
         </div>
 
       </div>
 
       <!-- ===== PORTFOLIO INTELLIGENCE (RECOVERED MODULES) ===== -->
       <div class="section-header" style="margin-top:24px;">Portfolio Intelligence (Analytics + Risk + Monte Carlo)</div>
-      <div class="scenario-grid" style="margin-top:10px; height:auto; align-items:start; grid-template-columns:320px 1fr;">
+      <div class="scenario-grid"
+        style="margin-top:10px; height:auto; align-items:start; grid-template-columns:320px 1fr;">
         <div class="scenario-card side">
           <h3>Portfolio Scanner</h3>
-          <p style="font-size:12px; color:#888; margin-bottom:12px;">
+          <p style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">
             Connected to recovered backend modules: analytics, portfolio risk, and correlated Monte Carlo.
           </p>
           <input id="portintel-tickers" type="text" value="AAPL,MSFT,SPY" placeholder="Tickers comma-separated"
@@ -1039,22 +1059,23 @@
             <input id="portintel-horizon" type="number" min="20" max="756" value="252"
               style="font-size:12px; width:50%;" title="Monte Carlo horizon days" />
           </div>
-          <button class="btn primary" id="portintel-run-btn" type="button" onclick="runPortfolioIntelligence()">Run Portfolio Intelligence</button>
-          <div id="portintel-status" style="margin-top:10px; font-size:11px; color:#888;">Idle</div>
+          <button class="btn primary" id="portintel-run-btn" type="button" onclick="runPortfolioIntelligence()">Run
+            Portfolio Intelligence</button>
+          <div id="portintel-status" style="margin-top:10px; font-size:11px; color:var(--text-secondary);">Idle</div>
         </div>
 
         <div class="scenario-card main">
-          <div id="portintel-summary" style="font-size:12px; color:#aaa; margin-bottom:12px;">
+          <div id="portintel-summary" style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">
             Run scanner to load analytics summary and correlation snapshot.
           </div>
-          <div id="portintel-risk" style="font-size:12px; color:#aaa; margin-bottom:12px;">
+          <div id="portintel-risk" style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">
             Risk metrics will appear here (VaR/CVaR, drawdown, Sharpe, stress).
           </div>
-          <div id="portintel-mc" style="font-size:12px; color:#aaa; margin-bottom:10px;">
+          <div id="portintel-mc" style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">
             Monte Carlo distribution metrics will appear here.
           </div>
           <canvas id="portintel-mc-canvas" width="760" height="220"
-            style="display:none; width:100%; height:220px; background:#0b0f1a; border:1px solid #22304a; border-radius:6px;"></canvas>
+            style="display:none; width:100%; height:220px; background:var(--card-bg); border:1px solid var(--bdr-strong); border-radius:6px;"></canvas>
         </div>
       </div>
 
@@ -1067,7 +1088,8 @@
         <button class="btn link-btn" type="button" onclick="switchView('dashboard')">Home</button>
       </div>
       <div class="vizlab-subtitle">38 visualizations — <span style="color:#2ecc71;">25 live algorithm renders</span> ·
-        <span style="color:#9b59b6;">13 decorative sims</span> — WebGL · Canvas · Three.js</div>
+        <span style="color:#9b59b6;">13 decorative sims</span> — WebGL · Canvas · Three.js
+      </div>
       <div class="vizlab-grid" id="vizlab-grid">
         <!-- Cards injected by viz_lab.js -->
       </div>
@@ -1093,7 +1115,7 @@
       </div>
       <div class="scenario-card" style="margin-bottom:12px;">
         <h3 style="margin:0;">Experimental Engines</h3>
-        <div style="font-size:12px; color:#888;">
+        <div style="font-size:12px; color:var(--text-secondary);">
           Launchable prototypes. Nothing is deleted; unfinished modules stay visible here.
         </div>
       </div>
@@ -1121,7 +1143,7 @@
       </div>
       <div class="scenario-card" id="agents-fallback-card">
         <h3 style="margin-top:0;">Agent Workspace</h3>
-        <div style="font-size:12px;color:#888;margin-bottom:10px;">
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">
           Loading Planner / Reviewer / Docs modules...
         </div>
         <button class="btn secondary" type="button"
@@ -1172,7 +1194,7 @@
           <span id="viz-regime-label" style="font-size:11px; font-family:monospace; color:#00ff88;"></span>
         </div>
         <button onclick="VizLab.close()"
-          style="background:#1a1a3a; border:1px solid #334; color:#fff; font-size:12px; padding:5px 14px; border-radius:6px; cursor:pointer; font-family:monospace;">✕
+          style="background:#1a1a3a; border:1px solid var(--border-color); color:#fff; font-size:12px; padding:5px 14px; border-radius:6px; cursor:pointer; font-family:monospace;">✕
           Close</button>
       </div>
       <div id="viz-canvas-container" style="flex:1; position:relative; overflow:hidden;">
@@ -1311,13 +1333,14 @@
   <script src="sim_dashboard.js?v=2026.02.18-v1"></script>
   <script src="real_estate.js?v=2026.02.18-v4"></script>
   <script src="viz_lab.js?v=2026.02.27-v3"></script> <!-- Viz Lab — 29 live renders -->
+  <script src="viz_mmo.js?v=2026.03.09-mmo-v1"></script> <!-- MMO Viz Lab add-ons -->
   <script src="strategy.js?v=2026.02.27-v1"></script> <!-- Multi-Strategy + Correlation UI -->
   <script src="terminal.js"></script>
   <script src="info.js?v=2026.02.27-v1"></script> <!-- Info Module Documentation -->
   <script src="derivatives.js?v=2026.02.27-v1"></script> <!-- Derivatives + Black-Scholes + Signal Composer -->
   <script src="decision.js?v=2026.02.27-v1"></script> <!-- Decision Center + Approval Workflow -->
   <script src="trader.js?v=2026.03.01-v1"></script> <!-- ARIA Trader — Composite Score Engine -->
-  <script src="mmo.js?v=2026.03.06-v2"></script> <!-- MMO — Mau's Market Ontology -->
+  <script src="mmo.js?v=2026.03.09-quantum-v2"></script> <!-- MMO — Mau's Market Ontology -->
   <script src="playroom.js?v=2026.03.08-v1"></script> <!-- Playroom -->
   <script src="playroom_gitcity.js?v=2026.03.08-v1"></script> <!-- Playroom Git City -->
   <script src="playroom_racing.js?v=2026.03.08-v1"></script> <!-- Playroom Racing -->
