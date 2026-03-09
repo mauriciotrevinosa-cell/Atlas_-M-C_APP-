@@ -1,0 +1,78 @@
+/* MMO Mini-Render Overlay Styles */
+
+.mmo-render-overlay {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(4, 5, 12, 0.85);
+    /* Deep dark blue/black */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 1000;
+    border-radius: 12px;
+    border: 1px solid rgba(124, 63, 228, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), inset 0 0 40px rgba(124, 63, 228, 0.05);
+    animation: mmoFadeIn 0.3s ease-out forwards;
+}
+
+@keyframes mmoFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.mmo-render-header {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    background: linear-gradient(180deg, rgba(20, 20, 35, 0.9) 0%, rgba(10, 10, 20, 0) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 10;
+}
+
+#mmo-render-title {
+    font-family: monospace;
+    font-size: 11px;
+    color: #9b8ee8;
+    letter-spacing: 2px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.mmo-btn-close-render {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 24px;
+    font-weight: 300;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 5px;
+    transition: all 0.2s ease;
+}
+
+.mmo-btn-close-render:hover {
+    color: #ff4757;
+    text-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
+    transform: scale(1.1);
+}
+
+.mmo-render-mount {
+    flex: 1;
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
