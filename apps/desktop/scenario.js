@@ -504,6 +504,7 @@ async function nextStep() {
 
     try {
         const res = await fetch(`${CONFIG.serverUrl}/api/scenario/${currentSessionId}/next`, { method: 'POST' });
+        if (!res.ok) throw new Error(`scenario/next ${res.status}: ${res.statusText}`);
         const data = await res.json();
 
         if (data.status === 'finished') {
@@ -585,9 +586,9 @@ function processStep(state) {
     }
 
     // 1. Update Stats
-    elDate.textContent = state.date;
-    elPrice.textContent = "$" + state.price.toFixed(2);
-    elPortfolio.textContent = "$" + state.portfolio_value.toFixed(2);
+    elDate.textContent = state.date || '—';
+    elPrice.textContent = "$" + (state.price ?? 0).toFixed(2);
+    elPortfolio.textContent = "$" + (state.portfolio_value ?? 0).toFixed(2);
     const elHoldings = document.getElementById('scen-holdings');
     if (elHoldings) {
         elHoldings.textContent = state.holdings ?? 0;
@@ -653,7 +654,7 @@ function processStep(state) {
     if (state.reasoning && state.reasoning.length > 0) {
         const entry = document.createElement('div');
         entry.className = 'log-entry';
-        const header = `[${state.date}] ${state.decision.toUpperCase()}`;
+        const header = `[${state.date || ''}] ${(state.decision || 'hold').toUpperCase()}`;
         // Colored status
         let color = '#ccc';
         if (state.decision === 'buy') color = '#00ff00';
