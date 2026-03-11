@@ -1180,6 +1180,93 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
   }
 
   /* ═══════════════════════════════════════════════════════════════
+     RENDER: NON-HERMITIAN HAMILTONIAN H_eff (Phase 3C)
+     H_eff = H − iΓ/2  (open quantum system)
+     ε_k = E_k − iΓ_k/2  (complex eigenvalues)
+     Exceptional point: eigenvalues coalesce → ε_A → ε_B
+     ═══════════════════════════════════════════════════════════════ */
+  function _renderNonHermitian(qs) {
+    const el = document.getElementById('mmo-nh-display');
+    if (!el) return;
+    const nh = qs.non_hermitian;
+    if (!nh) { el.innerHTML = '<div style="font-size:9px;color:#3a3a5a">—</div>'; return; }
+
+    const P_NH    = typeof nh.P_NH    === 'number' ? nh.P_NH    : 0;
+    const P_loss  = typeof nh.P_loss  === 'number' ? nh.P_loss  : 0;
+    const ep_gap  = typeof nh.ep_gap  === 'number' ? nh.ep_gap  : 1;
+    const near_ep = nh.near_ep || ep_gap < 0.05;
+    const gamma_g = typeof nh.gamma_global === 'number' ? nh.gamma_global : 0;
+
+    // Survival color: green = stable, yellow = decaying, red = rapid loss
+    const survColor = P_NH > 0.7 ? '#00ff88' : P_NH > 0.4 ? '#f1c40f' : '#ff4757';
+    // EP gap color: danger when gap is tiny (eigenvalues coalescing)
+    const epColor   = near_ep ? '#ff4757' : ep_gap < 0.15 ? '#f1c40f' : '#00d4ff';
+
+    const epBadge = near_ep
+      ? `<span class="mmo-nh-ep-warning">⚡ NEAR EXCEPTIONAL POINT</span>`
+      : ep_gap < 0.15
+      ? `<span class="mmo-nh-ep-warning mmo-nh-ep-caution">⚠ EP PROXIMITY</span>`
+      : `<span class="mmo-nh-ep-badge">EIGENVALUE SPLIT</span>`;
+
+    // Eigenvalue rows (top 4 by probability)
+    const evRows = (nh.eigenvalues || [])
+      .sort((a, b) => b.p - a.p)
+      .slice(0, 4)
+      .map(ev => {
+        const eCol = ev.E > 0.08 ? '#00ff88' : ev.E < -0.08 ? '#ff4757' : '#8be9fd';
+        const gCol = ev.Gamma > 0.5 ? '#ff4757' : ev.Gamma > 0.2 ? '#f1c40f' : '#44f';
+        const survPct = Math.round((ev.survival || 0) * 100);
+        return `
+<div class="mmo-nh-ev-row">
+  <span class="mmo-nh-state" style="color:${eCol}">${ev.state}</span>
+  <span class="mmo-nh-val" style="color:${eCol}" title="Real energy E_k">${ev.E >= 0 ? '+' : ''}${ev.E.toFixed(3)}</span>
+  <span class="mmo-nh-val" style="color:${gCol}" title="Decay rate Γ_k">Γ=${ev.Gamma.toFixed(3)}</span>
+  <span class="mmo-nh-val" style="color:#bd93f9" title="Im(ε) = -Γ/2">${ev.eps_im.toFixed(3)}i</span>
+  <div class="mmo-nh-surv-track" title="Survival probability">
+    <div class="mmo-nh-surv-fill" style="width:${survPct}%;background:${eCol};"></div>
+  </div>
+  <span class="mmo-nh-pct" style="color:${eCol}">${survPct}%</span>
+</div>`;
+      }).join('');
+
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:9px;">
+        <div style="text-align:center;">
+          <div style="font-size:22px;font-weight:900;color:${survColor};font-family:monospace;
+            text-shadow:0 0 10px ${survColor}88;">${(P_NH * 100).toFixed(1)}%</div>
+          <div style="font-size:8px;color:#556;font-family:monospace;">P_NH survival</div>
+        </div>
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+            <div style="font-size:10px;font-weight:700;color:${survColor};">
+              ${P_NH > 0.7 ? 'COHERENT' : P_NH > 0.4 ? 'LEAKING' : 'DISSIPATING'}
+            </div>
+            ${epBadge}
+          </div>
+          <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${P_NH*100}%;background:${survColor};border-radius:3px;
+              transition:width 0.6s;box-shadow:0 0 5px ${survColor}66;"></div>
+          </div>
+          <div style="font-size:8px;color:#445;margin-top:3px;font-family:monospace;">
+            P_loss=${(P_loss*100).toFixed(1)}% · Γ_global=${gamma_g.toFixed(3)} · EP gap=${ep_gap.toFixed(4)}
+          </div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:16px;font-weight:700;color:${epColor};font-family:monospace;">${ep_gap.toFixed(4)}</div>
+          <div style="font-size:8px;color:#556;">EP gap |Δε|</div>
+        </div>
+      </div>
+      <div style="font-size:8px;color:#445;text-transform:uppercase;font-family:monospace;margin-bottom:4px;">
+        H_eff eigenvalues — ε_k = E_k − iΓ_k/2
+      </div>
+      <div class="mmo-nh-ev-table">${evRows}</div>
+      <div style="font-size:8px;color:#334;margin-top:5px;font-family:monospace;">
+        Open system: env. coupling Γ leaks probability — Phase 3C
+      </div>
+    `;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
      RENDER: QUANTUM ENTANGLEMENT MATRIX
      Shows inter-asset correlation as quantum entanglement strength.
      Positive correlation = entangled (⊕), negative = anti-entangled (⊗)
@@ -1543,11 +1630,12 @@ ${overlapHtml}
       qs.entanglement = ENTANGLE_TABLE[qs.ticker] || {};
     }
 
-    // Phase 3B: Berry phase + path integral — always run locally from API data
-    if (!qs.berry_phase || !qs.path_integral) {
+    // Phase 3B + 3C: Berry phase, path integral, Non-Hermitian — always run locally from API data
+    if (!qs.berry_phase || !qs.path_integral || !qs.non_hermitian) {
       const localAugment = _computeLocalQuantumState(qs.ticker || 'SPY');
       if (!qs.berry_phase)    qs.berry_phase    = localAugment.berry_phase;
       if (!qs.path_integral)  qs.path_integral  = localAugment.path_integral;
+      if (!qs.non_hermitian)  qs.non_hermitian  = localAugment.non_hermitian;
     }
 
     return qs;
@@ -1584,6 +1672,7 @@ ${overlapHtml}
     _renderDecoherence(qs);
     _renderEntanglement(qs.ticker, qs.entanglement);
     _renderBerry(qs);
+    _renderNonHermitian(qs);
     _renderFocusDetail(qs);
 
     // Update Vacuum Chamber data
@@ -1887,6 +1976,37 @@ ${overlapHtml}
       noise_factor: Number(_clamp(char.vol * (0.5 + entropy * 0.5), 0, 1).toFixed(3)),
     };
 
+    // ── Non-Hermitian Hamiltonian H_eff (Phase 3C) ───────────────────
+    // H_eff = H − iΓ/2  (open quantum system: environment coupling)
+    // Complex eigenvalues: ε_k = E_k − iΓ_k/2
+    //   E_k  = real energy (state momentum/return proxy)
+    //   Γ_k  = state-specific decay rate (less probable → decays faster)
+    // Non-Hermitian survival: P_NH(τ) = Σ_k p_k · exp(−Γ_k · τ)
+    // Exceptional point: eigenvalues coalesce when |ε_A − ε_B| → 0
+    const _nhE0 = { BULL: 0.20, BEAR: -0.20, SIDEWAYS: 0.00, VOLATILE: 0.10, TRENDING: 0.15 };
+    const _nhGamma = decoherence.noise_factor;  // global Γ from CIR+entropy coupling
+    const nh_eigenvalues = stateOrder.map(s => {
+      const E_k     = _nhE0[s] || 0;
+      const p_k     = amps[s]  || 0;
+      const Gamma_k = Number(_clamp(_nhGamma * (1.2 - p_k), 0.01, 2.0).toFixed(4));
+      const surv_k  = Number((p_k * Math.exp(-Gamma_k * tau)).toFixed(5));
+      return { state: s, E: Number(E_k.toFixed(4)), Gamma: Gamma_k, eps_im: Number((-Gamma_k / 2).toFixed(4)), p: Number(p_k.toFixed(4)), survival: surv_k };
+    });
+    const P_NH = Number(nh_eigenvalues.reduce((s, ev) => s + ev.survival, 0).toFixed(4));
+    // Exceptional point gap: distance between two dominant eigenvalue pairs
+    const _nhSorted = [...nh_eigenvalues].sort((a, b) => b.p - a.p);
+    const ep_gap = _nhSorted.length >= 2
+      ? Number(Math.sqrt((_nhSorted[0].E - _nhSorted[1].E) ** 2 + (_nhSorted[0].Gamma - _nhSorted[1].Gamma) ** 2).toFixed(4))
+      : 1.0;
+    const non_hermitian = {
+      gamma_global: Number(_nhGamma.toFixed(4)),
+      eigenvalues:  nh_eigenvalues,
+      P_NH,                                          // prob. remaining in system
+      P_loss: Number((1 - P_NH).toFixed(4)),         // prob. leaked to environment
+      ep_gap,                                        // exceptional point gap
+      near_ep: ep_gap < 0.05,                        // coalescence warning
+    };
+
     const delta_p = Number(char.vol.toFixed(3));
     const delta_x = Number(Math.min(5, 1 / Math.max(0.18, Math.abs(probability_current_J) * 6 + char.trend)).toFixed(3));
     const u_sys = Number((delta_p * delta_x).toFixed(3));
@@ -1942,6 +2062,7 @@ ${overlapHtml}
       entanglement: ENTANGLE_TABLE[t] || {},
       berry_phase,
       path_integral,
+      non_hermitian,
       confidence: Number((1 - entropy).toFixed(3)),
       _local: true,
     };
@@ -2210,6 +2331,10 @@ ${overlapHtml}
     <div class="mmo-card mmo-berry-card">
       <div class="mmo-card-title" style="color:#bd93f9">Berry Phase γ &nbsp;|&nbsp; Regime Topology</div>
       <div id="mmo-berry-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+    </div>
+    <div class="mmo-card mmo-nh-card">
+      <div class="mmo-card-title" style="color:#ff5555">H<sub>eff</sub> Non-Hermitian &nbsp;|&nbsp; Open System</div>
+      <div id="mmo-nh-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
     </div>
     <div class="mmo-card mmo-entanglement-card">
       <div class="mmo-card-title" style="color:#8be9fd">Entanglement Matrix &amp; Overlap</div>

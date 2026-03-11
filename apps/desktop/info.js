@@ -831,9 +831,19 @@ window.InfoModule = (() => {
       name: 'Phase 3B — Implemented ✓',
       icon: '🔭',
       desc: 'Phase 3B brings Berry phase topology, Feynman path-integral return distributions, and quantum state overlap (fidelity) matrices to the MMO HUD. These three new panels appear in the bottom bar alongside String Theory and Entanglement.',
-      source: 'Implemented features: (1) Berry phase γ card — geometric phase along closed loop in (T_CIR, trend) space, detecting BULL_LOOP / BEAR_LOOP / NEUTRAL regime cycles; (2) Path Integral K(R) bars in String Theory — Feynman amplitude distribution over 60 random paths; (3) Quantum Overlap |⟨ψ_A|ψ_B⟩|² in Entanglement Matrix — state fidelity computed from scanner cache after all tickers load. Non-Hermitian correction planned for Phase 3C.',
+      source: 'Implemented features: (1) Berry phase γ card — geometric phase along closed loop in (T_CIR, trend) space, detecting BULL_LOOP / BEAR_LOOP / NEUTRAL regime cycles; (2) Path Integral K(R) bars in String Theory — Feynman amplitude distribution over 60 random paths; (3) Quantum Overlap |⟨ψ_A|ψ_B⟩|² in Entanglement Matrix — state fidelity computed from scanner cache after all tickers load.',
       how: 'Berry: γ = Im log ∏_k ⟨ψ_k|ψ_{k+1}⟩ for N=8 waypoints on a (T_CIR, trend) circle. Topological flag |γ| > π/2. Winding number = γ/(2π). Path integral: S = Σ(ΔP)²/(2σ²), K(R) = Σ_paths exp(−S/ℏ_eff) binned by final return R. Quantum overlap: |⟨ψ_A|ψ_B⟩|² = (Σ_s √(p_As·p_Bs))² — computed in _computeOverlapMatrix() once all scanner states are cached in _onAllScansLoaded().',
       tags: ['Phase 3B', 'Entanglement', 'Path Integral', 'Berry Phase', 'Implemented', 'Overlap Matrix'],
+    },
+    {
+      id: 'mmo_phase3c',
+      category: 'quantum',
+      name: 'Phase 3C — Implemented ✓',
+      icon: '🌀',
+      desc: 'Phase 3C models the MMO as an open quantum system via the Non-Hermitian effective Hamiltonian H_eff = H − iΓ/2. Complex eigenvalues ε_k = E_k − iΓ_k/2 encode both state momentum (E_k) and environment-induced decay (Γ_k). The new H_eff card in the bottom bar shows survival probability P_NH, probability leakage P_loss, per-state eigenvalues, and an exceptional-point proximity indicator.',
+      source: 'H_eff eigenvalues: E_k mapped from dominant state (BULL=+0.20, BEAR=−0.20, SIDEWAYS=0.00, VOLATILE=0.10, TRENDING=0.15). Γ_k = Γ_global × (1.2 − p_k) clamped to [0.01, 2.0] — less probable states decay faster. P_NH(τ) = Σ_k p_k · exp(−Γ_k · τ). Exceptional point gap = |ε_A − ε_B| for the two dominant eigenvalue pairs. near_ep flag fires when gap < 0.05. Γ_global = decoherence.noise_factor = σ · (0.5 + H · 0.5).',
+      how: 'On each analyze() call _computeLocalQuantumState() builds the non_hermitian object. For API-sourced states, _augmentWithPhysics() re-derives it locally. _renderNonHermitian() renders the card: survival bar, P_loss, EP gap readout, and a per-state eigenvalue table showing E_k, Γ_k, Im(ε_k), and a mini survival bar.',
+      tags: ['Phase 3C', 'Non-Hermitian', 'Open System', 'Exceptional Point', 'H_eff', 'Implemented'],
     },
   ];
 

@@ -3059,11 +3059,11 @@ def strategy_engines(ticker: str = "AAPL"):
         ],
         "ml": [
             {**{"name": k, **v}} for k, v in ml_stat.items()
-        ] + [
-            {"name": "ml_lstm", "label": "LSTM", "weight": 0.20, "status": "untrained", "note": "requires PyTorch"},
+            if k in ("ml_xgboost", "ml_rf", "ml_lstm")
         ],
         "rl": [
-            {"name": "rl_dqn", "label": "DQN Agent", "weight": 0.25, "status": "untrained"},
+            {**{"name": k, **v}} for k, v in ml_stat.items()
+            if k in ("rl_dqn",)
         ],
         "train_endpoint": f"/api/ml/train/{symbol}",
     }
@@ -3082,8 +3082,10 @@ def _ml_model_path(ticker: str, engine: str) -> Path:
 def _ml_model_status(ticker: str) -> Dict[str, Any]:
     """Return training status for each ML engine for a given ticker."""
     engines = {
-        "ml_xgboost": {"label": "XGBoost",      "weight": 0.25},
-        "ml_rf":      {"label": "Random Forest", "weight": 0.15},
+        "ml_xgboost": {"label": "XGBoost",       "weight": 0.25},
+        "ml_rf":      {"label": "Random Forest",  "weight": 0.15},
+        "ml_lstm":    {"label": "LSTM",            "weight": 0.20, "note": "requires PyTorch"},
+        "rl_dqn":     {"label": "DQN Agent",       "weight": 0.25, "note": "ε-greedy Q-learning"},
     }
     result = {}
     for key, meta in engines.items():
@@ -3100,7 +3102,12 @@ def _ml_model_status(ticker: str) -> Dict[str, Any]:
 @app.post("/api/ml/train/{ticker}")
 async def ml_train(ticker: str, period: str = "2y"):
     """
-    Train XGBoost and RandomForest ML signal engines for a ticker.
+    Train all four ML/RL signal engines for a ticker:
+      - XGBoost     (gradient boosted trees, sklearn-compatible)
+      - RandomForest (ensemble baseline)
+      - LSTM         (sequential deep learning, requires PyTorch)
+      - DQN          (reinforcement learning agent, PyTorch or numpy fallback)
+
     Models saved to data/models/{TICKER}_{engine}.pkl.
     Returns per-engine training metrics.
     """
@@ -3157,6 +3164,57 @@ async def ml_train(ticker: str, period: str = "2y"):
             metrics["ml_rf"] = {**m, "status": "trained", "saved_to": str(path)}
         except Exception as e:
             metrics["ml_rf"] = {"status": "error", "error": str(e)}
+
+        # ── LSTM ─────────────────────────────────────────────────────────
+        try:
+            from atlas.core_intelligence.engines.ml.ml_suite import LSTMEngine
+            lstm_engine = LSTMEngine(
+                hidden_size=64,
+                num_layers=2,
+                sequence_length=min(20, max(5, len(X) // 10)),
+                epochs=min(50, max(10, len(X) // 5)),
+                lr=0.001,
+            )
+            lstm_engine.name = "ml_lstm"
+            lstm_engine.model_dir = _ML_MODEL_DIR
+            m = lstm_engine.train(X, y)
+            if "error" not in m:
+                lstm_engine.is_trained = True
+                path = _ml_model_path(symbol, "ml_lstm")
+                with open(path, "wb") as f:
+                    pickle.dump(lstm_engine, f)
+                metrics["ml_lstm"] = {**m, "status": "trained", "saved_to": str(path)}
+            else:
+                metrics["ml_lstm"] = {**m, "status": "skipped"}
+        except Exception as e:
+            metrics["ml_lstm"] = {"status": "error", "error": str(e)}
+
+        # ── DQN (RL) ──────────────────────────────────────────────────────
+        try:
+            from atlas.core_intelligence.engines.ml.ml_suite import DQNEngine
+            dqn_engine = DQNEngine(
+                seq_len=min(10, max(3, len(X) // 15)),
+                hidden_size=128,
+                episodes=min(30, max(5, len(X) // 8)),
+                epsilon_start=1.0,
+                epsilon_end=0.05,
+                gamma=0.95,
+                lr=5e-4,
+                batch_size=min(64, max(16, len(X) // 5)),
+            )
+            dqn_engine.name = "rl_dqn"
+            dqn_engine.model_dir = _ML_MODEL_DIR
+            m = dqn_engine.train(X, y)
+            if "error" not in m:
+                dqn_engine.is_trained = True
+                path = _ml_model_path(symbol, "rl_dqn")
+                with open(path, "wb") as f:
+                    pickle.dump(dqn_engine, f)
+                metrics["rl_dqn"] = {**m, "status": "trained", "saved_to": str(path)}
+            else:
+                metrics["rl_dqn"] = {**m, "status": "skipped"}
+        except Exception as e:
+            metrics["rl_dqn"] = {"status": "error", "error": str(e)}
 
         return {
             "ticker":    symbol,
