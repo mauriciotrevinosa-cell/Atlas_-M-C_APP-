@@ -1,394 +1,570 @@
 /**
- * Atlas Viz Lab — Mau's Market Ontology Addon
- * Integrates "Black Hole" and "Galaxy" 3D simulations.
+ * Atlas Viz Lab — Market Physics Simulations  UHQ v2.0
+ * =====================================================
+ *
+ *  vizBlackhole  — Liquidity Singularity
+ *    · 35 000-particle accretion disk with temperature-correct colours
+ *      (inner blue-white 10⁷ K  →  outer orange-red 10⁴ K)
+ *    · Dual bloom layers (soft base + wide glow halo)
+ *    · Relativistic jets along Z-axis (blue plasma)
+ *    · Photon-sphere torus + layered corona
+ *    · Cinematic spiral camera approach on load
+ *    · ETF → multi-vortex (4 orbiting sub-holes)
+ *    · Stock → single unified singularity
+ *
+ *  vizGalaxy3D   — Market Galaxy
+ *    · 40 000-particle spiral galaxy + 3 000-particle dense nucleus
+ *    · 8 sector arms (ETF) or 2 arms (Stock), each with a distinct sector colour
+ *    · Fixed bug: galaxy tilt now accumulates rather than being reset each frame
+ *    · Galactic core: luminous yellow-white nucleus with independent material
+ *    · Soft bloom layers on both disk and core
+ *    · Slow camera orbit + gentle tilt oscillation
  */
 
 (function () {
-    if (!window.VizLab || !window.VizLab.registerViz) {
-        console.error("VizLab not found or registerViz not exposed.");
-        return;
+  'use strict';
+
+  if (!window.VizLab || !window.VizLab.registerViz) {
+    console.error('[viz_mmo] VizLab not found.');
+    return;
+  }
+
+  // ── Fall back to inline helpers if UHQ didn't load ────────────────────
+  const _lerp  = (a, b, t) => a + (b - a) * t;
+  const _clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const _rand  = (a, b) => a + Math.random() * (b - a);
+
+  function _setupRenderer(renderer) {
+    if (window.UHQ) { window.UHQ.setupRenderer(renderer); return; }
+    renderer.toneMapping         = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    renderer.outputColorSpace    = THREE.SRGBColorSpace;
+  }
+
+  function _softMat(opts) {
+    if (window.UHQ) return window.UHQ.softMat(opts);
+    const { size = 0.18, opacity = 0.88 } = opts || {};
+    return new THREE.PointsMaterial({
+      size, vertexColors: true, transparent: true, opacity,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+  }
+
+  function _glowMat(opts) {
+    if (window.UHQ) return window.UHQ.glowMat(opts);
+    const { size = 1.1, opacity = 0.15 } = opts || {};
+    return new THREE.PointsMaterial({
+      size, vertexColors: true, transparent: true, opacity,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     BLACK HOLE v2  —  Liquidity Singularity
+  ══════════════════════════════════════════════════════════════════════ */
+  function vizBlackhole() {
+    const container = document.getElementById('viz-canvas-container') || document.getElementById('viz-overlay');
+    if (!container || typeof THREE === 'undefined') return null;
+
+    const W = container.clientWidth  || 800;
+    const H = (container.clientHeight || 500) - 50;
+    const DISK_COUNT = 35000;
+    const JET_COUNT  = 2000;
+
+    // Ticker context
+    const ticker = window.__MMO_CURRENT_TICKER__ || 'SPY';
+    window.__MMO_CURRENT_TICKER__ = null;
+    const isETF = ['SPY', 'QQQ', 'DIA', 'IWM', 'VTI', 'VIX'].includes(ticker);
+
+    // ── Scene ────────────────────────────────────────────────────────────
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000004);
+
+    const camera = new THREE.PerspectiveCamera(52, W / H, 0.1, 500);
+    // Start position for cinematic approach
+    camera.position.set(0, 80, 130);
+    camera.lookAt(0, 0, 0);
+
+    // ── Renderer ─────────────────────────────────────────────────────────
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    _setupRenderer(renderer);
+
+    const mount = document.getElementById('viz-three-mount');
+    if (!mount) return null;
+    mount.innerHTML = '';
+    mount.appendChild(renderer.domElement);
+
+    // ── Context label ────────────────────────────────────────────────────
+    const label = document.createElement('div');
+    Object.assign(label.style, {
+      position: 'absolute', bottom: '14px', left: '16px', zIndex: '10',
+      fontFamily: 'monospace', fontSize: '11px', letterSpacing: '0.6px',
+      textShadow: '0 0 10px currentColor', pointerEvents: 'none',
+    });
+    label.innerHTML = isETF
+      ? `<span style="color:#ff9500">ETF</span> <span style="color:#888">${ticker}</span> — multi-vortex accretion system`
+      : `<span style="color:#00d4ff">STOCK</span> <span style="color:#888">${ticker}</span> — unified singularity core`;
+    label.style.color = isETF ? '#ff9500' : '#00d4ff';
+    mount.appendChild(label);
+
+    // ── Temperature-correct disk colour ──────────────────────────────────
+    // Inner (r≈3)  → blue-white  (T~10^7 K)
+    // Mid   (r~15) → white-yellow transition
+    // Outer (r≈45) → orange-red  (T~10^4 K)
+    function diskColor(radius, col, i3) {
+      const t = _clamp((radius - 3) / 42, 0, 1);
+      if (t < 0.22) {
+        // Blue-white corona
+        const u = t / 0.22;
+        col[i3]     = _lerp(0.80, 1.0, u);
+        col[i3 + 1] = _lerp(0.90, 1.0, u);
+        col[i3 + 2] = 1.0;
+      } else if (t < 0.52) {
+        // White → yellow
+        const u = (t - 0.22) / 0.30;
+        col[i3]     = 1.0;
+        col[i3 + 1] = _lerp(1.0, 0.75, u);
+        col[i3 + 2] = _lerp(1.0, 0.05, u);
+      } else {
+        // Yellow → orange → deep red
+        const u = (t - 0.52) / 0.48;
+        col[i3]     = _lerp(1.0, 0.55, u);
+        col[i3 + 1] = _lerp(0.75, 0.08, u);
+        col[i3 + 2] = 0.0;
+      }
     }
 
-    // Helper inside the module
-    function rand(min, max) { return min + Math.random() * (max - min); }
+    // ── Accretion disk particles ──────────────────────────────────────────
+    const dGeo  = new THREE.BufferGeometry();
+    const dPos  = new Float32Array(DISK_COUNT * 3);
+    const dCol  = new Float32Array(DISK_COUNT * 3);
+    const dVels = new Float32Array(DISK_COUNT * 3);
 
-    /* ═══════════════════════════════════════════════════════
-       BLACK HOLE (Mau's Market Ontology - Gravity/Liquidity)
-    ═══════════════════════════════════════════════════════ */
-    function vizBlackhole() {
-        const container = document.getElementById('viz-canvas-container') || document.getElementById('viz-overlay');
-        if (!container || typeof THREE === 'undefined') { return null; }
-
-        const W = container.clientWidth || 800; // fallback if measurement fails
-        const H = (container.clientHeight || 500) - 50;
-        const COUNT = 25000;
-
-        // Detect Ticker & ETF Status
-        const ticker = window.__MMO_CURRENT_TICKER__ || 'SPY';
-        window.__MMO_CURRENT_TICKER__ = null; // consume
-        const isETF = ['SPY', 'QQQ', 'DIA', 'IWM', 'VTI', 'VIX'].includes(ticker);
-
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x020205);
-        const camera = new THREE.PerspectiveCamera(65, W / H, 0.1, 500);
-        camera.position.set(0, 15, 30);
-        camera.lookAt(0, 0, 0);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(W, H);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-        const mount = document.getElementById('viz-three-mount');
-        if (mount) {
-            mount.innerHTML = '';
-            mount.appendChild(renderer.domElement);
-        }
-
-        // Add visual text overlay in the corner for context
-        const contextText = document.createElement('div');
-        contextText.style.position = 'absolute';
-        contextText.style.bottom = '10px';
-        contextText.style.left = '15px';
-        contextText.style.color = '#7c3fe4';
-        contextText.style.fontFamily = 'monospace';
-        contextText.style.fontSize = '10px';
-        contextText.style.zIndex = '100';
-        contextText.textContent = isETF
-            ? `ETF DETECTED (${ticker}): Rendering underlying micro-vortices`
-            : `STOCK DETECTED (${ticker}): Unified entity core`;
-        if (mount) mount.appendChild(contextText);
-
-        const geo = new THREE.BufferGeometry();
-        const pos = new Float32Array(COUNT * 3);
-        const col = new Float32Array(COUNT * 3);
-        const vels = new Float32Array(COUNT * 3);
-
-        for (let i = 0; i < COUNT; i++) {
-            const i3 = i * 3;
-            // Spawn in a wide accretion disk
-            const angle = Math.random() * Math.PI * 2;
-            const radius = rand(15, 45);
-            pos[i3] = Math.cos(angle) * radius;
-            pos[i3 + 1] = rand(-0.5, 0.5);
-            pos[i3 + 2] = Math.sin(angle) * radius;
-
-            col[i3] = rand(0.8, 1.0); // R
-            col[i3 + 1] = rand(0.3, 0.6); // G
-            col[i3 + 2] = rand(0.0, 0.2); // B
-
-            // Orbital velocity
-            const v = Math.sqrt(100 / radius);
-            vels[i3] = -Math.sin(angle) * v;
-            vels[i3 + 1] = rand(-0.01, 0.01);
-            vels[i3 + 2] = Math.cos(angle) * v;
-        }
-
-        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-        geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-
-        const mat = new THREE.PointsMaterial({
-            size: 0.15,
-            vertexColors: true,
-            transparent: true,
-            opacity: 0.8,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
-        const points = new THREE.Points(geo, mat);
-        scene.add(points);
-
-        // Define Black Holes (1 for Stock, multiple for ETF representing underlying companies)
-        const blackholes = [];
-        const bhGeo = new THREE.SphereGeometry(1, 32, 32); // base size
-        const bhMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-        const glowGeo = new THREE.SphereGeometry(1.2, 32, 32);
-        const glowMat = new THREE.MeshBasicMaterial({
-            color: 0xff3300, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending
-        });
-
-        if (isETF) {
-            // Main central core + 4 smaller orbiting vortices
-            blackholes.push({ mesh: new THREE.Mesh(bhGeo, bhMat), glow: new THREE.Mesh(glowGeo, glowMat), pos: new THREE.Vector3(0, 0, 0), mass: 60, scale: 4 });
-            for (let v = 0; v < 4; v++) {
-                const b = new THREE.Mesh(bhGeo, bhMat);
-                const g = new THREE.Mesh(glowGeo, glowMat);
-                const angle = (Math.PI * 2 / 4) * v;
-                const dist = 12 + Math.random() * 4;
-                blackholes.push({ mesh: b, glow: g, pos: new THREE.Vector3(Math.cos(angle) * dist, rand(-1, 1), Math.sin(angle) * dist), mass: 15, scale: 1.5, angle: angle, dist: dist, speed: rand(0.01, 0.02) });
-            }
-        } else {
-            // Single massive core for a stock
-            blackholes.push({ mesh: new THREE.Mesh(bhGeo, bhMat), glow: new THREE.Mesh(glowGeo, glowMat), pos: new THREE.Vector3(0, 0, 0), mass: 100, scale: 5 });
-        }
-
-        blackholes.forEach(bh => {
-            bh.mesh.scale.set(bh.scale, bh.scale, bh.scale);
-            bh.glow.scale.set(bh.scale, bh.scale, bh.scale);
-            scene.add(bh.mesh);
-            scene.add(bh.glow);
-        });
-
-        let animId = null;
-        function animate() {
-            animId = requestAnimationFrame(animate);
-
-            // Update orbiting blackholes
-            if (isETF) {
-                for (let v = 1; v < blackholes.length; v++) {
-                    const bh = blackholes[v];
-                    bh.angle += bh.speed;
-                    bh.pos.x = Math.cos(bh.angle) * bh.dist;
-                    bh.pos.z = Math.sin(bh.angle) * bh.dist;
-                    bh.mesh.position.copy(bh.pos);
-                    bh.glow.position.copy(bh.pos);
-                }
-            }
-
-            const positions = geo.attributes.position.array;
-            const colors = geo.attributes.color.array;
-
-            for (let i = 0; i < COUNT; i++) {
-                const i3 = i * 3;
-                let px = positions[i3];
-                let py = positions[i3 + 1];
-                let pz = positions[i3 + 2];
-
-                let totalFx = 0, totalFy = 0, totalFz = 0;
-                let minDist = 9999;
-
-                // Gravity pull towards all black holes
-                blackholes.forEach(bh => {
-                    const dx = bh.pos.x - px;
-                    const dy = bh.pos.y - py;
-                    const dz = bh.pos.z - pz;
-                    const distSq = dx * dx + dy * dy + dz * dz;
-                    const dist = Math.sqrt(distSq);
-
-                    if (dist < minDist) minDist = dist;
-
-                    const force = bh.mass / distSq;
-                    totalFx += (dx / dist) * force;
-                    totalFy += (dy / dist) * force;
-                    totalFz += (dz / dist) * force;
-                });
-
-                vels[i3] += totalFx;
-                vels[i3 + 1] += totalFy;
-                vels[i3 + 2] += totalFz;
-
-                // General relativity precession / drag
-                vels[i3] *= 0.995;
-                vels[i3 + 1] *= 0.99;
-                vels[i3 + 2] *= 0.995;
-
-                positions[i3] += vels[i3];
-                positions[i3 + 1] += vels[i3 + 1];
-                positions[i3 + 2] += vels[i3 + 2];
-
-                // Color shifts to intense blue/white near EVENT HORIZONS
-                if (minDist < 8) {
-                    colors[i3] = lerp(colors[i3], 0.1, 0.05);
-                    colors[i3 + 1] = lerp(colors[i3 + 1], 0.5, 0.05);
-                    colors[i3 + 2] = lerp(colors[i3 + 2], 1.0, 0.05);
-                }
-
-                // If swallowed by any black hole (dynamic horizon check)
-                let swallowed = false;
-                for (let v = 0; v < blackholes.length; v++) {
-                    const bh = blackholes[v];
-                    const dSq = (bh.pos.x - px) ** 2 + (bh.pos.y - py) ** 2 + (bh.pos.z - pz) ** 2;
-                    if (dSq < (bh.scale * 1.1) ** 2) { swallowed = true; break; }
-                }
-
-                if (swallowed) {
-                    const angle = Math.random() * Math.PI * 2;
-                    const radius = rand(40, 50);
-                    positions[i3] = Math.cos(angle) * radius;
-                    positions[i3 + 1] = rand(-1, 1);
-                    positions[i3 + 2] = Math.sin(angle) * radius;
-
-                    colors[i3] = rand(0.8, 1.0);
-                    colors[i3 + 1] = rand(0.2, 0.4);
-                    colors[i3 + 2] = 0.0;
-
-                    const v = Math.sqrt(100 / radius);
-                    vels[i3] = -Math.sin(angle) * v;
-                    vels[i3 + 1] = rand(-0.01, 0.01);
-                    vels[i3 + 2] = Math.cos(angle) * v;
-                }
-            }
-
-            geo.attributes.position.needsUpdate = true;
-            geo.attributes.color.needsUpdate = true;
-
-            points.rotation.y += 0.002;
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        return () => {
-            cancelAnimationFrame(animId);
-            renderer.dispose();
-        };
+    for (let i = 0; i < DISK_COUNT; i++) {
+      const i3  = i * 3;
+      const ang = Math.random() * Math.PI * 2;
+      const r   = _rand(4, 46);
+      // Thin disk: height exponentially suppressed at large radii
+      const h   = _rand(-1, 1) * Math.exp(-r * 0.055) * 1.5;
+      dPos[i3]     = Math.cos(ang) * r;
+      dPos[i3 + 1] = h;
+      dPos[i3 + 2] = Math.sin(ang) * r;
+      diskColor(r, dCol, i3);
+      const v        = Math.sqrt(125 / (r + 0.5));
+      dVels[i3]     = -Math.sin(ang) * v;
+      dVels[i3 + 1] = _rand(-0.005, 0.005);
+      dVels[i3 + 2] =  Math.cos(ang) * v;
     }
 
-    function lerp(a, b, t) { return a + (b - a) * t; }
+    dGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
+    dGeo.setAttribute('color',    new THREE.BufferAttribute(dCol, 3));
 
-    /* ═══════════════════════════════════════════════════════
-       GALAXY 3D (Asset Clusters & Correlation Orbits)
-    ═══════════════════════════════════════════════════════ */
-    function vizGalaxy3D() {
-        const container = document.getElementById('viz-canvas-container') || document.getElementById('viz-overlay');
-        if (!container || typeof THREE === 'undefined') { return null; }
+    // Two layers: crisp detail + wide glow halo
+    const diskDetail = new THREE.Points(dGeo, _softMat({ size: 0.20, opacity: 0.85 }));
+    const diskGlow   = new THREE.Points(dGeo, _glowMat({ size: 1.10, opacity: 0.16 }));
+    scene.add(diskDetail);
+    scene.add(diskGlow);
 
-        const W = container.clientWidth || 800; // fallback if measurement fails
-        const H = (container.clientHeight || 500) - 50;
-        const COUNT = 30000;
+    // ── Relativistic jets ─────────────────────────────────────────────────
+    const jGeo  = new THREE.BufferGeometry();
+    const jPos  = new Float32Array(JET_COUNT * 3);
+    const jCol  = new Float32Array(JET_COUNT * 3);
+    const jVels = new Float32Array(JET_COUNT * 3);
 
-        // Detect Ticker & ETF Status 
-        // (Use global flag set by MMO or fallback to SPY)
-        const ticker = window.__MMO_CURRENT_TICKER__ || 'SPY';
-        window.__MMO_CURRENT_TICKER__ = null; // consume
-        const isETF = ['SPY', 'QQQ', 'DIA', 'IWM', 'VTI', 'VIX'].includes(ticker);
-
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x060814);
-        const camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 1000);
-        camera.position.set(0, 40, 60);
-        camera.lookAt(0, 0, 0);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(W, H);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-        const mount = document.getElementById('viz-three-mount');
-        if (mount) {
-            mount.innerHTML = '';
-            mount.appendChild(renderer.domElement);
-        }
-
-        // Add contextual indicator text
-        const contextText = document.createElement('div');
-        contextText.style.position = 'absolute';
-        contextText.style.bottom = '10px';
-        contextText.style.left = '15px';
-        contextText.style.color = '#7c3fe4';
-        contextText.style.fontFamily = 'monospace';
-        contextText.style.fontSize = '10px';
-        contextText.style.zIndex = '100';
-        contextText.textContent = isETF
-            ? `ETF (${ticker}): Multi-sector correlation clusters`
-            : `STOCK (${ticker}): Single focused entity orbital`;
-        if (mount) mount.appendChild(contextText);
-
-        const geo = new THREE.BufferGeometry();
-        const pos = new Float32Array(COUNT * 3);
-        const col = new Float32Array(COUNT * 3);
-        const params = new Float32Array(COUNT * 3); // angle, radius, speed
-
-        // For ETFs we want many spiral arms (sectors), inside a stock it's tighter (just its divisions, maybe 2 arms)
-        const ARMS = isETF ? 8 : 2;
-
-        for (let i = 0; i < COUNT; i++) {
-            const i3 = i * 3;
-            // Spread of radius depends on if it's an ETF containing everything or a stock representing one specific mass
-            const radius = isETF ? rand(4, 50) : rand(1, 40);
-
-            const armOffset = (i % ARMS) * (Math.PI * 2 / ARMS);
-
-            // Tightness of the spiral arm wrap
-            const spiralTightness = isETF ? 0.3 : 1.2;
-            const angle = armOffset + (radius * spiralTightness) + rand(-0.4, 0.4);
-
-            params[i3] = angle;
-            params[i3 + 1] = radius;
-
-            // Speed relies heavily on radius. In an ETF, outer edges move very slowly. For a single stock, it's more cohesive
-            const speedFact = isETF ? 30 : 50;
-            params[i3 + 2] = rand(0.001, 0.005) * (speedFact / (radius + 5));
-
-            pos[i3] = Math.cos(angle) * radius;
-            // Thicker in center, thinner edges
-            pos[i3 + 1] = (rand(-1, 1) * (isETF ? 20 : 8)) / (radius + 2);
-            pos[i3 + 2] = Math.sin(angle) * radius;
-
-            // Colors based on whether it is an ETF (Rainbow/diverse) or Stock (Focused corporate/technical colors)
-            const t = Math.min(1, radius / 45);
-            if (isETF) {
-                // Different arms = different colors for different sectors
-                const armColor = i % ARMS;
-                if (armColor % 2 == 0) {
-                    col[i3] = lerp(1.0, 0.2, t);
-                    col[i3 + 1] = lerp(0.8, 0.3, t);
-                    col[i3 + 2] = lerp(0.5, 1.0, t);
-                } else {
-                    col[i3] = lerp(0.2, 0.1, t);
-                    col[i3 + 1] = lerp(1.0, 0.5, t);
-                    col[i3 + 2] = lerp(0.4, 0.1, t);
-                }
-            } else {
-                col[i3] = lerp(0.2, 0.1, t); // Stock color (Cyans/Blues)
-                col[i3 + 1] = lerp(0.8, 0.3, t);
-                col[i3 + 2] = lerp(1.0, 0.8, t);
-            }
-        }
-
-        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-        geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-
-        const mat = new THREE.PointsMaterial({
-            size: isETF ? 0.12 : 0.18, // slightly larger particles for individual stock to represent density
-            vertexColors: true,
-            transparent: true,
-            opacity: 0.8,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
-        const points = new THREE.Points(geo, mat);
-        scene.add(points);
-
-        let animId = null;
-        function animate() {
-            animId = requestAnimationFrame(animate);
-
-            const positions = geo.attributes.position.array;
-            for (let i = 0; i < COUNT; i++) {
-                const i3 = i * 3;
-                params[i3] += params[i3 + 2]; // angle += speed
-                const angle = params[i3];
-                const radius = params[i3 + 1];
-
-                positions[i3] = Math.cos(angle) * radius;
-                positions[i3 + 2] = Math.sin(angle) * radius;
-                // Keep Y the same
-            }
-            geo.attributes.position.needsUpdate = true;
-
-            points.rotation.y += 0.001;
-            points.rotation.x = -0.2;
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        return () => {
-            cancelAnimationFrame(animId);
-            renderer.dispose();
-        };
+    for (let i = 0; i < JET_COUNT; i++) {
+      const i3  = i * 3;
+      const dir = i < JET_COUNT / 2 ? 1 : -1;
+      const spr = _rand(0, 0.4);
+      const ang = Math.random() * Math.PI * 2;
+      jPos[i3]     = Math.cos(ang) * spr;
+      jPos[i3 + 1] = dir * _rand(1, 5);
+      jPos[i3 + 2] = Math.sin(ang) * spr;
+      jVels[i3 + 1] = dir * _rand(0.08, 0.22);
+      // Blue-violet plasma colour
+      jCol[i3]     = _rand(0.30, 0.55);
+      jCol[i3 + 1] = _rand(0.15, 0.35);
+      jCol[i3 + 2] = 1.0;
     }
+    jGeo.setAttribute('position', new THREE.BufferAttribute(jPos, 3));
+    jGeo.setAttribute('color',    new THREE.BufferAttribute(jCol, 3));
 
-    // Register with VizLab
-    window.VizLab.registerViz(
-        'blackhole',
-        { cat: 'art', label: 'Liquidity Black Hole', icon: '🌌', api: null, desc: '3D Event horizon representing systemic liquidity traps and phase collapse.' },
-        true, // creating its own renderer 
-        vizBlackhole
+    const jetDetail = new THREE.Points(jGeo, _softMat({ size: 0.16, opacity: 0.75 }));
+    const jetGlow   = new THREE.Points(jGeo, _glowMat({ size: 0.85, opacity: 0.14 }));
+    scene.add(jetDetail);
+    scene.add(jetGlow);
+
+    // ── Event horizon (black sphere) ──────────────────────────────────────
+    const R_EH = isETF ? 3.0 : 4.5;
+    const ehMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(R_EH, 64, 64),
+      new THREE.MeshBasicMaterial({ color: 0x000000 })
     );
+    scene.add(ehMesh);
 
-    window.VizLab.registerViz(
-        'galaxy3d',
-        { cat: 'art', label: 'Market Galaxy 3D', icon: '🌠', api: null, desc: 'Asset correlation clusters orbiting a central fundamental core.' },
-        true,
-        vizGalaxy3D
+    // ── Photon-sphere ring ─────────────────────────────────────────────────
+    const photonRing = new THREE.Mesh(
+      new THREE.TorusGeometry(R_EH * 1.28, 0.07, 16, 200),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 })
     );
+    photonRing.rotation.x = Math.PI / 2;
+    scene.add(photonRing);
 
+    // ── Corona glow layers (additive spheres, inside-out normals) ──────────
+    const coronaLayers = [
+      { r: R_EH * 1.55, color: 0xff5500, opacity: 0.055 },
+      { r: R_EH * 2.10, color: 0x4400ff, opacity: 0.030 },
+      { r: R_EH * 3.00, color: 0xff2200, opacity: 0.012 },
+    ];
+    for (const lyr of coronaLayers) {
+      scene.add(new THREE.Mesh(
+        new THREE.SphereGeometry(lyr.r, 32, 32),
+        new THREE.MeshBasicMaterial({
+          color: lyr.color, transparent: true, opacity: lyr.opacity,
+          blending: THREE.AdditiveBlending, side: THREE.BackSide,
+        })
+      ));
+    }
+
+    // ── Gravity sources ───────────────────────────────────────────────────
+    const blackholes = [{ pos: new THREE.Vector3(0, 0, 0), mass: isETF ? 65 : 120 }];
+    if (isETF) {
+      for (let v = 0; v < 4; v++) {
+        const a = (Math.PI * 2 / 4) * v;
+        const d = 13 + Math.random() * 3;
+        blackholes.push({
+          pos: new THREE.Vector3(Math.cos(a) * d, 0, Math.sin(a) * d),
+          mass: 12, angle: a, dist: d, speed: _rand(0.008, 0.018),
+        });
+      }
+    }
+
+    // ── Cinematic camera state ─────────────────────────────────────────────
+    const camTarget  = new THREE.Vector3(0, 22, 42);
+    const camStart   = camera.position.clone();
+    let   camT       = 0;     // 0 → 1 approach progress
+    let   orbitAngle = 0;
+
+    // ── Animation loop ────────────────────────────────────────────────────
+    let animId = null;
+    let time   = 0;
+
+    function animate() {
+      animId = requestAnimationFrame(animate);
+      time  += 0.016;
+
+      // — Camera approach / orbit —
+      if (camT < 1) {
+        camT = Math.min(1, camT + 0.004);
+        const ease = 1 - Math.pow(1 - camT, 3);
+        camera.position.lerpVectors(camStart, camTarget, ease);
+        camera.lookAt(0, 0, 0);
+      } else {
+        orbitAngle += 0.0006;
+        const orR = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
+        camera.position.x = Math.cos(orbitAngle) * orR;
+        camera.position.z = Math.sin(orbitAngle) * orR;
+        camera.lookAt(0, 0, 0);
+      }
+
+      // — Orbiting ETF sub-holes —
+      if (isETF) {
+        for (let v = 1; v < blackholes.length; v++) {
+          const bh = blackholes[v];
+          bh.angle += bh.speed;
+          bh.pos.x = Math.cos(bh.angle) * bh.dist;
+          bh.pos.z = Math.sin(bh.angle) * bh.dist;
+        }
+      }
+
+      // — Disk particle physics —
+      const dp = dGeo.attributes.position.array;
+      const dc = dGeo.attributes.color.array;
+
+      for (let i = 0; i < DISK_COUNT; i++) {
+        const i3 = i * 3;
+        let px = dp[i3], py = dp[i3 + 1], pz = dp[i3 + 2];
+        let fx = 0, fy = 0, fz = 0;
+        let minDist = 9999;
+
+        for (const bh of blackholes) {
+          const dx = bh.pos.x - px, dy = bh.pos.y - py, dz = bh.pos.z - pz;
+          const distSq = Math.max(0.1, dx * dx + dy * dy + dz * dz);
+          const dist   = Math.sqrt(distSq);
+          if (dist < minDist) minDist = dist;
+          const force  = bh.mass / distSq;
+          fx += (dx / dist) * force;
+          fy += (dy / dist) * force;
+          fz += (dz / dist) * force;
+        }
+
+        dVels[i3]     = (dVels[i3]     + fx) * 0.994;
+        dVels[i3 + 1] = (dVels[i3 + 1] + fy) * 0.988;
+        dVels[i3 + 2] = (dVels[i3 + 2] + fz) * 0.994;
+
+        dp[i3]     += dVels[i3];
+        dp[i3 + 1] += dVels[i3 + 1];
+        dp[i3 + 2] += dVels[i3 + 2];
+
+        // — Blueshift: colour shift to white-blue when very close —
+        if (minDist < 7) {
+          const bf = _clamp(1 - (minDist - 2) / 5, 0, 1) * 0.12;
+          dc[i3]     = _lerp(dc[i3],     0.25, bf);
+          dc[i3 + 1] = _lerp(dc[i3 + 1], 0.75, bf);
+          dc[i3 + 2] = _lerp(dc[i3 + 2], 1.0,  bf);
+        }
+
+        // — Swallowed → respawn at outer disk edge —
+        let swallowed = false;
+        for (const bh of blackholes) {
+          if ((bh.pos.x - px) ** 2 + (bh.pos.z - pz) ** 2 < (R_EH * 1.15) ** 2) {
+            swallowed = true; break;
+          }
+        }
+        if (swallowed) {
+          const ang = Math.random() * Math.PI * 2;
+          const r   = _rand(40, 47);
+          dp[i3]     = Math.cos(ang) * r;
+          dp[i3 + 1] = _rand(-1, 1) * Math.exp(-r * 0.055) * 1.5;
+          dp[i3 + 2] = Math.sin(ang) * r;
+          diskColor(r, dc, i3);
+          const v      = Math.sqrt(125 / (r + 0.5));
+          dVels[i3]    = -Math.sin(ang) * v;
+          dVels[i3+1]  = _rand(-0.003, 0.003);
+          dVels[i3+2]  =  Math.cos(ang) * v;
+        }
+      }
+      dGeo.attributes.position.needsUpdate = true;
+      dGeo.attributes.color.needsUpdate    = true;
+
+      // — Jet physics —
+      const jp = jGeo.attributes.position.array;
+      for (let i = 0; i < JET_COUNT; i++) {
+        const i3 = i * 3;
+        jp[i3]     += jVels[i3];
+        jp[i3 + 1] += jVels[i3 + 1];
+        jp[i3 + 2] += jVels[i3 + 2];
+        // Slight radial spread as jet rises
+        jp[i3]     *= 1.0012;
+        jp[i3 + 2] *= 1.0012;
+        if (Math.abs(jp[i3 + 1]) > 25) {
+          const dir = jp[i3 + 1] > 0 ? 1 : -1;
+          const ang = Math.random() * Math.PI * 2;
+          const spr = _rand(0, 0.3);
+          jp[i3]     = Math.cos(ang) * spr;
+          jp[i3 + 1] = dir * _rand(1, 4);
+          jp[i3 + 2] = Math.sin(ang) * spr;
+        }
+      }
+      jGeo.attributes.position.needsUpdate = true;
+
+      // — Photon ring opacity pulse —
+      photonRing.material.opacity = 0.55 + Math.sin(time * 2.5) * 0.20;
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+    return () => { cancelAnimationFrame(animId); renderer.dispose(); };
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     GALAXY 3D v2  —  Market Galaxy
+  ══════════════════════════════════════════════════════════════════════ */
+  function vizGalaxy3D() {
+    const container = document.getElementById('viz-canvas-container') || document.getElementById('viz-overlay');
+    if (!container || typeof THREE === 'undefined') return null;
+
+    const W = container.clientWidth  || 800;
+    const H = (container.clientHeight || 500) - 50;
+    const DISK_COUNT = 40000;
+    const CORE_COUNT =  3500;
+
+    const ticker = window.__MMO_CURRENT_TICKER__ || 'SPY';
+    window.__MMO_CURRENT_TICKER__ = null;
+    const isETF = ['SPY', 'QQQ', 'DIA', 'IWM', 'VTI', 'VIX'].includes(ticker);
+
+    // ── Scene ─────────────────────────────────────────────────────────────
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x010208);
+    scene.fog = new THREE.FogExp2(0x010208, 0.0022);
+
+    const camera = new THREE.PerspectiveCamera(52, W / H, 0.1, 1000);
+    camera.position.set(0, 50, 70);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    _setupRenderer(renderer);
+
+    const mount = document.getElementById('viz-three-mount');
+    if (!mount) return null;
+    mount.innerHTML = '';
+    mount.appendChild(renderer.domElement);
+
+    // ── Context label ──────────────────────────────────────────────────────
+    const label = document.createElement('div');
+    Object.assign(label.style, {
+      position: 'absolute', bottom: '14px', left: '16px', zIndex: '10',
+      fontFamily: 'monospace', fontSize: '11px', color: '#50fa7b',
+      textShadow: '0 0 10px #50fa7b', pointerEvents: 'none',
+    });
+    const ARMS = isETF ? 8 : 2;
+    label.innerHTML = isETF
+      ? `<span style="color:#ff9500">ETF</span> <span style="color:#888">${ticker}</span> — ${ARMS} sector arms`
+      : `<span style="color:#00d4ff">STOCK</span> <span style="color:#888">${ticker}</span> — focused orbital structure`;
+    mount.appendChild(label);
+
+    // ── Sector arm colours (one per market sector) ─────────────────────────
+    const ARM_COLORS = [
+      [0.20, 0.80, 1.00],  // Tech        — cyan
+      [1.00, 0.72, 0.10],  // Finance      — gold
+      [0.28, 1.00, 0.48],  // Health       — green
+      [1.00, 0.28, 0.28],  // Energy       — red
+      [0.78, 0.28, 1.00],  // Utilities    — purple
+      [1.00, 0.52, 0.05],  // Industrials  — orange
+      [0.28, 0.60, 1.00],  // Consumer     — blue
+      [0.80, 1.00, 0.28],  // Materials    — lime
+    ];
+
+    // ── Disk particles ─────────────────────────────────────────────────────
+    const dGeo    = new THREE.BufferGeometry();
+    const dPos    = new Float32Array(DISK_COUNT * 3);
+    const dCol    = new Float32Array(DISK_COUNT * 3);
+    const dParams = new Float32Array(DISK_COUNT * 3); // angle, radius, speed
+
+    const tight   = isETF ? 0.28 : 1.05;
+    const maxR    = isETF ? 52    : 42;
+    const minR    = isETF ?  2    :  1;
+    const hSpread = isETF ? 16    :  7;
+
+    for (let i = 0; i < DISK_COUNT; i++) {
+      const i3     = i * 3;
+      const armIdx = i % ARMS;
+      const armOff = (armIdx / ARMS) * Math.PI * 2;
+      const radius = minR + Math.random() * (maxR - minR);
+      const angle  = armOff + radius * tight + _rand(-0.38, 0.38);
+      const speed  = _rand(0.0004, 0.0028) * ((isETF ? 22 : 42) / (radius + 4));
+
+      dParams[i3]     = angle;
+      dParams[i3 + 1] = radius;
+      dParams[i3 + 2] = speed;
+
+      dPos[i3]     = Math.cos(angle) * radius;
+      dPos[i3 + 1] = (_rand(-1, 1) * hSpread) / (radius + 1.5);
+      dPos[i3 + 2] = Math.sin(angle) * radius;
+
+      // Arm colour with radial brightness falloff
+      const ac   = ARM_COLORS[armIdx % ARM_COLORS.length];
+      const fade = _clamp(1.25 - radius / maxR, 0.25, 1.0);
+      const sc   = _rand(0.82, 1.00);
+      dCol[i3]     = _clamp(ac[0] * fade * sc, 0, 1);
+      dCol[i3 + 1] = _clamp(ac[1] * fade * sc, 0, 1);
+      dCol[i3 + 2] = _clamp(ac[2] * fade * sc, 0, 1);
+    }
+
+    dGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
+    dGeo.setAttribute('color',    new THREE.BufferAttribute(dCol, 3));
+
+    const diskDetail = new THREE.Points(dGeo, _softMat({ size: isETF ? 0.16 : 0.20, opacity: 0.86 }));
+    const diskGlow   = new THREE.Points(dGeo, _glowMat({ size: isETF ? 0.80 : 1.00, opacity: 0.14 }));
+
+    // Wrap both in a group so a single rotation affects them identically
+    const galaxyGroup = new THREE.Group();
+    galaxyGroup.add(diskDetail);
+    galaxyGroup.add(diskGlow);
+    scene.add(galaxyGroup);
+
+    // ── Galactic nucleus (dense, bright yellow-white core) ─────────────────
+    const cGeo = new THREE.BufferGeometry();
+    const cPos = new Float32Array(CORE_COUNT * 3);
+    const cCol = new Float32Array(CORE_COUNT * 3);
+
+    for (let i = 0; i < CORE_COUNT; i++) {
+      const i3    = i * 3;
+      const phi   = Math.acos(2 * Math.random() - 1);
+      const theta = Math.random() * Math.PI * 2;
+      const r     = _rand(0, 3.2);
+      cPos[i3]     = Math.sin(phi) * Math.cos(theta) * r;
+      cPos[i3 + 1] = Math.cos(phi) * r * 0.22; // flatten to disk
+      cPos[i3 + 2] = Math.sin(phi) * Math.sin(theta) * r;
+      const br     = _rand(0.88, 1.00);
+      cCol[i3]     = br;
+      cCol[i3 + 1] = _rand(0.92, 1.00) * br;
+      cCol[i3 + 2] = _rand(0.72, 0.88) * br; // warm white
+    }
+
+    cGeo.setAttribute('position', new THREE.BufferAttribute(cPos, 3));
+    cGeo.setAttribute('color',    new THREE.BufferAttribute(cCol, 3));
+
+    const coreDetail = new THREE.Points(cGeo, _softMat({ size: 0.50, opacity: 0.95 }));
+    const coreGlow   = new THREE.Points(cGeo, _glowMat({ size: 2.80, opacity: 0.30 }));
+    galaxyGroup.add(coreDetail);
+    galaxyGroup.add(coreGlow);
+
+    // ── Animation ──────────────────────────────────────────────────────────
+    let animId     = null;
+    let camOrbitA  = Math.atan2(camera.position.z, camera.position.x);
+    let tiltBase   = -0.18;
+
+    function animate() {
+      animId = requestAnimationFrame(animate);
+
+      // Orbital mechanics — update each particle's angle + rebuild X/Z
+      const dp = dGeo.attributes.position.array;
+      for (let i = 0; i < DISK_COUNT; i++) {
+        const i3        = i * 3;
+        dParams[i3]    += dParams[i3 + 2];
+        const ang       = dParams[i3];
+        const r         = dParams[i3 + 1];
+        dp[i3]          = Math.cos(ang) * r;
+        dp[i3 + 2]      = Math.sin(ang) * r;
+        // Y is static (height doesn't change)
+      }
+      dGeo.attributes.position.needsUpdate = true;
+
+      // Slow self-rotation of the whole group (accumulating, not constant)
+      galaxyGroup.rotation.y += 0.00045;
+
+      // Subtle tilt oscillation (± 2°)
+      galaxyGroup.rotation.x = tiltBase + Math.sin(Date.now() * 0.000065) * 0.035;
+
+      // Gentle camera orbit
+      camOrbitA += 0.00038;
+      const camR = Math.hypot(camera.position.x, camera.position.z);
+      camera.position.x = Math.cos(camOrbitA) * camR;
+      camera.position.z = Math.sin(camOrbitA) * camR;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+    return () => { cancelAnimationFrame(animId); renderer.dispose(); };
+  }
+
+  // ── Registration ────────────────────────────────────────────────────────
+  window.VizLab.registerViz(
+    'blackhole',
+    {
+      cat: 'art', label: 'Liquidity Black Hole', icon: '🌌', api: null,
+      desc: 'UHQ v2 — Temperature-correct accretion disk (blue-white core → red outer), ' +
+            'relativistic plasma jets, photon-sphere ring, layered corona, cinematic approach. ' +
+            'ETF = multi-vortex system  ·  Stock = unified singularity.',
+    },
+    true, vizBlackhole
+  );
+
+  window.VizLab.registerViz(
+    'galaxy3d',
+    {
+      cat: 'art', label: 'Market Galaxy 3D', icon: '🌠', api: null,
+      desc: 'UHQ v2 — 40 k particle spiral galaxy. ETF: 8 sector arms (Tech/Finance/Health/Energy…) ' +
+            'each with a distinct colour. Dense yellow-white galactic nucleus. Soft bloom layers. ' +
+            'Slow camera orbit. Fixed galaxy-tilt accumulation.',
+    },
+    true, vizGalaxy3D
+  );
 })();

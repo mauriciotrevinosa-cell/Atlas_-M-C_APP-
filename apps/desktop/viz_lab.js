@@ -191,6 +191,13 @@ window.VizLab = (() => {
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // UHQ: ACES tone mapping + sRGB colour space
+    if (window.UHQ) { window.UHQ.setupRenderer(renderer); }
+    else {
+      renderer.toneMapping         = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.1;
+      renderer.outputColorSpace    = THREE.SRGBColorSpace;
+    }
     const mount = document.getElementById('viz-three-mount');
     if (!mount) return;
     mount.innerHTML = '';
@@ -284,9 +291,17 @@ window.VizLab = (() => {
     geo.setAttribute('position', new THREE.BufferAttribute(currentPos, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(currentCol, 3));
 
-    const mat = new THREE.PointsMaterial({ size: 0.04, vertexColors: true, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
-    const points = new THREE.Points(geo, mat);
+    // UHQ: soft glow particles (detail layer) + wide bloom-sim halo layer
+    const mat = window.UHQ
+      ? window.UHQ.softMat({ size: 0.13, opacity: 0.88 })
+      : new THREE.PointsMaterial({ size: 0.07, vertexColors: true, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
+    const glowMat = window.UHQ
+      ? window.UHQ.glowMat({ size: 0.70, opacity: 0.14 })
+      : new THREE.PointsMaterial({ size: 0.40, vertexColors: true, transparent: true, opacity: 0.10, blending: THREE.AdditiveBlending, depthWrite: false });
+    const points    = new THREE.Points(geo, mat);
+    const glowLayer = new THREE.Points(geo, glowMat); // shares same BufferGeometry
     scene.add(points);
+    scene.add(glowLayer);
 
     // Lighting fog-like effect
     scene.fog = new THREE.Fog(0x060610, 30, 80);
@@ -400,6 +415,8 @@ window.VizLab = (() => {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    if (window.UHQ) window.UHQ.setupRenderer(renderer, { exposure: 1.0 });
+    else { renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace; }
 
     const mount = document.getElementById('viz-three-mount');
     if (!mount) return;
@@ -3401,6 +3418,8 @@ window.VizLab = (() => {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(W, H);
+    if (window.UHQ) window.UHQ.setupRenderer(renderer);
+    else { renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace; }
     renderer.domElement.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%';
     container.appendChild(renderer.domElement);
 
@@ -3704,6 +3723,8 @@ window.VizLab = (() => {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(W, H);
+    if (window.UHQ) window.UHQ.setupRenderer(renderer);
+    else { renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace; }
     renderer.domElement.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;';
     container.appendChild(renderer.domElement);
 
@@ -4770,6 +4791,8 @@ window.VizLab = (() => {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    if (window.UHQ) window.UHQ.setupRenderer(renderer);
+    else { renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace; }
     renderer.domElement.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;';
     container.appendChild(renderer.domElement);
 
@@ -5325,6 +5348,8 @@ window.VizLab = (() => {
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.setClearColor(0x06060e, 1);
+    if (window.UHQ) window.UHQ.setupRenderer(renderer);
+    else { renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace; }
     container.appendChild(renderer.domElement);
 
     // Lighting
@@ -6167,6 +6192,8 @@ window.VizLab = (() => {
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.setClearColor(0x020208, 1);
+    if (window.UHQ) window.UHQ.setupRenderer(renderer);
+    else { renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace; }
     container.appendChild(renderer.domElement);
 
     // Galaxy core
