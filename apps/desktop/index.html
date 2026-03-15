@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="styles.css?v=ui-premium-1">
   <link rel="stylesheet" href="css/mmo_overrides.css?v=2026.03.09-quantum-v2">
+  <link rel="stylesheet" href="css/signal_terminal.css?v=2026.03.15-v1">
   <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 
@@ -1135,6 +1136,9 @@
     <!-- ===== VIEW: THOUGHT MAP ===== -->
     <div id="view-thought" class="view-section"></div>
 
+    <!-- ===== VIEW: SIGNAL TERMINAL ===== -->
+    <div id="view-signal-terminal" class="view-section"></div>
+
     <!-- ===== VIEW: AI AGENTS ===== -->
     <div id="view-agents" class="view-section">
       <div class="section-header-row">
@@ -1313,6 +1317,13 @@
         </svg>
       </div>
 
+      <!-- Signal Terminal Icon (activity / pulse) -->
+      <div class="nav-item" onclick="switchView('signal-terminal')" id="nav-signals">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      </div>
+
       <!-- Info Icon (question mark / book) -->
       <div class="nav-item" onclick="switchView('info')" id="nav-info">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1351,6 +1362,7 @@
   <script src="rl_lab.js?v=2026.03.07-v1"></script> <!-- RL Lab -->
   <script src="thought_map.js?v=2026.03.08-v2"></script> <!-- Thought Map -->
   <script src="agents.js?v=2026.03.08-v3"></script> <!-- AI Agents -->
+  <script src="signal_terminal.js?v=2026.03.15-v1"></script> <!-- Signal Terminal -->
   <script>
     // View Switcher Logic
     function switchView(viewName) {
@@ -1381,6 +1393,7 @@
         'rl': null,
         'thought': 'nav-thought',
         'agents': 'nav-agents',
+        'signal-terminal': 'nav-signals',
       };
 
       const navId = navMap[viewName];
@@ -1451,6 +1464,9 @@
             window._mmoInitDone = true;
           }
         }, 80);
+      }
+      if (viewName === 'signal-terminal' && typeof SignalTerminal !== 'undefined') {
+        SignalTerminal.init();
       }
     }
 

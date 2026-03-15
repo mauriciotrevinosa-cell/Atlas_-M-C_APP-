@@ -12,6 +12,8 @@ import uuid
 class SourceType(str, Enum):
     RSS     = "rss"
     REDDIT  = "reddit"
+    NITTER  = "nitter"    # Twitter/X via Nitter RSS mirrors
+    SEC     = "sec"       # SEC EDGAR filings (Form 4, 8-K, 13F)
     WEBHOOK = "webhook"
     MANUAL  = "manual"
 

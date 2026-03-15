@@ -13,7 +13,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional
 
-from .collectors import RSSCollector, RedditCollector
+from .collectors import RSSCollector, RedditCollector, NitterCollector, SECEdgarCollector
 from .models import SourceType
 from .services import AlertService, SignalService, WatchlistService, WhaleService
 from .storage import SignalRepository
@@ -130,5 +130,9 @@ class SignalScheduler:
             return RSSCollector(source)
         if source.type == SourceType.REDDIT:
             return RedditCollector(source)
+        if source.type == SourceType.NITTER:
+            return NitterCollector(source)
+        if source.type == SourceType.SEC:
+            return SECEdgarCollector(source)
         logger.debug("[Scheduler] no collector for type=%s source=%s", source.type, source.id)
         return None

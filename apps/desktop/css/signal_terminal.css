@@ -1,0 +1,404 @@
+/* ═══════════════════════════════════════════════════════════════
+   Signal Terminal — UI Styles
+   Follows Atlas CSS variable conventions (styles.css root vars).
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Layout ──────────────────────────────────────────────────── */
+#view-signal-terminal {
+  padding: 0 18px 80px;
+}
+
+.st-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0 10px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 10px;
+}
+
+.st-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: .5px;
+}
+
+.st-title svg { color: var(--accent-green); flex-shrink: 0; }
+
+.st-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Server badge ────────────────────────────────────────────── */
+.st-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: .4px;
+}
+.st-badge-on  { background: rgba(0,220,100,.12); color: var(--accent-green); border: 1px solid rgba(0,220,100,.25); }
+.st-badge-off { background: rgba(200,50,50,.12);  color: #e74c3c;             border: 1px solid rgba(200,50,50,.25);  }
+
+/* ── Stats strip ─────────────────────────────────────────────── */
+.st-stats-strip {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.st-stat {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 64px;
+}
+.st-stat span:first-child {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+.st-stat span:last-child {
+  font-size: 9px;
+  color: var(--txt-muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-top: 2px;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────── */
+.st-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+.st-tab {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--txt-muted);
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .18s;
+}
+.st-tab:hover  { color: var(--text-secondary); border-color: var(--border-color); }
+.st-tab.active {
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+  background: rgba(0,220,100,.06);
+}
+
+/* ── Control buttons ────────────────────────────────────────── */
+.st-ctrl-btn {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.st-ctrl-btn:hover   { border-color: var(--accent-green); color: var(--accent-green); }
+.st-ctrl-btn:disabled { opacity: .5; cursor: default; }
+.st-ctrl-btn-green  { border-color: var(--accent-green); color: var(--accent-green); }
+.st-ctrl-btn-green:hover { background: rgba(0,220,100,.08); }
+
+/* ── Inputs / selects ───────────────────────────────────────── */
+.st-input, .st-select {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  outline: none;
+  transition: border-color .15s;
+}
+.st-input:focus, .st-select:focus { border-color: var(--accent-green); }
+.st-select { appearance: none; padding-right: 24px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+}
+
+/* ── Filter row ─────────────────────────────────────────────── */
+.st-filter-row, .st-add-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.st-filter-row .st-input { width: 120px; }
+
+/* ── Panes ───────────────────────────────────────────────────── */
+.st-pane { animation: st-fade-in .2s ease; }
+@keyframes st-fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ── Placeholder / error ─────────────────────────────────────── */
+.st-placeholder {
+  color: var(--txt-muted);
+  font-size: 12px;
+  padding: 24px 0;
+  text-align: center;
+}
+.st-error {
+  color: #e74c3c;
+  font-size: 12px;
+  padding: 20px;
+  background: rgba(231,76,60,.06);
+  border: 1px solid rgba(231,76,60,.2);
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* ── Signal feed ─────────────────────────────────────────────── */
+.st-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: calc(100vh - 340px);
+  overflow-y: auto;
+}
+.st-signal-row {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.st-signal-row:hover { border-color: rgba(0,220,100,.3); }
+
+.st-sig-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  margin-bottom: 5px;
+}
+.st-sig-cat {
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid;
+  font-weight: 600;
+  font-size: 9px;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+}
+.st-sig-sent { font-weight: 600; font-size: 10px; }
+.st-sig-urgency { font-size: 8px; }
+.st-sig-age, .st-sig-score { color: var(--txt-muted); margin-left: auto; }
+.st-sig-score { color: var(--text-secondary); font-weight: 600; }
+
+.st-sig-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+.st-sig-tickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.st-ticker-chip {
+  background: rgba(52,152,219,.12);
+  color: #3498db;
+  border: 1px solid rgba(52,152,219,.25);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+/* Expanded signal detail */
+.st-sig-detail {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+.st-sig-expand {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.st-link { color: var(--accent-green); font-size: 11px; text-decoration: none; }
+.st-link:hover { text-decoration: underline; }
+.st-sig-author { font-size: 10px; color: var(--txt-muted); }
+.st-sig-body {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  background: var(--bg-dark);
+  padding: 7px 10px;
+  border-radius: 6px;
+}
+.st-sig-kws { display: flex; flex-wrap: wrap; gap: 4px; }
+.st-kw {
+  background: var(--bg-dark);
+  color: var(--txt-muted);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+.st-sig-ids {
+  display: flex;
+  gap: 12px;
+  font-size: 10px;
+  color: #445;
+  font-family: monospace;
+}
+
+.st-load-more-row { display: flex; justify-content: center; padding: 12px 0; }
+
+/* ── Watchlist ───────────────────────────────────────────────── */
+.st-watch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: calc(100vh - 340px);
+  overflow-y: auto;
+}
+.st-watch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+.st-watch-ticker { font-weight: 700; font-family: monospace; color: var(--text-primary); min-width: 60px; }
+.st-watch-name   { color: var(--text-secondary); flex: 1; }
+.st-watch-type   { color: var(--txt-muted); font-size: 10px; text-transform: uppercase; min-width: 44px; }
+.st-watch-prio   { font-size: 10px; font-weight: 600; min-width: 48px; }
+.st-watch-alert  { font-size: 12px; }
+.st-del-btn {
+  background: none;
+  border: none;
+  color: #445;
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color .15s;
+}
+.st-del-btn:hover { color: #e74c3c; }
+
+/* ── Whale events ────────────────────────────────────────────── */
+.st-whale-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+}
+.st-whale-type   { font-size: 14px; min-width: 22px; text-align: center; }
+.st-whale-ticker { font-weight: 700; font-family: monospace; color: #9b59b6; min-width: 55px; }
+.st-whale-size   { font-weight: 700; color: var(--accent-green); min-width: 60px; }
+.st-whale-desc   { color: var(--text-secondary); flex: 1; }
+.st-whale-conf   { color: var(--txt-muted); font-size: 10px; min-width: 32px; text-align: right; }
+.st-whale-date   { color: #445; font-size: 10px; white-space: nowrap; }
+
+/* ── Sources ─────────────────────────────────────────────────── */
+.st-source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.st-source-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+}
+.st-src-has-error { border-color: rgba(231,76,60,.25); }
+.st-src-type {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: .5px;
+  min-width: 52px;
+  text-align: center;
+}
+.st-src-name   { font-weight: 600; color: var(--text-primary); flex: 1; }
+.st-src-stats  { color: var(--txt-muted); font-size: 10px; white-space: nowrap; }
+.st-src-err    { color: #f39c12; font-size: 10px; white-space: nowrap; }
+
+/* Toggle switch */
+.st-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  margin-left: auto;
+}
+.st-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.st-toggle-track {
+  width: 32px;
+  height: 17px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  transition: all .2s;
+  position: relative;
+}
+.st-toggle-track::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #445;
+  transition: all .2s;
+}
+.st-toggle input:checked + .st-toggle-track {
+  background: rgba(0,220,100,.1);
+  border-color: var(--accent-green);
+}
+.st-toggle input:checked + .st-toggle-track::after {
+  left: 17px;
+  background: var(--accent-green);
+}
+
+/* ── Nav icon (signal pulse) ────────────────────────────────── */
+#nav-signals svg {
+  animation: none;
+}
+#nav-signals.active {
+  color: var(--accent-green);
+}

@@ -46,6 +46,34 @@ class WatchlistService:
                     },
                 ))
 
+        for src_cfg in cfg.DEFAULT_NITTER_SOURCES:
+            if src_cfg["id"] not in existing:
+                self._repo.upsert_source(Source(
+                    id=src_cfg["id"],
+                    name=src_cfg["name"],
+                    type=SourceType.NITTER,
+                    url="",
+                    refresh_interval=src_cfg.get("refresh_interval", 900),
+                    config={
+                        "query":      src_cfg["query"],
+                        "query_type": src_cfg.get("query_type", "search"),
+                    },
+                ))
+
+        for src_cfg in cfg.DEFAULT_SEC_SOURCES:
+            if src_cfg["id"] not in existing:
+                self._repo.upsert_source(Source(
+                    id=src_cfg["id"],
+                    name=src_cfg["name"],
+                    type=SourceType.SEC,
+                    url="",
+                    refresh_interval=src_cfg.get("refresh_interval", 1800),
+                    config={
+                        "form_type": src_cfg["form_type"],
+                        "count":     src_cfg.get("count", 20),
+                    },
+                ))
+
     # ── Watchlist ─────────────────────────────────────────────────────────
 
     def add(self, item: WatchlistItem) -> WatchlistItem:

@@ -87,3 +87,39 @@ DEFAULT_REDDIT_SOURCES = [
         "refresh_interval": 600,
     },
 ]
+
+# ── Default Nitter sources (Twitter/X via RSS, no auth) ───────────────────
+DEFAULT_NITTER_SOURCES = [
+    {
+        "id": "nitter_earnings",
+        "name": "Twitter — Earnings & Finance",
+        "query": "earnings beat miss guidance EPS revenue",
+        "query_type": "search",
+        "refresh_interval": 900,
+    },
+    {
+        "id": "nitter_whale_alerts",
+        "name": "Twitter — Whale Alerts",
+        "query": "@whale_alert",
+        "query_type": "user",
+        "refresh_interval": 600,
+    },
+]
+
+# ── Default SEC EDGAR sources ─────────────────────────────────────────────
+DEFAULT_SEC_SOURCES = [
+    {
+        "id": "sec_form4",
+        "name": "SEC EDGAR — Form 4 (Insider Transactions)",
+        "form_type": "4",
+        "count": 20,
+        "refresh_interval": 1800,    # 30 min — filings don't change rapidly
+    },
+    {
+        "id": "sec_8k",
+        "name": "SEC EDGAR — Form 8-K (Material Events)",
+        "form_type": "8-K",
+        "count": 20,
+        "refresh_interval": 1800,
+    },
+]
