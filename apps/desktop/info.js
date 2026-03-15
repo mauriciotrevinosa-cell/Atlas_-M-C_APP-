@@ -713,6 +713,40 @@ window.InfoModule = (() => {
       tags: ['FastAPI', 'REST', 'WebSocket', 'Python', 'Server'],
     },
 
+    /* ══════════════════════ SIGNAL TERMINAL ══════════════════════════ */
+    {
+      id: 'signal_terminal',
+      category: 'feature',
+      name: 'Signal Terminal',
+      icon: '📡',
+      desc: 'Real-time market signal ingestion hub. Aggregates news, social chatter, SEC filings, and insider transactions from RSS feeds, Reddit, Twitter/X (via Nitter), and SEC EDGAR into a unified, scored feed. Supports keyword-based alerts with Telegram and Discord notifications.',
+      source: 'Yahoo Finance RSS, MarketWatch RSS, CoinDesk RSS, Seeking Alpha RSS, Reddit (r/stocks, r/wallstreetbets, r/investing, r/CryptoCurrency), Nitter RSS mirrors (Twitter/X), SEC EDGAR Atom feeds (Form 4 insider transactions, Form 8-K material events).',
+      how: 'Collector layer fetches raw items on configurable intervals (300–1800 s). Normalizer strips HTML, extracts $CASHTAG tickers, and computes a SHA-256 dedup fingerprint. Classifier applies rule-based keyword sets to assign one of 8 categories (earnings, macro, whale, technical, crypto, sentiment, news, unknown) and a sentiment score in [−1, +1]. Matcher cross-references extracted tickers against the user watchlist. Scorer combines recency decay (exp(−h/24)), sentiment magnitude, category boost, and watchlist match count into a final relevance score [0, 1]. Alert rules fire on matching conditions (ticker, category, sentiment, urgency, relevance_min) and dispatch LOG / Telegram / Discord / webhook notifications. Whale detector pattern-matches size phrases ($50M, $1.2B) in signal text.',
+      tags: ['RSS', 'Reddit', 'SEC EDGAR', 'Nitter', 'Alerts', 'Telegram', 'Discord', 'Watchlist', 'Scoring'],
+      api: '/api/signals/',
+    },
+    {
+      id: 'signal_collectors',
+      category: 'data',
+      name: 'Signal Terminal — Collectors',
+      icon: '🔌',
+      desc: 'Four pluggable collector adapters that normalize external feeds into a common RawItem schema: RSS/Atom (feedparser + stdlib XML fallback), Reddit public JSON API, Nitter RSS mirrors (4-instance rotation), and SEC EDGAR Atom feeds.',
+      source: 'HTTP/RSS fetch on configurable refresh intervals. No paid API keys required. Reddit uses the public .json endpoint; Nitter uses public mirror instances; SEC EDGAR provides free Atom feeds per EDGAR ToS.',
+      how: 'BaseCollector ABC defines fetch() → List[RawItem]. RSSCollector: tries feedparser, falls back to xml.etree.ElementTree; parses both RSS 2.0 <item> and Atom <entry>. RedditCollector: fetches r/{sub}/{sort}.json with 2 s rate limit; extracts score, upvote_ratio, num_comments. NitterCollector: rotates through 4 public Nitter instances; supports search/user/hashtag query types; 3 s rate limit. SECEdgarCollector: browse-edgar?output=atom URL per form type; required User-Agent header per EDGAR ToS; prefixes titles with [SEC {form_type}].',
+      tags: ['RSS', 'Reddit', 'Nitter', 'SEC EDGAR', 'Collector', 'Adapter'],
+    },
+    {
+      id: 'signal_alerts',
+      category: 'feature',
+      name: 'Signal Terminal — Alert Rules',
+      icon: '🔔',
+      desc: 'Rule-based alert engine that evaluates every ingested signal against user-defined conditions and dispatches notifications to log, Telegram bot, Discord webhook, or a custom HTTP endpoint.',
+      source: 'Evaluated in real-time inside the ingest pipeline after scoring. Conditions are stored in SQLite (st_alert_rules). Trigger history stored in st_alert_triggers.',
+      how: 'Each AlertRule has a conditions dict (ticker?, category?, sentiment?, urgency?, relevance_min?) and an action (log/telegram/discord/webhook). On ingest, all enabled rules are tested: ticker is a substring match; relevance_min is a ≥ threshold; other fields are equality checks. Matching rules fire _send_*() dispatch methods. Telegram: urllib POST to api.telegram.org/bot{TOKEN}/sendMessage (no extra deps, reads TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID from env or rule config). Discord: urllib POST of JSON embed to webhook URL, color-coded by sentiment. Webhook: urllib POST of full signal JSON to target URL.',
+      tags: ['Alerts', 'Telegram', 'Discord', 'Webhook', 'Notifications', 'Rules'],
+      api: '/api/signals/alerts/rules',
+    },
+
     /* ══════════════════════ QUANTUM / MMO THEORY ══════════════════════ */
     {
       id: 'mmo_overview',

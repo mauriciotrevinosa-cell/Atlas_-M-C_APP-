@@ -402,3 +402,197 @@
 #nav-signals.active {
   color: var(--accent-green);
 }
+
+/* ── Alert rules tab ────────────────────────────────────────── */
+.st-alert-form {
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+.st-alert-form-title {
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.st-alert-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+.st-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.st-form-field-wide {
+  grid-column: 1 / -1;
+}
+.st-form-field label {
+  font-size: .72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.st-form-field input,
+.st-form-field select {
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  color: var(--text-primary);
+  font-size: .8rem;
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color .15s;
+}
+.st-form-field input:focus,
+.st-form-field select:focus {
+  border-color: var(--accent-green);
+}
+.st-form-field select option {
+  background: var(--panel-bg, #1a1d24);
+}
+.st-alert-form-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.st-alert-rules-title {
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.st-alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.st-alert-row {
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  padding: 10px 12px;
+  transition: background .15s;
+}
+.st-alert-row:hover {
+  background: rgba(255,255,255,.05);
+}
+.st-alert-row-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.st-alert-name {
+  flex: 1;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.st-alert-action {
+  font-size: .7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0,220,100,.1);
+  color: var(--accent-green);
+  border: 1px solid rgba(0,220,100,.2);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.st-alert-fire-info {
+  font-size: .7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.st-alert-cond {
+  margin-top: 6px;
+  font-size: .72rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.st-alert-disabled .st-alert-name {
+  opacity: .45;
+}
+.st-alert-disabled .st-alert-action {
+  opacity: .35;
+}
+.st-btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: .8rem;
+  transition: color .15s, background .15s;
+}
+.st-btn-icon:hover {
+  color: #e55;
+  background: rgba(220,50,50,.1);
+}
+
+/* ── Ticker drill-down modal ────────────────────────────────── */
+.st-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.65);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+}
+.st-modal.active {
+  display: flex;
+}
+.st-modal-box {
+  background: var(--panel-bg, #1a1d24);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  width: min(680px, 92vw);
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,.5);
+}
+.st-modal-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 10px;
+}
+.st-modal-title {
+  flex: 1;
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.st-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color .15s, background .15s;
+}
+.st-modal-close:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,.06);
+}
+.st-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 18px;
+}
+.st-muted {
+  color: var(--text-muted);
+  font-size: .8rem;
+}

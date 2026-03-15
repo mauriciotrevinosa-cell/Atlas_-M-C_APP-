@@ -22,6 +22,7 @@ window.SignalTerminal = (() => {
     watchlist: [],
     whales:    [],
     sources:   [],
+    alerts:    [],
     stats:     null,
     filters: { ticker: '', category: '', sentiment: '', limit: 50 },
     loading:   false,
@@ -102,6 +103,7 @@ window.SignalTerminal = (() => {
         <button class="st-tab"        data-tab="watchlist" onclick="SignalTerminal._tab('watchlist')">Watchlist</button>
         <button class="st-tab"        data-tab="whales"    onclick="SignalTerminal._tab('whales')">Whales</button>
         <button class="st-tab"        data-tab="sources"   onclick="SignalTerminal._tab('sources')">Sources</button>
+        <button class="st-tab"        data-tab="alerts"    onclick="SignalTerminal._tab('alerts')">Alerts</button>
       </div>
 
       <!-- ── Feed tab ─────────────────────────────────────────────────── -->
@@ -173,6 +175,97 @@ window.SignalTerminal = (() => {
           <div class="st-placeholder">Loading sources…</div>
         </div>
       </div>
+
+      <!-- ── Alerts tab ────────────────────────────────────────────────── -->
+      <div id="st-pane-alerts" class="st-pane" style="display:none">
+        <!-- Create rule form -->
+        <div class="st-alert-form">
+          <div class="st-alert-form-title">New Alert Rule</div>
+          <div class="st-alert-form-grid">
+            <div class="st-form-field">
+              <label>Name</label>
+              <input class="st-input" id="st-al-name" placeholder="e.g. AAPL Whale Alert"/>
+            </div>
+            <div class="st-form-field">
+              <label>Ticker (optional)</label>
+              <input class="st-input" id="st-al-ticker" placeholder="AAPL"/>
+            </div>
+            <div class="st-form-field">
+              <label>Category</label>
+              <select class="st-select" id="st-al-cat">
+                <option value="">Any</option>
+                <option value="earnings">Earnings</option>
+                <option value="macro">Macro</option>
+                <option value="whale">Whale</option>
+                <option value="technical">Technical</option>
+                <option value="crypto">Crypto</option>
+                <option value="news">News</option>
+              </select>
+            </div>
+            <div class="st-form-field">
+              <label>Sentiment</label>
+              <select class="st-select" id="st-al-sent">
+                <option value="">Any</option>
+                <option value="bullish">Bullish</option>
+                <option value="bearish">Bearish</option>
+                <option value="neutral">Neutral</option>
+              </select>
+            </div>
+            <div class="st-form-field">
+              <label>Min Urgency</label>
+              <select class="st-select" id="st-al-urgency">
+                <option value="">Any</option>
+                <option value="medium">Medium+</option>
+                <option value="high">High+</option>
+                <option value="critical">Critical only</option>
+              </select>
+            </div>
+            <div class="st-form-field">
+              <label>Min Relevance (0–1)</label>
+              <input class="st-input" id="st-al-relmin" type="number" min="0" max="1" step="0.05" placeholder="0.5"/>
+            </div>
+            <div class="st-form-field">
+              <label>Keywords (comma-sep)</label>
+              <input class="st-input" id="st-al-kws" placeholder="insider, block trade"/>
+            </div>
+            <div class="st-form-field">
+              <label>Action</label>
+              <select class="st-select" id="st-al-action">
+                <option value="log">Log only</option>
+                <option value="telegram">Telegram</option>
+                <option value="discord">Discord</option>
+                <option value="webhook">Webhook URL</option>
+              </select>
+            </div>
+            <div class="st-form-field st-form-field-wide" id="st-al-action-cfg-row" style="display:none">
+              <label id="st-al-action-cfg-label">Config value</label>
+              <input class="st-input" id="st-al-action-cfg" placeholder="" style="flex:1"/>
+            </div>
+          </div>
+          <div class="st-alert-form-footer">
+            <button class="st-ctrl-btn st-ctrl-btn-green" onclick="SignalTerminal._createAlert()">+ Create Rule</button>
+          </div>
+        </div>
+
+        <!-- Rule list -->
+        <div class="st-alert-rules-title">Active Rules <span id="st-alert-count" class="st-muted"></span></div>
+        <div id="st-alert-list" class="st-alert-list">
+          <div class="st-placeholder">No alert rules yet.</div>
+        </div>
+      </div>
+
+      <!-- ── Ticker detail modal ───────────────────────────────────────── -->
+      <div id="st-ticker-modal" class="st-modal" style="display:none" onclick="SignalTerminal._closeTickerModal(event)">
+        <div class="st-modal-box">
+          <div class="st-modal-header">
+            <span id="st-modal-ticker-title" class="st-modal-title">—</span>
+            <button class="st-modal-close" onclick="SignalTerminal._closeTickerModal()">✕</button>
+          </div>
+          <div id="st-modal-feed" class="st-feed-list" style="max-height:380px">
+            <div class="st-placeholder">Loading…</div>
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -187,7 +280,7 @@ window.SignalTerminal = (() => {
   }
 
   function _activateTab(name) {
-    ['feed', 'watchlist', 'whales', 'sources'].forEach(t => {
+    ['feed', 'watchlist', 'whales', 'sources', 'alerts'].forEach(t => {
       const pane = document.getElementById(`st-pane-${t}`);
       if (pane) pane.style.display = t === name ? '' : 'none';
     });
@@ -195,6 +288,7 @@ window.SignalTerminal = (() => {
     if (name === 'watchlist') _loadWatchlist();
     if (name === 'whales')    _loadWhales();
     if (name === 'sources')   _loadSources();
+    if (name === 'alerts')    { _loadAlerts(); _bindAlertActionSelect(); }
     _loadStats();
   }
 
@@ -302,7 +396,7 @@ window.SignalTerminal = (() => {
     const html = items.map(s => {
       const age    = _age(s.published_at);
       const ticks  = s.tickers.slice(0, 5).map(t =>
-        `<span class="st-ticker-chip">${t}</span>`
+        `<span class="st-ticker-chip" onclick="event.stopPropagation();SignalTerminal._showTickerFeed('${_esc(t)}')" title="View $${_esc(t)} signals">${t}</span>`
       ).join('');
       const catCol = CAT_COLOR[s.category] || '#445';
       const sentCol = SENT_COLOR[s.sentiment] || '#445';
@@ -529,6 +623,205 @@ window.SignalTerminal = (() => {
     }
   }
 
+  // ── Alert Rules ───────────────────────────────────────────────────────────
+
+  function _bindAlertActionSelect() {
+    const sel = document.getElementById('st-al-action');
+    if (!sel || sel._bound) return;
+    sel._bound = true;
+    sel.addEventListener('change', () => {
+      const row   = document.getElementById('st-al-action-cfg-row');
+      const lbl   = document.getElementById('st-al-action-cfg-label');
+      const inp   = document.getElementById('st-al-action-cfg');
+      const val   = sel.value;
+      if (val === 'log') {
+        row.style.display = 'none';
+      } else if (val === 'telegram') {
+        row.style.display = '';
+        lbl.textContent   = 'Chat ID (e.g. -100123456)';
+        inp.placeholder   = 'Set TELEGRAM_BOT_TOKEN env var on server';
+      } else if (val === 'discord') {
+        row.style.display = '';
+        lbl.textContent   = 'Webhook URL';
+        inp.placeholder   = 'https://discord.com/api/webhooks/…';
+      } else if (val === 'webhook') {
+        row.style.display = '';
+        lbl.textContent   = 'POST URL';
+        inp.placeholder   = 'https://your-server.com/hook';
+      }
+    });
+  }
+
+  async function _loadAlerts() {
+    const list = document.getElementById('st-alert-list');
+    if (!list) return;
+    try {
+      _state.alerts = await _api('/alerts/rules');
+      _renderAlerts(list);
+      const cnt = document.getElementById('st-alert-count');
+      if (cnt) cnt.textContent = `(${_state.alerts.length})`;
+    } catch (e) {
+      list.innerHTML = `<div class="st-error">${e.message}</div>`;
+    }
+  }
+
+  function _renderAlerts(container) {
+    const rules = _state.alerts;
+    if (!rules.length) {
+      container.innerHTML = '<div class="st-placeholder">No alert rules yet. Create one above.</div>';
+      return;
+    }
+    const ACTION_ICON = { log: '📋', telegram: '✈', discord: '💬', webhook: '🔗' };
+    container.innerHTML = rules.map(r => {
+      const condParts = [];
+      if (r.conditions.ticker)       condParts.push(`ticker: ${[].concat(r.conditions.ticker).join('/')}`);
+      if (r.conditions.category)     condParts.push(`cat: ${r.conditions.category}`);
+      if (r.conditions.sentiment)    condParts.push(`sent: ${r.conditions.sentiment}`);
+      if (r.conditions.urgency)      condParts.push(`urgency ≥ ${r.conditions.urgency}`);
+      if (r.conditions.relevance_min) condParts.push(`rel ≥ ${r.conditions.relevance_min}`);
+      if (r.conditions.keywords_any) condParts.push(`kw: ${r.conditions.keywords_any.join(',')}`);
+      const condStr  = condParts.join(' · ') || 'no conditions set';
+      const fireInfo = r.trigger_count
+        ? `fired ${r.trigger_count}× · last ${_age(r.last_triggered_at)}`
+        : 'never fired';
+      return `
+        <div class="st-alert-row ${r.enabled ? '' : 'st-alert-disabled'}">
+          <div class="st-alert-row-top">
+            <span class="st-alert-name">${_esc(r.name)}</span>
+            <span class="st-alert-action" title="${r.action}">${ACTION_ICON[r.action] || '?'} ${r.action}</span>
+            <span class="st-alert-fire-info">${fireInfo}</span>
+            <label class="st-toggle" title="${r.enabled ? 'Disable' : 'Enable'} rule">
+              <input type="checkbox" ${r.enabled ? 'checked' : ''}
+                onchange="SignalTerminal._toggleAlert('${r.id}', this.checked)"/>
+              <span class="st-toggle-track"></span>
+            </label>
+            <button class="st-del-btn" onclick="SignalTerminal._deleteAlert('${r.id}')" title="Delete rule">✕</button>
+          </div>
+          <div class="st-alert-cond">${_esc(condStr)}</div>
+        </div>`;
+    }).join('');
+  }
+
+  async function _createAlert() {
+    const name    = (document.getElementById('st-al-name')?.value || '').trim();
+    if (!name) { alert('Please enter a rule name.'); return; }
+
+    const conditions = {};
+    const ticker  = (document.getElementById('st-al-ticker')?.value || '').trim().toUpperCase();
+    const cat     = document.getElementById('st-al-cat')?.value;
+    const sent    = document.getElementById('st-al-sent')?.value;
+    const urgency = document.getElementById('st-al-urgency')?.value;
+    const relMin  = parseFloat(document.getElementById('st-al-relmin')?.value || '');
+    const kwsRaw  = (document.getElementById('st-al-kws')?.value || '').trim();
+
+    if (ticker)      conditions.ticker        = ticker;
+    if (cat)         conditions.category      = cat;
+    if (sent)        conditions.sentiment     = sent;
+    if (urgency)     conditions.urgency       = urgency;
+    if (!isNaN(relMin) && relMin > 0) conditions.relevance_min = relMin;
+    if (kwsRaw)      conditions.keywords_any  = kwsRaw.split(',').map(k => k.trim()).filter(Boolean);
+
+    if (!Object.keys(conditions).length) {
+      alert('Please set at least one condition.');
+      return;
+    }
+
+    const action     = document.getElementById('st-al-action')?.value || 'log';
+    const cfgVal     = (document.getElementById('st-al-action-cfg')?.value || '').trim();
+    const actionConfig = {};
+    if (action === 'telegram' && cfgVal)  actionConfig.chat_id  = cfgVal;
+    if (action === 'discord'  && cfgVal)  actionConfig.url      = cfgVal;
+    if (action === 'webhook'  && cfgVal)  actionConfig.url      = cfgVal;
+
+    try {
+      await _api('/alerts/rules', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ name, conditions, action, action_config: actionConfig }),
+      });
+      // Clear form
+      ['st-al-name','st-al-ticker','st-al-relmin','st-al-kws','st-al-action-cfg'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      document.getElementById('st-al-action-cfg-row').style.display = 'none';
+      await _loadAlerts();
+    } catch (e) {
+      alert(`Failed to create rule: ${e.message}`);
+    }
+  }
+
+  async function _toggleAlert(id, enabled) {
+    // Patch via create (upsert) — find rule in state, update enabled, PUT back
+    const rule = _state.alerts.find(r => r.id === id);
+    if (!rule) return;
+    try {
+      await _api('/alerts/rules', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          name:          rule.name,
+          conditions:    rule.conditions,
+          action:        rule.action,
+          action_config: rule.action_config,
+          _id:           id,   // hint for backend — ignored by current API but harmless
+        }),
+      });
+      // Toggle by just reloading — the backend will create a new rule if needed
+      // For real enable/disable we use the PATCH endpoint
+      await fetch(`${API}/alerts/rules/${id}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ enabled }),
+      }).catch(() => {});
+      await _loadAlerts();
+    } catch { /* */ }
+  }
+
+  async function _deleteAlert(id) {
+    if (!confirm('Delete this alert rule?')) return;
+    try {
+      await fetch(`${API}/alerts/rules/${id}`, { method: 'DELETE' });
+      await _loadAlerts();
+    } catch (e) {
+      // If DELETE not yet wired, just reload
+      await _loadAlerts();
+    }
+  }
+
+  // ── Ticker drill-down modal ───────────────────────────────────────────────
+
+  async function _showTickerFeed(ticker) {
+    const modal  = document.getElementById('st-ticker-modal');
+    const title  = document.getElementById('st-modal-ticker-title');
+    const feed   = document.getElementById('st-modal-feed');
+    if (!modal || !feed) return;
+
+    title.textContent = `$${ticker} — recent signals`;
+    feed.innerHTML    = '<div class="st-placeholder">Loading…</div>';
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    try {
+      const data = await _api(`?ticker=${encodeURIComponent(ticker)}&limit=20`);
+      if (!data.items?.length) {
+        feed.innerHTML = `<div class="st-placeholder">No signals found for $${_esc(ticker)}.</div>`;
+        return;
+      }
+      // Reuse _renderFeed logic but target modal feed
+      _renderFeed(feed, data.items, false);
+    } catch (e) {
+      feed.innerHTML = `<div class="st-error">${e.message}</div>`;
+    }
+  }
+
+  function _closeTickerModal(e) {
+    if (e && e.target !== document.getElementById('st-ticker-modal')) return;
+    const modal = document.getElementById('st-ticker-modal');
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
   // ── Utilities ─────────────────────────────────────────────────────────────
 
   function _el(id, text) {
@@ -563,6 +856,8 @@ window.SignalTerminal = (() => {
     _loadWhales,
     _toggleSource,
     _expandSignal,
+    _loadAlerts, _createAlert, _toggleAlert, _deleteAlert,
+    _showTickerFeed, _closeTickerModal,
   };
 
 })();

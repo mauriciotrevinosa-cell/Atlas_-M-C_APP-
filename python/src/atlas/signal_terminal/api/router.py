@@ -146,6 +146,27 @@ def create_alert_rule(body: AlertRuleCreate):
     return AlertRuleOut(**rule.dict())
 
 
+@router.patch("/alerts/rules/{rule_id}", response_model=AlertRuleOut, summary="Enable / disable an alert rule")
+def toggle_alert_rule(rule_id: str, enabled: bool = Query(...)):
+    svc, _ = _svc()
+    rules = svc._repo.get_alert_rules(enabled_only=False)
+    rule = next((r for r in rules if r.id == rule_id), None)
+    if not rule:
+        raise HTTPException(404, "Alert rule not found")
+    rule.enabled = enabled
+    svc._repo.upsert_alert_rule(rule)
+    return AlertRuleOut(**rule.dict())
+
+
+@router.delete("/alerts/rules/{rule_id}", summary="Delete an alert rule")
+def delete_alert_rule(rule_id: str):
+    svc, _ = _svc()
+    ok = svc._repo.delete_alert_rule(rule_id)
+    if not ok:
+        raise HTTPException(404, "Alert rule not found")
+    return {"deleted": rule_id}
+
+
 # ── Whale Events ──────────────────────────────────────────────────────────
 
 @router.get("/whales", response_model=List[WhaleEventOut], summary="Recent whale events")

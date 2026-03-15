@@ -10,9 +10,10 @@ import uuid
 
 
 class AlertAction(str, Enum):
-    LOG     = "log"      # write to alert log only
-    NOTIFY  = "notify"   # push notification (future)
-    WEBHOOK = "webhook"  # POST to external URL
+    LOG      = "log"       # write to alert log only
+    TELEGRAM = "telegram"  # Telegram bot message (requires TELEGRAM_BOT_TOKEN env)
+    DISCORD  = "discord"   # Discord webhook POST
+    WEBHOOK  = "webhook"   # POST to arbitrary URL
 
 
 class AlertRule(BaseModel):

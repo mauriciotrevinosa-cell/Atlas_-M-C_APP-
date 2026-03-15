@@ -262,6 +262,11 @@ class SignalRepository:
                 WHERE id=?
             """, (now, rule_id))
 
+    def delete_alert_rule(self, rule_id: str) -> bool:
+        with self._lock, self._conn() as conn:
+            cur = conn.execute("DELETE FROM st_alert_rules WHERE id=?", (rule_id,))
+            return cur.rowcount > 0
+
     @staticmethod
     def _row_to_rule(row) -> AlertRule:
         return AlertRule(
