@@ -5483,6 +5483,7 @@ async def broadcast_message(session_id: str, message: dict):
 # ==================== SIGNAL TERMINAL ====================
 
 try:
+    _add_sys_path()
     from atlas.signal_terminal.api import router as _st_router
     from atlas.signal_terminal.scheduler import init_scheduler as _st_init
 

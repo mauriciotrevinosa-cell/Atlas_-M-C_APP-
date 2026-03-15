@@ -695,7 +695,7 @@ window.SignalTerminal = (() => {
                 onchange="SignalTerminal._toggleAlert('${r.id}', this.checked)"/>
               <span class="st-toggle-track"></span>
             </label>
-            <button class="st-del-btn" onclick="SignalTerminal._deleteAlert('${r.id}')" title="Delete rule">✕</button>
+            <button class="st-btn-icon" onclick="SignalTerminal._deleteAlert('${r.id}')" title="Delete rule">✕</button>
           </div>
           <div class="st-alert-cond">${_esc(condStr)}</div>
         </div>`;
@@ -767,12 +767,8 @@ window.SignalTerminal = (() => {
           _id:           id,   // hint for backend — ignored by current API but harmless
         }),
       });
-      // Toggle by just reloading — the backend will create a new rule if needed
-      // For real enable/disable we use the PATCH endpoint
-      await fetch(`${API}/alerts/rules/${id}`, {
-        method:  'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ enabled }),
+      await fetch(`${API}/alerts/rules/${id}?enabled=${enabled}`, {
+        method: 'PATCH',
       }).catch(() => {});
       await _loadAlerts();
     } catch { /* */ }
