@@ -67,6 +67,10 @@ integrations = [
     "discord.py>=2.3.0",
 ]
 
+signals = [
+    "feedparser>=6.0.0",
+]
+
 all = [
     "aria-assistant[voice-basic,voice-advanced,web,image,memory,code,integrations]"
 ]

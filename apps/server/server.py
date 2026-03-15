@@ -5480,6 +5480,26 @@ async def broadcast_message(session_id: str, message: dict):
                 pass
 
 
+# ==================== SIGNAL TERMINAL ====================
+
+try:
+    from atlas.signal_terminal.api import router as _st_router
+    from atlas.signal_terminal.scheduler import init_scheduler as _st_init
+
+    app.include_router(_st_router, prefix="/api/signals")
+
+    @app.on_event("startup")
+    async def _start_signal_terminal():
+        sch = _st_init()
+        await sch.start()
+        logger.info("[SignalTerminal] background scheduler started")
+
+    logger.info("[SignalTerminal] router registered at /api/signals")
+
+except Exception as _st_err:
+    logger.warning("[SignalTerminal] not loaded: %s", _st_err)
+
+
 # ==================== STATIC FILES (Catch-All) ====================
 
 # Serve Static Files (Frontend)
