@@ -575,7 +575,7 @@ window.SignalTerminal = (() => {
       container.innerHTML = '<div class="st-placeholder">No sources configured.</div>';
       return;
     }
-    const TYPE_COLOR = { rss: '#3498db', reddit: '#ff6314', webhook: '#9b59b6', manual: '#445' };
+    const TYPE_COLOR = { rss: '#3498db', reddit: '#ff6314', nitter: '#1da1f2', sec: '#e6a817', webhook: '#9b59b6', manual: '#445' };
     container.innerHTML = sources.map(s => {
       const lastFetch = s.last_fetched_at ? _age(s.last_fetched_at) : 'never';
       const errClass  = s.error_count > 0 ? 'st-src-has-error' : '';

@@ -15,6 +15,7 @@ class SignalOut(BaseModel):
     source_id:       str
     url:             Optional[str]
     title:           str
+    body:            Optional[str] = None
     author:          Optional[str]
     published_at:    datetime
     collected_at:    datetime
