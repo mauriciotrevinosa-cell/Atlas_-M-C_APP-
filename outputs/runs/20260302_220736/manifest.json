@@ -1,0 +1,233 @@
+{
+  "run_id": "20260302_220736",
+  "generated_at_utc": "2026-03-02T22:07:36.585402+00:00",
+  "parameters": {
+    "symbols": [
+      "AAPL"
+    ],
+    "start_date": "2024-01-01",
+    "end_date": "2024-03-01",
+    "interval": "1d",
+    "n_paths": 50,
+    "horizon_days": 20,
+    "confidence": 0.95,
+    "loss_threshold": 0.05
+  },
+  "stage_outputs": {
+    "data": {
+      "AAPL": {
+        "cache_hit": true,
+        "source": "cache",
+        "files": {
+          "dataset_csv": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\data\\AAPL\\dataset.csv",
+          "metadata_json": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\data\\AAPL\\metadata.json"
+        },
+        "metadata": {
+          "symbol": "AAPL",
+          "provider": "cache",
+          "interval": "1d",
+          "as_of_utc": "2026-03-02T22:07:36.075101+00:00",
+          "fetched_at_utc": "2026-03-02T22:07:36.158218+00:00",
+          "date_range": {
+            "start": "2024-01-02 00:00:00+00:00",
+            "end": "2024-02-29 00:00:00+00:00"
+          },
+          "rows": 41,
+          "timezone": "UTC",
+          "pit": {
+            "version": "v1",
+            "dataset_hash": "714841b970384f1b",
+            "as_of_utc": "2026-03-02T22:07:36.075101+00:00"
+          },
+          "cache": {
+            "enabled": true,
+            "key": "phase1_AAPL_2024-01-01_2024-03-01_1d",
+            "hit": true,
+            "stale": false,
+            "metadata": {
+              "cached_at": 1772489225.9118207,
+              "rows": 41,
+              "columns": [
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume"
+              ],
+              "date_range": {
+                "start": "2024-01-02 00:00:00+00:00",
+                "end": "2024-02-29 00:00:00+00:00"
+              },
+              "custom": {
+                "symbol": "AAPL",
+                "provider": "yahoo",
+                "as_of_utc": "2026-03-02T22:06:59.610261+00:00",
+                "pit_version": "v1",
+                "dataset_hash": "714841b970384f1b"
+              },
+              "stale": false
+            }
+          },
+          "offline_fallback": false,
+          "provider_attempt_errors": {},
+          "validation": {
+            "is_valid": true,
+            "total_rows": 41,
+            "issues": [],
+            "warnings": [],
+            "checks": {
+              "nan_ratio": 0.0,
+              "spike_count": 0,
+              "ohlc_inconsistencies": 0,
+              "zero_volume_ratio": 0.0,
+              "duplicate_timestamps": 0,
+              "gap_ratio": 0.0488,
+              "gap_count": 2
+            }
+          },
+          "integrity": {
+            "nan_ratio": 0.0,
+            "nan_by_column": {
+              "open": 0,
+              "high": 0,
+              "low": 0,
+              "close": 0,
+              "volume": 0
+            },
+            "gap_count": 4,
+            "gap_ratio": 0.088889,
+            "split_candidates": [],
+            "trading_calendar": "weekday_business_day",
+            "expected_bars": 45,
+            "observed_bars": 41
+          }
+        }
+      }
+    },
+    "analytics": {
+      "summary": {
+        "symbols": [
+          "AAPL"
+        ],
+        "vol_window": 20,
+        "corr_window": 20,
+        "rows_in_returns_panel": 40,
+        "symbol_summary": {
+          "AAPL": {
+            "rows": 41,
+            "latest_simple_return": -0.0036929933615745814,
+            "latest_log_return": -0.0036998292967908093,
+            "latest_rolling_volatility": 0.12380823485733104,
+            "doji_count": 5,
+            "bullish_engulfing_count": 2,
+            "bearish_engulfing_count": 2
+          }
+        }
+      },
+      "files": {
+        "AAPL_analytics_csv": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\analytics\\AAPL_analytics.csv",
+        "correlation_matrix_csv": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\analytics\\correlation_matrix.csv",
+        "rolling_correlations_csv": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\analytics\\rolling_correlations.csv",
+        "correlation_heatmap_png": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\analytics\\correlation_heatmap.png",
+        "analytics_report_json": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\analytics\\analytics_report.json"
+      }
+    },
+    "simulation": {
+      "summary": {
+        "config": {
+          "n_paths": 50,
+          "horizon_days": 20,
+          "seed": 42
+        },
+        "symbols": [
+          "AAPL"
+        ],
+        "symbol_quantiles": {
+          "AAPL": {
+            "p5": -0.08282771600021914,
+            "p50": -0.027622869326815236,
+            "p95": 0.059019202775201854
+          }
+        },
+        "portfolio_quantiles": {
+          "p5": -0.08282771600021914,
+          "p50": -0.027622869326815236,
+          "p95": 0.059019202775201854
+        }
+      },
+      "files": {
+        "simulation_summary_json": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\simulation\\simulation_summary.json",
+        "final_returns_csv": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\simulation\\final_returns.csv",
+        "sample_paths_csv": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\simulation\\sample_paths.csv",
+        "simulation_paths_npz": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\simulation\\simulation_paths.npz",
+        "portfolio_histogram_png": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\simulation\\portfolio_histogram.png",
+        "portfolio_fan_chart_png": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\simulation\\portfolio_fan_chart.png"
+      }
+    },
+    "risk": {
+      "report": {
+        "confidence": 0.95,
+        "loss_threshold": 0.05,
+        "symbols": {
+          "AAPL": {
+            "historical_var": 0.01311411049148338,
+            "historical_cvar": 0.01949050147025249,
+            "max_drawdown": {
+              "mean": 0.0560614301744178,
+              "p95": 0.09274562101882741,
+              "worst": 0.11320446531675628
+            },
+            "probability_loss_gt_threshold": 0.26,
+            "simulated_quantiles": {
+              "q01": -0.10247917811936273,
+              "q05": -0.08282771600021914,
+              "q25": -0.05337352078813029,
+              "q50": -0.027622869326815236,
+              "q75": 0.016946110275683157,
+              "q95": 0.059019202775201854,
+              "q99": 0.07347311736300949
+            }
+          }
+        },
+        "portfolio": {
+          "historical_var": 0.01311411049148338,
+          "historical_cvar": 0.01949050147025249,
+          "max_drawdown": {
+            "mean": 0.0560614301744178,
+            "p95": 0.09274562101882741,
+            "worst": 0.11320446531675628
+          },
+          "probability_loss_gt_threshold": 0.26,
+          "simulated_quantiles": {
+            "q01": -0.10247917811936273,
+            "q05": -0.08282771600021914,
+            "q25": -0.05337352078813029,
+            "q50": -0.027622869326815236,
+            "q75": 0.016946110275683157,
+            "q95": 0.059019202775201854,
+            "q99": 0.07347311736300949
+          }
+        }
+      },
+      "files": {
+        "risk_report_json": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\risk\\risk_report.json",
+        "quantiles_table_csv": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\risk\\quantiles_table.csv",
+        "portfolio_distribution_png": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260302_220736\\risk\\portfolio_distribution.png"
+      }
+    }
+  },
+  "key_metrics": {
+    "portfolio_var": 0.01311411049148338,
+    "portfolio_cvar": 0.01949050147025249,
+    "probability_loss_gt_threshold": 0.26,
+    "portfolio_quantiles": {
+      "q01": -0.10247917811936273,
+      "q05": -0.08282771600021914,
+      "q25": -0.05337352078813029,
+      "q50": -0.027622869326815236,
+      "q75": 0.016946110275683157,
+      "q95": 0.059019202775201854,
+      "q99": 0.07347311736300949
+    }
+  }
+}

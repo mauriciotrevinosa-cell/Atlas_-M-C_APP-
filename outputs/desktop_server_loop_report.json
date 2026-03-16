@@ -1,0 +1,199 @@
+{
+  "passed": 24,
+  "failed": 0,
+  "total": 24,
+  "results": [
+    {
+      "name": "Health",
+      "method": "GET",
+      "path": "/api/health",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['status', 'service', 'version']"
+    },
+    {
+      "name": "Command Center",
+      "method": "GET",
+      "path": "/api/system/command_center",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['status', 'pulse_score', 'generated_at', 'aria', 'runtime', 'project', 'runs', 'highlights']"
+    },
+    {
+      "name": "Thought Map",
+      "method": "GET",
+      "path": "/api/system/thought_map",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['generated_at', 'status', 'pulse_score', 'connectivity', 'thinking_trace', 'graph', 'module_registry', 'visibility']"
+    },
+    {
+      "name": "System Verify",
+      "method": "GET",
+      "path": "/api/system/verify?ticker=AAPL",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['ticker', 'stages', 'ok', 'ts', 'summary']"
+    },
+    {
+      "name": "Quote",
+      "method": "GET",
+      "path": "/api/quote/AAPL",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['ticker', 'price', 'change_pct', 'source', 'synthetic']"
+    },
+    {
+      "name": "Market Data",
+      "method": "GET",
+      "path": "/api/market_data/AAPL",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['ticker', 'price', 'ohlc', 'news', 'source', 'synthetic']"
+    },
+    {
+      "name": "Analytics Summary",
+      "method": "GET",
+      "path": "/api/analytics/summary/AAPL?period=1y",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['ticker', 'period', 'n_bars', 'synthetic', 'price', 'returns', 'volatility', 'risk']"
+    },
+    {
+      "name": "Analytics Correlation",
+      "method": "GET",
+      "path": "/api/analytics/correlation?tickers=AAPL,MSFT,SPY&period=1y&return_method=log",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['tickers_requested', 'tickers_used', 'period', 'return_method', 'observations', 'synthetic', 'matrix', 'heatmap']"
+    },
+    {
+      "name": "Portfolio Risk",
+      "method": "POST",
+      "path": "/api/risk/portfolio/assess",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['tickers', 'period', 'return_method', 'observations', 'synthetic', 'weights', 'risk']"
+    },
+    {
+      "name": "Portfolio Monte Carlo",
+      "method": "POST",
+      "path": "/api/montecarlo/portfolio/simulate",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['tickers', 'period', 'return_method', 'observations', 'synthetic', 'weights', 'config', 'terminal_distribution']"
+    },
+    {
+      "name": "Portfolio",
+      "method": "GET",
+      "path": "/api/portfolio",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['source', 'has_active_session', 'capital', 'total_equity', 'positions']"
+    },
+    {
+      "name": "Signal Compose",
+      "method": "GET",
+      "path": "/api/signal/compose/AAPL?capital=100000",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['action', 'size_pct', 'dollar_amount', 'confidence', 'kelly_fraction', 'vol_scalar', 'engine_votes', 'reasoning']"
+    },
+    {
+      "name": "Strategy Analyze",
+      "method": "GET",
+      "path": "/api/strategy/analyze/AAPL?period=6mo",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['ticker', 'period', 'last_close', 'return_5d', 'consensus', 'individual', 'bars_used', 'synthetic']"
+    },
+    {
+      "name": "Strategy Backtest",
+      "method": "GET",
+      "path": "/api/strategy/backtest/AAPL?period=1y",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['ticker', 'period', 'initial_cash', 'final_equity', 'total_return', 'sharpe', 'max_drawdown', 'n_trades']"
+    },
+    {
+      "name": "Trader Analyze",
+      "method": "GET",
+      "path": "/api/trader/analyze/AAPL?period=1y",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['ticker', 'composite_score', 'verdict', 'confidence', 'last_close', 'components', 'prediction', 'insights']"
+    },
+    {
+      "name": "Trader Screen",
+      "method": "GET",
+      "path": "/api/trader/screen?period=1y&top_n=3",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['universe_size', 'screened', 'top_buys', 'top_avoids', 'full_ranking']"
+    },
+    {
+      "name": "Factors",
+      "method": "GET",
+      "path": "/api/factors/AAPL?period=1y",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['ticker', 'period', 'factor_count', 'scores', 'group_scores', 'top_factors', 'source', 'synthetic']"
+    },
+    {
+      "name": "Options Surface",
+      "method": "GET",
+      "path": "/api/options/surface/SPY",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['spot', 'r', 'base_iv', 'expiries', 'strikes', 'iv_grid', 'ticker', 'synthetic']"
+    },
+    {
+      "name": "VizLab Status",
+      "method": "GET",
+      "path": "/api/vizlab/system_status",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['timestamp', 'modules', 'aria_model', 'uptime_note']"
+    },
+    {
+      "name": "Agents Status",
+      "method": "GET",
+      "path": "/api/agents/status",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['available', 'agents_count', 'agents']"
+    },
+    {
+      "name": "Sim Snapshot",
+      "method": "GET",
+      "path": "/api/sim/dashboard/snapshot",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['state', 'modules', 'errors', 'audit']"
+    },
+    {
+      "name": "Scenario Start",
+      "method": "POST",
+      "path": "/api/scenario/start",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['session_id', 'ticker', 'total_steps', 'initial_state', 'synthetic']"
+    },
+    {
+      "name": "Scenario Next",
+      "method": "POST",
+      "path": "/api/scenario/scen-1772964269.747275/next",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['status', 'state']"
+    },
+    {
+      "name": "Scenario Switch",
+      "method": "POST",
+      "path": "/api/scenario/switch_ticker",
+      "status": 200,
+      "ok": true,
+      "detail": "keys=['status', 'ticker']"
+    }
+  ]
+}

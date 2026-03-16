@@ -1,0 +1,2517 @@
+
+==================================================
+--- edu-2014-exam-quant-fin-invest-formula.pdf ---
+==================================================
+
+[Page 1]
+Quantitative Finance and Investments Advanced Formula Sheet
+Fall 2014/Spring 2015
+Morning and afternoon exam booklets will include a formula package identical to the one
+attached to this study note. The exam committee believes that by providing many keyformulas, candidates will be able to focus more of their exam preparation time on the ap-plication of the formulas and concepts to demonstrate their understanding of the syllabus
+material and less time on the memorization of the formulas.
+The formula sheet was developed sequentially by reviewing the syllabus material for each
+major syllabus topic. Candidates should be able to follow the ﬂow of the formula package
+easily. We recommend that candidates use the formula package concurrently with the syl-
+labus material. Not every formula in the syllabus is in the formula package. Candidates are
+responsible for all formulas on the syllabus, including those not on the formulasheet.
+Candidates should carefully observe the sometimes subtle di ﬀerences in formulas and their
+application to slightly di ﬀerent situations. Candidates will be expected to recognize the
+correct formula to apply in a speci ﬁc situation of an exam question.
+Candidates will note that the formula package does not generally provide names or de ﬁnitions
+of the formula or symbols used in the formula. With the wide variety of references andauthors of the syllabus, candidates should recognize that the letter conventions and use ofsymbols may vary from one part of the syllabus to another and thus from one formula to
+another.
+W et r u s tt h a ty o uw i l l ﬁn dt h ei n c l u s i o no ft h ef o r m u l ap a c k a g et ob eav a l u a b l es t u d ya i d e
+that will allow for more of your preparation time to be spent on mastering the learning
+objectives and learning outcomes.
+Changes from Spring 2014 are:
+•Addition of formulas from Chapters 69 and 71 of Fabozzi
+•Addition of a formula from Chapter 6 of Bluhm
+•Deletion of Chapters 3 and 8 of Tsay
+1
+[Page 2]
+Interest Rate Models - Theory and Practice, Brigo and Mercurio
+Chapter 3
+Table 3.1 Summary of instantaneous short rate models
+Model Dynamics r> 0r∼ AB AO
+V drt=k[θ−rt]dt+σdWt N N Y Y
+CIR drt=k[θ−rt]dt+σ√rtdWt Y NCχ2Y Y
+D drt=artdt+σrtdWt Y LN Y N
+EV drt=rt[η−alnrt]dt+σrtdWt Y LN N N
+HW drt=k[θt−rt]dt+σdWt N N Y Y
+BK drt=rt[ηt−alnrt]dt+σrtdWt Y LN N N
+MM drt=rth
+ηt−³
+λ−γ
+1+γt´
+lnrti
+dt+σrtdWt Y LN N N
+CIR++ rt=xt+ϕt,d xt=k[θ−xt]dt+σ√xtdWt Y* SNCχ2Y Y
+EEVrt=xt+ϕt,d xt=xt[η−alnxt]dt+σxtdWtY* SLN N N
+*rates are positive under suitable conditions for the deterministic function ϕ.
+(3.5)dr(t)=k[θ−r(t)]dt+σdW (t),r (0) =r0
+(3.6)r(t)=r(s)e−k(t−s)+θ¡
+1−e−k(t−s)¢
++σRt
+se−k(t−u)dW(u)
+(3.7)E{r(t)|Fs}=r(s)e−k(t−s)+θ¡
+1−e−k(t−s)¢
+Var{r(t)|Fs}=σ2
+2k£
+1−e−2k(t−s)¤
+(3.8)P(t,T)=A(t,T)e−B(t,T)r(t)
+(3.9)dr(t)=[kθ−B(t,T)σ2−kr(t)]dt+σdWT(t)
+(3.11)dr(t)=[kθ−(k+λσ)r(t)]dt+σdW0(t),r (0) =r0
+(3.12)dr(t)=[b−ar(t)]dt+σdW0(t)
+(3.13)r(t)=r(s)e−a(t−s)+b
+a¡
+1−e−a(t−s)¢
++σRt
+se−a(t−u)dW0(u)
+(3.14) ˆα=nPn
+i=1riri−1−Pn
+i=1riPn
+i=1ri−1
+nPn
+i=1r2
+i−1−(Pn
+i=1ri−1)2
+(3.15) ˆβ=Pn
+i=1[ri−ˆαri−1]
+n(1−ˆα)
+(3.16) cV2=1
+nPn
+i=1h
+ri−ˆαri−1−ˆβ(1−ˆα)i2
+(3.19)E{r(t)|Fs}=r(s)ea(t−s)and Var {r(t)|Fs}=r2(s)e2a(t−s)³
+eσ2(t−s)−1´
+(3.20)P(t,T)=¯rp
+π2R∞
+0sin(2√¯rsinhy)R∞
+0f(z)s i n (yz)dzdy +2
+Γ(2p)¯rpK2p(2√¯r)
+(3.21)dr(t)=k(θ−r(t))dt+σp
+r(t)dW(t),r (0) =r0
+(3.22)dr(t)=[kθ−(k+λσ)r(t)]dt+σp
+r(t)dW0(t),r (0) =r0
+2
+[Page 3]
+(3.23)E{r(t)|Fs}=r(s)e−k(t−s)+θ¡
+1−e−k(t−s)¢
+Var{r(t)|Fs}=r(s)σ2
+k¡
+e−k(t−s)−e−2k(t−s)¢
++θσ2
+2k¡
+1−e−k(t−s)¢2
+(3.24)P(t,T)=A(t,T)e−B(t,T)r(t)
+(3.25)A(t,T)=∙2hexp{(k+h)(T−t)/2}
+2h+(k+h)(exp {(T−t)h}−1)¸2kθ/σ2
+B(t,T)=2(exp {(T−t)h}−1)
+2h+(k+h)(exp {(T−t)h}−1),h =√
+k2+2σ2
+(3.27)dr(t)=[kθ−(k+B(t,T)σ2)r(t)]dt+σp
+r(t)dWT(t)
+(3.28)pT
+r(t)|r(s)(x)=pχ2(υ,δ(t,s))/q(t,s)(x)=q(t,s)pχ2(υ,δ(t,s))(q(t,s)x)
+q(t,s)=2 [ρ(t−s)+ψ+B(t,T)]andδ(t,s)=4ρ(t−s)2r(s)eh(t−s)
+q(t,s)
+Page 68 R(t,T)=α(t,T)+β(t,T)r(t),P (t,T)=A(t,T)e−B(t,T)r(t)
+(3.29)σf(t,T)=∂B(t,T)
+∂Tσ(t,r(t))
+Page 69 dr(t)=b(t,r(t))dt+σ(t,r(t))dW(t)
+b(t,x)=λ(t)x+η(t),σ2(t,x)=γ(t)x+δ(t)
+∂
+∂tB(t,T)+λ(t)B(t,T)−1
+2γ(t)B(t,T)2+1=0,B (T,T )=0
+∂
+∂t[lnA(t,T)]−η(t)B(t,T)+1
+2δ(t)B(t,T)2=0,A (T,T )=1
+Page 69/70 Vasicek λ(t)=−k, η (t)=kθ, γ (t)=0,δ (t)=σ2
+Page 70 CIR λ(t)=−k, η (t)=kθ, γ (t)=σ2,δ (t)=0
+b(x)=λx+η, σ2(x)=γx+δ
+Page 71 lim
+t→∞E{r(t)|Fs}=e x pµθ
+a+σ2
+4a¶
+(3.31) lim
+t→∞Var{r(t)|Fs}=e x pµ2θ
+a+σ2
+2a¶∙
+expµσ2
+2a¶
+−1¸
+(3.32)dr(t)=[ϑ(t)−a(t)r(t)]dt+σ(t)dW(t)
+(3.33)dr(t)=[ϑ(t)−ar(t)]dt+σdW (t)
+(3.34)ϑ(t)=∂fM(0,t)
+∂T+afM(0,t)+σ2
+2a(1−e−2at)
+(3.35)r(t)=r(s)e−a(t−s)+Rt
+se−a(t−u)ϑ(u)du+σRt
+se−a(t−u)dW(u)
+=r(s)e−a(t−s)+α(t)−α(s)e−a(t−s)+σRt
+se−a(t−u)dW(u)
+(3.36) whereα(t)=fM(0,t)+σ2
+2a2(1−e−at)2
+3
+[Page 4]
+(3.37)E{r(t)|Fs}=r(s)e−a(t−s)+α(t)−α(s)e−a(t−s)
+Var{r(t)|Fs}=σ2
+2a£
+1−e−2a(t−s)¤
+(3.38)dx(t)=−ax(t)dt+σdW (t),x (0) = 0
+Page 74 x(t)=x(s)e−a(t−s)+σRt
+se−a(t−u)dW(u)
+(3.47)E{x(ti+1)|x(ti)=xi,j}=xi,je−a∆ti=:Mi,j
+Var{x(ti+1)|x(ti)=xi,j}=σ2
+2a£
+1−e−2a∆ti¤
+=:V2
+i
+(3.48)∆xi=Vi−1√
+3=σr
+3
+2a[1−e−2a∆ti−1
+(3.49)k=roundµMi,j
+∆xi+1¶
+(3.50)pu=1
+6+η2
+j,k
+6V2
+i+ηj,k
+2√
+3Vi,pm=2
+3−η2
+j,k
+3V2
+i,pd=1
+6+η2
+j,k
+6V2
+i−ηj,k
+2√
+3Vi
+(3.64)dxα
+t=μ(xα
+t;α)dt+σ(xα
+t;α)dWx
+t
+(3.65)Px(t,T)=Πx(t,T,xα
+t;α)
+(3.66)rt=xt+ϕ(t;α),t≥0
+(3.67)P(t,T)=e x ph
+−RT
+tϕ(s;α)dsi
+Πx(t,T,rt−ϕ(t;α);α)
+(3.68)ϕ(t;α)=ϕ∗(t;α): =fM(o,t)−fx(0,t;α)
+(3.69) exph
+−RT
+tϕ(s;α)dsi
+=Φ∗(t,T,x 0;α): =PM(0,T)
+Πx(0,T,x 0;α)Πx(0,t,x 0;α)
+PM(0,t)
+(3.70)Π(t,T,rt;α)=Φ∗(t,T,x 0;α)Π∗(t,T,rt−ϕ∗(t;α);α)
+(3.71)Vx(t,T,τ,K )=Ψx(t,T,τ,K,xα
+t;α)
+(3.74)drt=∙
+kθ+kϕ(t;α)+dϕ(t;α)
+dt−krt¸
+dt+σdWt
+Page 100 ϕVAS(t;α)=fM(0,t)+(e−kt−1)k2θ−σ2/2
+k2−σ2
+2k2e−kt(1−e−kt)−x0e−kt
+Page 101 P(t,T)=PM(0,T)A(0,t)e x p{−B(0,t)x0}
+PM(0,t)A(0,T)e x p{−B(0,T)x0}
+×A(t,T)e x p{−B(t,T)[rt−ϕVAS(t;α)]}
+(3.76)dx(t)=k(θ−x(t))dt+σp
+x(t)dW(t),x (0) =x0,r (t)=x(t)+ϕ(t)
+(3.77)ϕCIR(t;α)=fM(0,t)−fCIR(0,t;α)
+fCIR(0,t;α)=2kθ(exp{th}−1)
+2h+(k+h)(exp {th}−1)+x04h2exp{th}
+[2h+(k+h)(exp {th}−1)]2
+h=√
+k2+2σ2
+4
+[Page 5]
+Chapter 4
+(4.4)rt=x(t)+y(t)+ϕ(t),r (0) =r0
+(4.5)dx(t)=−ax(t)dt+σdW 1(t),x (0) = 0
+dy(t)=−by(t)dt+ηdW 2(t),y (0) = 0
+(4.6)E{r(t)|Fs}=x(s)e−a(t−s)+y(s)e−b(t−s)+ϕ(t)
+Var{r(t)|Fs}=σ2
+2a£
+1−e−2a(t−s)¤
++η2
+2b£
+1−e−2b(t−s)¤
++2ρση
+a+b£
+1−e−(a+b)(t−s)¤
+(4.7)r(t)=σRt
+0e−a(t−u)dW 1(u)+ηRt
+0e−b(t−u)dW 2(u)+ϕ(t)
+(4.8)dx(t)=−ax(t)dt+σdfW1(t)dy(t)=−by(t)dt+ηρdfW1(t)+ηp
+1−ρ2dfW2(t)
+wheredW 1(t)=ddfW1(t)anddW 2(t)=ρdfW1(t)+p
+1−ρ2dfW2(t)
+(4.9)M(t,T)=1−e−a(T−t)
+ax(t)+1−e−b(T−t)
+by(t)
+(4.10)V(t,T)=σ2
+a2∙
+T−t+2
+ae−a(T−t)−1
+2ae−2a(T−t)−3
+2a¸
++η2
+b2∙
+T−t+2
+be−b(T−t)−1
+2be−2b(T−t)−3
+2b¸
++2ρση
+ab∙
+T−t+e−a(T−t)−1
+a+e−b(T−t)−1
+b−e−(a+b)(T−t)−1
+a+b¸
+(4.11)P(t,T)=e x p½
+−RT
+tϕ(u)du−1−e−a(T−t)
+ax(t)−1−e−b(T−t)
+by(t)+1
+2V(t,T)¾
+(4.12)ϕ(t)=fM(0,T)+σ2
+2a2¡
+1−e−aT¢2+η2
+2b2¡
+1−e−bT¢2+ρση
+ab(1−e−aT)(1−e−bT)
+(4.13) expn
+−RT
+tϕ(u)duo
+=PM(0,T)
+PM(0,t)exp½
+−1
+2[V(0,T)−V(0,t)]¾
+(4.14)P(t,T)=PM(0,T)
+PM(0,t)exp{A(t,T)}
+A(t,T): =1
+2[V(t,T)−V(0,T)+V(0,t)]−1−e−a(T−t)
+ax(t)−1−e−b(T−t)
+by(t)
+(4.15)P(t,T)=A(t,T)e x p{−B(a,t,T )x(t)−B(b,t,T )y(t)}
+(4.16)σf(t,T)=p
+σ2e−2a(T−t)+η2e−2b(T−t)+2ρσηe−(a+b)(T−t)
+5
+[Page 6]
+Page 152Cov(df(t,T1),d f(t,T2))
+dt
+=σ2∂B
+∂T(a,t,T 1)∂B
+∂T(a,t,T 2)+η2∂B
+∂T(b,t,T 1)∂B
+∂T(b,t,T 2)
++ρση∙∂B
+∂T(a,t,T 1)∂B
+∂T(b,t,T 2)+∂B
+∂T(a,t,T 2)∂B
+∂T(b,t,T 1)¸
+=σ2e−a(T1+T2−2t)+η2e−b(T1+T2−2t)
++ρση£
+e−aT1−bT2+(a+b)t+e−aT2−bT1+(a+b)t¤
+Corr (df(t,T1),d f(t,T2)) =σ2e−a(T1+T2−2t)+η2e−b(T1+T2−2t)
+σf(t,T1)σf(t,T2)
++ρση£
+e−aT1−bT2+(a+b)t+e−aT2−bT1+(a+b)t¤
+σf(t,T1)σf(t,T2)
+Page 153 f(t,T1T2)=lnP(t,T1)−lnP(t,T2)
+T2−T1
+df(t,T1,T2)=...dt +B(a,t,T 2)−B(a,t,T 1)
+T2−T1σdW 1(t)
++B(b,t,T 2)−B(b,t,T 1)
+T2−T1ηdW 2(t)
+σf(t,T1,T2)=p
+σ2β(a,t,T 1,T2)2+η2β(b,t,T 1,T2)2+2ρσηβ (a,t,T 1,T2)β(b,t,T 1,T2)
+where β(z,t,T 1,T2)=B(z,t,T 2)−B(z,t,T 1)
+T2−T1
+Cov(df(t,T1,T2),d f(t,T3,T4))
+dt
+σ2B(a,t,T 2)−B(a,t,T 1)
+T2−T1B(a,t,T 4)−B(a,t,T 3)
+T4−T3
++η2B(b,t,T 2)−B(b,t,T 1)
+T2−T1B(b,t,T 4)−B(b,t,T 3)
+T4−T3
++ρση∙B(a,t,T 2)−B(a,t,T 1)
+T2−T1B(b,t,T 4)−B(b,t,T 3)
+T4−T3
++B(a,t,T 4)−B(a,t,T 3)
+T4−T3B(b,t,T 2)−B(b,t,T 1)
+T2−T1¸
+Page 160 σ3=s
+σ2
+1+σ2
+2
+(¯a−¯b)2+2 ¯ρσ1σ2
+¯b−¯a
+dZ3(t)=σ1dZ1(t)−σ2
+¯a−¯bdZ2(t)
+σ3,σ 4=σ2
+¯a−¯b
+Page 161 a=¯a, b =¯b, σ =σ3,η =σ4,ρ =σ1¯ρ−σ4
+σ3
+6
+[Page 7]
+ϕ(t)=r0e−¯at+Rt
+0θ(v)e−¯a(t−v)dv
+¯a=a, ¯b=b, σ 1=p
+σ2+η2+2ρση, σ 2=η(a−b)
+¯ρ=σρ+ηp
+σ2+η2+2ρση,θ (t)=dϕ(t)
+dt+aϕ(t)
+Managing Credit Risk: The Great Challenge for Global Financial
+Markets, Caouette, et. al.
+Chapter 20
+(20.2)Rp=NP
+i=1XiEAR
+(20.3)Vp=NP
+i=1NP
+j=1XiXjσiσjρij
+(20.5)UALp=NP
+i=1NP
+j=1XiXjσiσjρij1
+Page 403 CVaR (CL)=EAD •LGD •µ
+Φµ√ρΦ−1(CL)+Φ−1(PD)√1−ρ¶
+−PD¶
+×1+(M−2.5)•b(PD)
+1−1.5b(PD)
+Liquidity Risk Measurement and Management: A Practioner’s
+Guide to Global Best Practices, Matz and Neu
+Chapter 2
+Page 33 logV(t)=α+βt+σεt
+Page 33 logVq(t)=α+βt−σΦ−1(q)√
+t
+Bond-CDS Basis Handbook: Measuring, Trading and Analysing
+Basis Trades, Elizalde, Doctor, and Saltuk
+Page 13, Equation 1 S=PD×(1−R)
+Page 15, Equation 2 FR =U−AI
+RA+FC
+Page 18, Equation 3 SS=PV[c+p]−BP
+RFA
+Page 25, Equation 4 BTP 1=CN×(100−R−U−CP−FC)+BN×(R+CR−BP−FC)
+Page 25, Equation 5 BTP 2=BN×(100 +CR−BP−FC)−CN×(U+CP+FC)
+Page 43, Equation 7 CN =BP−R
+100−R−U×BN
+7
+[Page 8]
+A Survey of Behavioral Finance, Barberis and Thaler
+(1) (x,p:y,q)=π(p)v(x)+π(q)v(y)
+(2)P
+iπiv(xi)wherev=xαifx≥0
+−λ(−x)αifx< 0andπi=w(Pi)−w(P∗
+i),
+w(P)=Pγ
+(Pγ+( 1−P)γ)1/γ
+(3)Dt+1
+Dt=egD+σDεt+1
+(4)Ct+1
+Ct=egC+σCηt+1
+(5)µεt
+ηt¶
+˜Nµµ0
+0¶
+,µ1w
+w1¶¶
+, i.i.d.over time
+(6)E0∞P
+t=0ρtC1−γ
+t
+1−γ
+(7) 1 = ρEt"µCt+1
+Ct¶−γ
+Rt+1#
+(8)Rt+1=Dt+1+Pt+1
+Pt=1+Pt+1/Dt+1
+Pt/DtDt+1
+Dt
+(9)rt+1=∆dt+1+const.≡dt+1−dt+const.
+(10)Eπv[(1−w)Rf,t+1+wRt+1−1]
+(11)E0∞P
+t=0∙
+ρtC1−γ
+t
+1−γ+b0C−γ
+tˆv(Xt+1)¸
+(13)Rt+1=Pt+1+Dt+1
+Pt
+(14)pt−dt=Et∞P
+j=0ρt∆dt+1+j−Et∞P
+j=0ρtrt+1+j+Etlim
+j→∞ρj(pt+j−dt+j)+const.
+(15)E0∞P
+t=0∙
+ρtC1−γ
+t
+1−γ+b0C−γ
+t˜v(Xt+1,zt)¸
+(16)ri−rf=βi.1(F1−rf)+...+βi,K(FK−rf)
+(17)ri,t−rf,t=αi+βi,1(F1,t−rf,t)+...+βi,K(FK,t−rf,t)+εi,t
+(18)Rf=1
+ρeγgC+0.5γ2σ2
+C
+(19) 1 = ρ1+f
+fegD−γGC+0.5(σ2
+D+γ2σ2
+C−2γσCσDw)
+(20)Rt+1=Dt+1+Pt+1
+Pt=1+Pt+1/Dt+1
+Pt/DtDt+1
+Dt=1+f
+fegD+σDεt+1
+8
+[Page 9]
+CAIA Level II: Advanced Core Topics in Alternative Investments,
+Black, Chambers, Kazemi
+Chapter 16
+(16.1)Preported
+t =α+β0Ptrue
+t+β1Ptrue
+t−1+β2Ptrue
+t−2+···
+(16.2)Preported
+t =αPtrue
+t+α(1−α)Ptrue
+t−1+α(1−α)2Ptrue
+t−2+···
+(16.3)Ptrue
+t=( 1/α)×Preported
+t−[(1−α)/α]×Preported
+t−1
+(16.4)Ptrue
+t=Preported
+t−1 +[ ( 1/α)×(Preported
+t−Preported
+t−1 )]
+(16.5)Rt,reported≈β0Rt,true+β1Rt−1,true+β2Rt−2,true+···
+(16.6)Preported
+t =( 1−ρ)Ptrue
+t+ρPreported
+t−1
+(16.7)∆Preported
+t =( 1−ρ)∆Ptrue
+t+ρ∆Preported
+t−1
+(16.8)Rt,reported≈(1−ρ)Rt,true+ρRt−1,reported
+(16.9)Rt,true=(Rt,reported−ρRt−1,reported )/(1−ρ)
+(16.10) ˆρ=corr(Rt,reported−Rt−1,reported )
+(16.11)ρi,j=σij/(σiσj)
+(16.12)Rreported
+t =α+β1Rreported
+t−1 +β2Rreported
+t−2 +···+βkRreported
+t−k +εt
+Chapter 21
+Page 262 Y=S×I×E×HwhereY=yield,S=total solar radiation over the area
+per period, I=fraction of solar radiation captured by the crop canopy, E=photosynthetic
+eﬃciency of the crop (total plant dry matter per unit of solar radiation), H=harvest index
+(fraction of total dry matter that is harvestable)
+Managing Investment Portfolio: A Dynamic Process, Maginn, Tut-
+tle, Pinto, McLeavey
+Chapter 8
+Page 523 TRCI =CR+RR+SR
+Page 553 RRn,t=(Rt+Rt−1+Rt−2+...+Rt−n)/n
+Page 554 DD =rPn
+i=1[min(ri−r∗,0)]2
+n−1
+Page 555 SR=ARR−rf
+SD
+Page 556 SR=ARR−rf
+DD
+9
+[Page 10]
+The Secular and Cyclic Determina nts of Capitalization Rates: The
+Role of Property Fundamentals, Macroeconic Factors, and "Struc-tural Changes," Chervachidze, Costello, Wheaton
+(1)Log(Cj,t)=a0+a1log(Cj,t−1)+a2log(Cj,t−4)+a3log(RRIj,t)+a4RTBt+a7Q2t
++a8Q3t+a9Q4t+a10Dj
+(1.1)RRIj,t−s=RRj,t/MRR j
+(2)Log(Cj,t)=a0+a1log(Cj,t−1)+a2log(Cj,t−4)+a3log(RRIj,t−s)+a4RTBt
++a5SPREAD t+a6DEBTFLOW t+a7Q2t+a8Q3t+a9Q4t+a10Dj
+(2.1)DEBTFLOW t=TNBL t/GDPt
+(3)Log(Cj,t)=a0+a1log(Cj,t−1)+a2log(Cj,t−4)+a3log(RRIj,t−s)+a4RTBt
++a5SPREAD t+a6DEBTFLOW t+a7Q2t+a8Q3t+a9Q4t
+(4)Log(Cj,t)=a0+a1yearq +a2log(Cj,t−1)+a3log(Cj,t−4)+a4log(RRIj,t−s)+a5RTBt
++a6SPREAD t+a7DEBTFLOW t+a7Q2t+a8Q3t+a9Q4t+a10Dj
+Analysis of Financial Time Series, Tsay
+Chapter 9
+(9.1)rit=αi+βi1f1t+···+βimfmt+it,t=1,...,T, i =1,...,k
+(9.2) rt=α+βft+t,t=1,...,T
+(9.3) Ri=αi1T+Fβ0
+i+Ei
+(9.4) R=Gξ0+E
+(9.5)rit=αi+βirmt+it,i=1,...,k t =1,...,T
+(9.11) Var(yi)=w0
+iΣrwi,i=1,...,k
+(9.12) Cov(yi,yj)=w0
+iΣrwj,i,j=1,...,k
+(9.13)kP
+i=1Var(ri)=tr(Σr)=kP
+i=1λi=kP
+i=1Var(yi)
+(9.14) ˆΣr≡[ˆσij,r]=1
+T−1TP
+t=1(rt−¯r)(rt−¯r)0,¯r=1
+TTP
+t=1rt
+(9.15) ˆρr=ˆS−1ˆΣrˆS−1
+(9.16) rt−μ=βft+t
+(9.17)Σr=Cov(rt)=E[(rt−μ)(rt−μ)0]=E[(βft+t)(βft+t)0]=ββ0+D
+(9.18) Cov(rt,ft)=E[(rt−μ)f0
+t]=βE(ftf0
+t)+E(tf0
+t)=β
+(9.19) ˆβ≡[ˆβij]=hpˆλ1ˆe1|pˆλ2ˆe2|···|pˆλmˆemi
+(9.20) LR(m)=−∙
+T−1−1
+6(2k+5 )−2
+3m¸³
+ln|ˆΣr|−ln|ˆβˆβ0+ˆD|´
+10
+[Page 11]
+Handbook of Fixed Income Securities, Fabozzi
+Chapter 69
+(69−4) Asset AllocationP
+s(wP
+s−wB
+s)·RB
+s
+(69−5) Security SelectionP
+swP
+s·(RP
+s−RB
+s)
+(69−12)αP
+kfP
+k−αB
+kfB
+k=P
+sαP
+k,sfP
+k,s−P
+sαB
+k,sfB
+k,s
+Chapter 70
+(70−1) Asset Allocation wP·P
+sµwP
+s
+wP−wB
+s
+wB¶
+·(TRB
+s−TRB)
+(70−2) Sector ManagementP
+swP
+s·(TRP
+s−TRB
+s)
+(70−3) Top-Level Exposure (wP−wB)·TRB
+(70−4) Asset Allocation wP·P
+sµwP
+s
+wP−wB
+s
+wB¶
+·(ERB
+s−ERB)
+(70−5) Sector ManagementP
+swP
+s·(ERP
+s−ERB
+s)
+(70−6) Top-Level Exposure (wP−wB)·ERB
+Chapter 71
+Page 1737
+RP−RB=P
+tβt(RP
+t−RB
+t)
+A=(RP−RB)/T
+(1 +RP)1/T−(1 +RB)1/T
+C=RP−RB−APT
+t=1(RP
+t−RB
+t)PT
+t=1(RP
+t−RB
+t)2
+βt=A+C(RP
+t−RB
+t)
+Introduction to Credit Risk Modeling, 2nd ed., Bluhm, Overbeck,
+Wagner
+Chapter 6
+Page 237
+Mn=Mn
+1
+11
+==================================================
+--- formula_sheet_for_financial_mathematics.pdf ---
+==================================================
+
+[Page 1]
+Formula Sheet for Financial Mathematics                                          
+Tutoring and Le arning Centre, George Brown College     2014                             www.georgebrown.ca/tlc  
+ 
+ 
+SIMPLE INTEREST  
+I = P rt   
+- I is the amount of interest earned  
+- P is the principal sum of money earning the interest  
+- r is the simple annual (or nominal) interest rate (usually expressed as a percentage)  
+- t is the interest period in years  
+S = P + I  
+S = P (1 +  rt) 
+- S is the future value (or maturity value). It is equal to the principal plus the interest 
+earned.  
+COMPOUND INTEREST  
+FV = PV (1 + i )n  
+ 
+i = 𝐣
+𝐦  j = nominal annual rate of interest  
+  m = number of compounding periods  
+  i = periodic rate of interest  
+ 
+PV = FV (1 + i )−n OR PV = 𝐅𝐕
+(𝟏 + 𝐢)𝐧    
+ 
+ANNUITIES  
+Classifying rationale  Type of annuity  
+Length of conversion period 
+relative to the payment 
+period Simple annuity  - when the 
+interest compounding period is the same as the payment period 
+(C/Y = P/Y).  For example, a car 
+loan for which interest is 
+compounded monthly and 
+payments are made monthly.  General annuity  - when the 
+interest compounding period 
+does NOT equal the payment 
+period (C/Y ≠ P/Y).  For 
+example, a mortgage for 
+which interest is compounded 
+semi -annually but payments 
+are made monthly.  
+Date of payment  Ordinary annuity – payments 
+are made at the END of each 
+payment period. For example,  
+OSAP loan payment.  Annuity due - payments are 
+made at the BEGINNING of each payment period. For 
+example, lease rental 
+payments on real estate.  
+Payment schedule  Deferred annuity – first 
+payment is delayed for a period of time.  Perpetuity – an annuity for 
+which payments continue forever. (Note: payment 
+amount ≤ periodic interest 
+earned)  
+[Page 2]
+              
+Tutoring and Learning Centre, George Brown College     2014                              www.georgebrown.ca/tlc  Beginning date and end 
+date Annuity certain – an annuity 
+with a fixed term; both the 
+beginning date and end date are 
+known. For example, installment 
+payments on a loan.  Contingent annuity  - the 
+beginning date, the ending 
+date, or both are unknown. 
+For example, pension 
+payments.  
+ 
+ORDINARY SIMPLE  annuity  
+FVn = PMT �(𝟏+𝒊)ⁿ−𝟏
+𝒊� 
+Note: �(𝟏+𝒊)ⁿ−𝟏
+𝒊� is called the compounding or accumulation factor  for annuities (or the 
+accumulated value of one dollar per period).  
+PV n = PMT �𝟏−(𝟏+𝒊)¯ⁿ
+𝒊� 
+ 
+ORDINARY GENERAL  annuity   
+FVg = PMT �(𝟏+𝒑)ⁿ−𝟏
+𝒑�   PV g = PMT �𝟏−(𝟏+𝒑)¯ⁿ
+𝒑� 
+***First, you must calculate p (equivalent rate of interest per payment period) using p = (1+ i)c─1 
+where i is the periodic  rate of interest and  c is the number of interest conversion periods per 
+payment interval.  
+c = # 𝒐𝒇 𝒊𝒏𝒕𝒆𝒓𝒆𝒔𝒕  𝒄𝒐𝒏𝒗𝒆𝒓𝒔𝒊𝒐𝒏  𝒑𝒆𝒓𝒊𝒐𝒅𝒔  𝒑𝒆𝒓 𝒚𝒆𝒂𝒓
+# 𝒐𝒇 𝒑𝒂𝒚𝒎𝒆𝒏𝒕  𝒑𝒆𝒓𝒊𝒐𝒅𝒔  𝒑𝒆𝒓 𝒚𝒆𝒂𝒓  
+c = C/Y
+P/Y 
+ 
+CONSTANT GROWTH annuity  
+size of n th payment = PMT (1+k)n-1 
+k = constant rate of growth  
+PMT = amount of payment  
+n = number of payments  
+sum of periodic constant growth payments = PMT �(𝟏+𝒌)ⁿ−𝟏
+𝒌� 
+FV = PMT �(𝟏+𝒊)ⁿ−(𝟏+𝒌)ⁿ
+𝒊−𝒌� 
+[Page 3]
+              
+Tutoring and Learning Centre, George Brown College     2014                              www.georgebrown.ca/tlc  �(𝟏+𝒊)ⁿ−(𝟏+𝒌)ⁿ
+𝒊−𝒌� is the compounding factor  for constant – growth annuities.  
+PV = PMT �𝟏−(𝟏+𝒌)ⁿ(𝟏+𝒊)¯ⁿ
+𝒊−𝒌� 
+�𝟏−(𝟏+𝒌)ⁿ(𝟏+𝒊)¯ⁿ
+𝒊−𝒌� is the discount factor for constant –  growth annuities.  
+PV = n (PMT)(1 + i)-1 [This formula is used when the constant  growth rate and the periodic 
+interest rate are the same.]  
+ 
+SIMPLE annuity DUE  
+FVn(due)  = PMT �(𝟏+𝒊)ⁿ−𝟏
+𝒊�(𝟏+𝒊)  
+PV n(due)  = PMT �𝟏−(𝟏+𝒊)¯ⁿ
+𝒊�(𝟏+𝒊) 
+ 
+GENERAL annuity DUE  
+FVg = PMT �(𝟏+𝒑)ⁿ−𝟏
+𝒑�(𝟏+𝒊)    
+PV g = PMT �𝟏−(𝟏+𝒑)¯ⁿ
+𝒑�(𝟏+𝒊) 
+***Note that y ou must first calculate p (equivalent rate of interest per payment period) using  
+p = (1+i )c─1 where i is the  periodic  rate of interest and c is the number of interest conversion 
+periods per payment interval.  
+ 
+ORDINARY DEFERRED ANNUITIES or  DEFERRED ANNUITIES DUE:  
+ 
+Use the same formulas as ordinary annuities (simple or general) OR annuities due (simple or 
+general). Adjust for the period of deferment  – period between “now” and the starting point of 
+the term of the annuity.  
+ 
+ORDINARY SIMPLE  PERPETUITY  
+PV = 𝑃𝑀𝑇
+𝑖 
+ 
+ORDINARY GENERAL PERPETUITY  
+PV = 𝑃𝑀𝑇
+𝑝  where p = (1+ i)c─1 
+[Page 4]
+              
+Tutoring and Learning Centre, George Brown College     2014                              www.georgebrown.ca/tlc  SIMPLE PERPETUITY DUE  
+PV (due) = PMT +  𝑃𝑀𝑇
+𝑖 
+ 
+GENERAL PERPETUITY DUE 
+PV (due) = PMT +  𝑃𝑀𝑇
+𝑝  where p = (1+ i)c─1 
+ 
+AMORTIZATION involving SIMPLE ANNU ITIES:  
+ 
+Amortization refers to the method of repaying both the principal and the interest by a series of 
+equal payments made at equal intervals of time.  
+ 
+If the payment interval and the interest conversion period are equal in length, the problem 
+involves working with a simple annuity. Most often the payments are made at the end of a 
+payment interval meaning that we are working with an ordinary simple annuity.  
+ The following formulas apply : 
+ 
+PV n = PMT �1−(1+𝑖)¯ⁿ
+𝑖�   FVn = PMT �(1+𝑖)ⁿ−1
+𝑖� 
+ 
+Finding the outstanding principal balance using the retrospective method:  
+ 
+Outstanding balance = FV of the original debt ─ FV of the payments made  
+ 
+Use FV = PV (1 + i)n to calculate the FV of the original debt.  
+ 
+Use FVn = PMT �(1+𝑖)ⁿ−1
+𝑖� to calculate the FV o f the payments made  
+ 
+==================================================
+--- quantum_finance_ictp_day1_part1_and_part2-.pdf ---
+==================================================
+
+[Page 1]
+Askery Canabarro 
+Campus Arapiraca - UFAL Quantum Finance 
+(Quantum Computing for Finance) 
+[Page 2]
+Askery Canabarro 
+Campus Arapiraca - UFAL 
+
+[Page 4]
+Maceió-AL 
+Marechal Deodoro-AL 
+
+[Page 5]
+Outline (Day 1) 
+1.Thoughts about the financial market 
+2.Some Definitions 
+2.1 Price vs Value vs EMH 
+3.Portfolio and Portfolio Optimization 
+3.0 Risk and Return 
+3.1 Classical Approach 
+3.2 Soccer Squad comparison (Quantum Approach) 
+4.Introduction to QAOA 
+
+[Page 6]
+Notice 
+This talk is not about: 
+3●how to invest; 
+●where to invest; 
+●how much to invest… 
+
+[Page 7]
+Notice 
+This talk is about: 
+3
+●applications of quantum algorithm (QAOA); 
+●(brief) introduction on the ﬁnancial market; 
+●(brief) risk and risk management (Markowitz’s 
+Portfolio Theory, 1952 )...
+
+[Page 8]
+Main Ref. : https://doi.org/10.1590/1806-9126-RBEF-2022-0099 
+                   https://www.dualq.tech/tutoriais/quantum-finance/    
+[Page 9]
+Codes: https://github.com/askery/computacao-quantica-aplicada-ao-mercado-financeiro  
+
+[Page 10]
+Askery Canabarro 
+Campus Arapiraca - UFAL 
+Proof of Concept chart showing the state-of-the-art classical accuracy, as 
+well as the quantum solution accuracy 
+[Page 11]
+Exercise 0: 
+a)download and skim the paper; 
+b)run the related codes. 
+[Page 12]
+Disclaimer 
+3●I do participate in the ﬁnancial market, but not using 
+the whole ideas from this academic  examples!!! 
+●DO NOT  use the code to invest real money!!! 
+●Many interpretations are too personal… 
+●Non certiﬁed/amateur investitor… 
+
+[Page 14]
+1.Thoughts about the financial market 
+
+[Page 15]
+Example: B3 (Bovespa), NYSE etc 
+[Page 16]
+Provocation: What scientific field better explain this? 
+[Page 17]
+fear
+skepticism 
+panic 
+What scientific field better explain this? 
+[Page 18]
+fear
+skepticism 
+panic 
+What scientific field better explain this? 
+hope (fear of losing opportunities) optimism 
+[Page 19]
+Do not be fooled by numbers!!!! 
+[Page 20]
+Notice 
+●Investing is dealing/reasoning about the future 
+(a lot we do not know) 
+●Investing involves many emotions (a lot we can 
+not control) 
+
+==================================================
+--- qb.pdf ---
+==================================================
+
+[Page 1]
+The Physics of Quantum Mechanics
+James Binney
+and
+David Skinner
+[Page 2]
+iv
+This book is a consequence of the vision and muniﬁcence of
+Walter of Merton, who in 1264 launched something good
+Copyright c∝ci∇cleco√†∇t2008–2013 James Binney and David Skinner
+Published by Cappella Archive 2008; revised printings 2009, 2010, 20 11
+[Page 3]
+Contents
+Preface x
+1 Probability and probability amplitudes 1
+1.1 The laws of probability 3
+•Expectation values 4
+1.2 Probability amplitudes 5
+•Two-slit interference 6 •Matter waves? 7
+1.3 Quantum states 7
+•Quantum amplitudes and measurements 7
+⊲Complete sets of amplitudes 8 •Dirac notation 9
+•Vector spaces and their adjoints 9 •The energy rep-
+resentation 12 •Orientation of a spin-half particle 12
+•Polarisation of photons 14
+1.4 Measurement 15
+Problems 15
+2 Operators, measurement and time evolution 17
+2.1 Operators 17
+⊲Functions of operators 20 ⊲Commutators 20
+2.2 Evolution in time 21
+•Evolution of expectation values 23
+2.3 The position representation 24
+•Hamiltonian of a particle 26 •Wavefunction for well
+deﬁned momentum 27 ⊲The uncertainty principle 28
+•Dynamics of a free particle 29 •Back to two-slit in-
+terference 31 •Generalisation to three dimensions 31
+⊲Probability current 32 ⊲The virial theorem 33
+Problems 34
+3 Harmonic oscillators and magnetic ﬁelds 37
+3.1 Stationary states of a harmonic oscillator 37
+3.2 Dynamics of oscillators 41
+•Anharmonic oscillators 42
+3.3 Motion in a magnetic ﬁeld 45
+•Gauge transformations 46 •Landau Levels 47
+⊲Displacement of the gyrocentre 49 •Aharonov-Bohm ef-
+fect 51
+Problems 52
+4 Transformations & Observables 58
+4.1 Transforming kets 58
+•Translating kets 59 •Continuous transformations
+[Page 4]
+vi Contents
+and generators 60 •The rotation operator 62
+•Discrete transformations 62 ⊲(a) The parity operator 62
+⊲Mirror operators 63
+4.2 Transformations of operators 64
+⊲The parity operator 66 ⊲Mirror operators 68
+4.3 Symmetries and conservation laws 68
+4.4 The Heisenberg picture 70
+4.5 What is the essence of quantum mechanics? 71
+Problems 73
+5 Motion in step potentials 75
+5.1 Square potential well 75
+•Limiting cases 78 ⊲(a) Inﬁnitely deep well 78
+⊲(b) Inﬁnitely narrow well 78
+5.2 A pair of square wells 79
+•Ammonia 81 ⊲The ammonia maser 83
+5.3 Scattering of free particles 84
+⊲The scattering cross section 86 •Tunnelling through a
+potential barrier 87 •Scattering by a classically allowed
+region 88 •Resonant scattering 89 ⊲The Breit–Wigner
+cross section 92
+5.4 How applicable are our results? 95
+5.5 Summary 98
+Problems 99
+6 Composite systems 104
+6.1 Composite systems 105
+•Collapse of the wavefunction 108 •Operators for com-
+posite systems 109 •Development of entanglement 110
+•Einstein–Podolski–Rosen experiment 111
+⊲Bell’s inequality 113
+6.2 Quantum computing 116
+6.3 The density operator 121
+•Reduced density operators 125 •Shannon entropy 127
+6.4 Thermodynamics 129
+6.5 Measurement 132
+Problems 135
+7 Angular Momentum 139
+7.1 Eigenvalues of JzandJ2139
+•Rotation spectra of diatomic molecules 142
+7.2 Orbital angular momentum 145
+•Las the generator of circular translations 146 •Spectra
+ofL2andLz147•Orbital angular momentum eigenfunc-
+tions 147 •Orbital angular momentum and parity 151
+•Orbital angular momentum and kinetic energy 151
+•Legendre polynomials 153
+7.3 Three-dimensional harmonic oscillator 154
+7.4 Spin angular momentum 158
+•Spin and orientation 159 •Spin-half systems 161 ⊲The
+Stern–Gerlach experiment 161 •Spin-one systems 164
+•The classical limit 165 •Precession in a magnetic ﬁeld 168
+[Page 5]
+Contents vii
+7.5 Addition of angular momenta 169
+•Case of two spin-half systems 173 •Case of spin one and
+spin half 174 •The classical limit 175
+Problems 176
+8 Hydrogen 181
+8.1 Gross structure of hydrogen 182
+•Emission-line spectra 186 •Radial eigenfunctions 186
+•Shielding 190 •Expectation values for r−k192
+8.2 Fine structure and beyond 193
+•Spin-orbit coupling 194 •Hyperﬁne structure 197
+Problems 199
+9 Perturbation theory 203
+9.1 Time-independent perturbations 203
+•Quadratic Stark eﬀect 205 •Linear Stark eﬀect and
+degenerate perturbation theory 206 •Eﬀect of an ex-
+ternal magnetic ﬁeld 208 ⊲Paschen–Back eﬀect 210
+⊲Zeeman eﬀect 210
+9.2 Variational principle 212
+9.3 Time-dependent perturbation theory 213
+•Fermi golden rule 214 •Radiative transition rates 215
+•Selection rules 219
+Problems 220
+10 Helium and the periodic table 226
+10.1Identical particles 226
+⊲Generalisation to the case of Nidentical particles 227
+•Pauli exclusion principle 227 •Electron pairs 229
+10.2Gross structure of helium 230
+•Gross structure from perturbation theory 231
+•Application of the variational principle to he-
+lium 232 •Excited states of helium 233
+•Electronic conﬁgurations and spectroscopic terms 236
+⊲Spectrum of helium 237
+10.3The periodic table 237
+•From lithium to argon 237 •The fourth and ﬁfth peri-
+ods 241
+Problems 242
+11 Adiabatic principle 244
+11.1Derivation of the adiabatic principle 245
+11.2Application to kinetic theory 246
+11.3Application to thermodynamics 248
+11.4The compressibility of condensed matter 249
+11.5Covalent bonding 250
+•A model of a covalent bond 250 •Molecular dynamics 252
+•Dissociation of molecules 253
+11.6The WKBJ approximation 253
+Problems 255
+[Page 6]
+viii Contents
+12 ScatteringTheory 257
+12.1The scattering operator 257
+•Perturbative treatment of the scattering operator 259
+12.2The S-matrix 261
+•Theiǫprescription 261 •Expanding the S-matrix 263
+•The scattering amplitude 265
+12.3Cross-sections and scattering experiments 267
+•The optical theorem 269
+12.4Scattering electrons oﬀ hydrogen 271
+12.5Partial wave expansions 273
+•Scattering at low energy 276
+12.6Resonant scattering 278
+•Breit–Wigner resonances 280 •Radioactive decay 280
+Problems 282
+Appendices
+A The laws of probability 285
+B Cartesian tensors 286
+C Fourier series and transforms 288
+D Operators in classical statistical mechanics 289
+E Lie groups and Lie algebras 291
+F The hidden symmetry of hydrogen 292
+G Lorentz covariant equations 294
+H Thomas precession 297
+I Matrix elements for a dipole-dipole interaction 299
+J Selection rule for j 300
+K Restrictions on scattering potentials 301
+Index 303
+[Page 7]
+Preface
+This book is the fruit of for many years teaching the introduction to quan-
+tum mechanics to second-year students of physics at Oxford Univ ersity. We
+have tried to convey to students that it is the use of probability amp litudes
+rather than probabilities that makes quantum mechanics the extra ordinary
+thing that it is, and tograspthat the theory’smathematicalstruc turefollows
+almost inevitably from the concept of a probability amplitude. We have also
+tried to explain how classical mechanics emerges from quantum mech anics.
+Classical mechanics is about movement and change, while the strong empha-
+sis on stationary states in traditional quantum courses makes the quantum
+world seem static and irreconcilably diﬀerent from the world of every -day
+experience and intuition. By stressing that stationary states are merely the
+toolweusetosolvethetime-dependent Schr¨ odingerequation, a ndpresenting
+plenty of examples of how interference between stationary state s gives rise
+to familiar dynamics, we have tried to pull the quantum and classical w orlds
+into alignment, and to help students to extend their physical intuitio n into
+the quantum domain.
+Traditional courses use only the position representation. If you s tep
+back from the position representation, it becomes easier to explain that the
+familiar operators have a dual role: on the one hand they are repos itories of
+information about the physical characteristics of the associated observable,
+andonthe otherhandtheyarethe generatorsofthe fundament alsymmetries
+of space and time. These symmetries are crucial for, as we show alr eady in
+Chapter 4, they dictate the canonical commutation relations, fro m which
+much follows.
+Another advantageofdown-playingthe position representationis that it
+becomesmorenaturaltosolveeigenvalueproblemsbyoperatorme thodsthan
+by invoking Frobenius’ method for solving diﬀerential equations in se ries. A
+carefulpresentationof Frobenius’method is both time-consumin gand rather
+dull. The job is routinely bodged to the extent that it is only demonstr ated
+that in certain circumstances a series solution canbe found, whereas in
+quantummechanicsweneed assurancethat allsolutionscanbe found bythis
+method, which is a priori implausible. We solve all the eigenvalue problem s
+we encounter by rigorous operator methods and dispense with solu tion in
+series.
+By introducing the angular momentum operators outside the positio n
+representation, wegivethem anexistence independent ofthe orb italangular-
+momentum operators, and thus reduce the mystery that often s urrounds
+spin. We have tried hard to be clear and rigorous in our discussions of the
+connection between a body’s spin and its orientation, and the implicat ions of
+spin for exchange symmetry. We treat hydrogen in fair detail, helium at the
+level of gross structure only, and restrict our treatment of oth er atoms to an
+explanation of how quantum mechanics explains the main trends of at omic
+properties as one proceeds down the periodic table. Many-electro n atoms
+are extremely complex systems that cannot be treated in a ﬁrst co urse with
+a level of rigour with which we are comfortable.
+Scattering theory is of enormous practical importance and raises some
+tricky conceptual questions. Chapter 5 on motion in one-dimension al step
+potentials introduces many of the key concepts, such as the conn ection be-
+tween phase shifts and the scattering cross section and how and w hy in
+resonant scattering sensitive dependence of phases shifts on en ergy gives rise
+to sharp peaks in the scattering cross section. In Chapter 12 we d iscuss fully
+three-dimensional scattering in terms of the S-matrix and partial waves.
+In most branches of physics it is impossible in a ﬁrst course to bring
+students to the frontier of human understanding. We are fortun ate in be-
+ing able to do this already in Chapter 6, which introduces entanglemen t and
+[Page 8]
+Preface xi
+quantumcomputing, andcloseswith adiscussionofthestill unresolv edprob-
+lem of measurement. Chapter 6 also demonstrates that thermody namics is
+a straightforward consequence of quantum mechanics and that w e no longer
+need to derive the laws of thermodynamics through the traditional, rather
+subtle, arguments about heat engines.
+We assume familiarity with complex numbers, including de Moivre’s
+theorem, and familiarity with ﬁrst-order linear ordinary diﬀerential equa-
+tions. We assume basic familiarity with vector calculus and matrix algeb ra.
+We introduce the theory of abstract linear algebra to the level we r equire
+from scratch. Appendices contain compact introductions to tens or notation,
+Fourier series and transforms, and Lorentz covariance.
+Every chapter concludes with an extensive list of problems for which
+solutions are available. The solutions to problems marked with an aste risk,
+which tend to be the harder problems, are available online1and solutions to
+other problems are availableto colleagueswho are teaching a course from the
+book. In nearly every problem a student will either prove a useful r esult or
+deepen his/her understanding of quantum mechanics and what it sa ys about
+the material world. Even after successfully solving a problem we sus pect
+students will ﬁnd it instructive and thought-provoking to study th e solution
+posted on the web.
+We are grateful to several colleagues for comments on the ﬁrst t wo edi-
+tions,particularlyJustinWarkforalertingustotheproblemwiththe singlet-
+triplet splitting. Fabian Essler, Andre Lukas, John March-Russella nd Laszlo
+Solymar made several constructive suggestions. We thank Artur Ekert for
+stimulating discussions of material covered in Chapter 6 and for rea ding that
+chapter in draft form.
+June 2012 James Binney
+David Skinner
+1http://www-thphys.physics.ox.ac.uk/people/JamesBinn ey/QBhome.htm
+[Page 9]
+1
+Probability and probability
+amplitudes
+The future is alwaysuncertain. Will it rain tomorrow? Will Pretty Lady win
+the 4.20 race at Sandown Park on Tuesday? Will the Financial Times All
+Shares index rise by more than 50 points in the next two months? Nob ody
+knows the answers to such questions, but in each case we may have infor-
+mation that makes a positive answer more or less appropriate: if we a re in
+the Great Australian Desert and it’s winter, it is exceedingly unlikely to rain
+tomorrow, but if we are in Delhi in the middle of the monsoon, it will almos t
+certainlyrain. IfPrettyLadyisgettingonin yearsand hasn’twonar aceyet,
+she’s unlikely to win on Tuesday either, while if she recently won a couple of
+major races and she’s looking ﬁt, she may well win at Sandown Park. T he
+performance of the All Shares index is hard to predict, but factor s aﬀecting
+company proﬁtability and the direction interest rates will move, will m ake
+the index more or less likely to rise. Probability is a concept which enable s
+us to quantify and manipulate uncertainties. We assign a probability p= 0
+to an event if we think it is simply impossible, and we assign p= 1 if we
+think the event is certain to happen. Intermediate values for pimply that
+we think an event may happen and may not, the value of pincreasing with
+our conﬁdence that it will happen.
+Physics is about predicting the future. Will this ladder slip when I
+step on it? How many times will this pendulum swing to and fro in an
+hour? What temperature will the water in this thermos be at when it h as
+completely melted this ice cube? Physics often enables us to answer s uch
+questions with a satisfying degree of certainty: the ladder will not s lip pro-
+vided it is inclined at less than 23 .34◦to the vertical; the pendulum makes
+3602 oscillations per hour; the water will reach 6 .43◦C. But if we are pressed
+forsuﬃcient accuracywemust admit to uncertaintyandresortto probability
+because our predictions depend on the data we have, and these ar e always
+subject to measuring error, and idealisations: the ladder’s critical angle de-
+pends on the coeﬃcients of friction at the two ends of the ladder, a nd these
+cannot be precisely given because both the wall and the ﬂoor are slig htly
+irregular surfaces; the period of the pendulum depends slightly on t he am-
+plitude of its swing, which will vary with temperature and the humidity o f
+the air; the ﬁnal temperature of the water will vary with the amoun t of heat
+transferred through the walls of the thermos and the speed of ev aporation
+[Page 10]
+2 Chapter 1: Probability and probability amplitudes
+from the water’s surface, which depends on draughts in the room a s well as
+on humidity. If we are asked to make predictions about a ladder that is in-
+clined near its critical angle, or we need to know a quantity like the per iod of
+the pendulum to high accuracy, we cannot make deﬁnite statement s, we can
+only say something like the probability of the ladder slipping is 0 .8, or there
+is a probability of 0 .5 that the period of the pendulum lies between 1 .0007s
+and 1.0004s. We can dispense with probability when slightly vague answers
+are permissible, such as that the period is 1 .00s to three signiﬁcant ﬁgures.
+The concept of probability enables us to push our science to its limits, and
+make the most precise and reliable statements possible.
+Probability enters physics in two ways: through uncertain data and
+through the system being subject to random inﬂuences. In the ﬁr st case we
+couldmakeamoreaccuratepredictionifapropertyofthesystem, suchasthe
+length or temperature of the pendulum, were more precisely chara cterised.
+That is, the value of some number is well deﬁned, it’s just that we don ’t
+know the value very accurately. The second case is that in which our system
+is subject to inherently random inﬂuences – for example, to the dra ughts
+that make us uncertain what will be the ﬁnal temperature of the wa ter.
+To attain greater certainty when the system under study is subje ct to such
+random inﬂuences, we can either take steps to increase the isolatio n of our
+system – for example by putting a lid on the thermos – or we can expan d the
+systemunderstudysothattheformerlyrandominﬂuencesbecom ecalculable
+interactions between one part of the system and another. Such e xpansion
+of the system is not a practical proposition in the case of the therm os – the
+expanded system would have to encompass the air in the room, and t hen
+we would worry about ﬂuctuations in the intensity of sunlight throug h the
+window, draughts under the door and much else. The strategy doe s work
+in other cases, however. For example, climate changes over the las t ten
+million years can be studied as the response of a complex dynamical sy stem
+– the atmosphere coupled to the oceans – that is subject to rando m external
+stimuli, but a more complete account of climate changes can be made w hen
+the dynamical system is expanded to include the Sun and Moon becau se
+climate is strongly aﬀected by the inclination of the Earth’s spin axis to the
+plane of the Earth’s orbit and the Sun’s coronal activity.
+A low-mass system is less likely to be well isolated from its surroundings
+than a massive one. For example, the orbit of the Earth is scarcely a ﬀected
+by radiation pressure that sunlight exerts on it, while dust grains les s than a
+few microns in size that are in orbit about the Sun lose angular moment um
+through radiation pressure at a rate that causes them to spiral in from near
+the Earth to the Sun within a few millennia. Similarly, a rubber duck left
+in the bath after the children have got out will stay very still, while tiny
+pollen grains in the water near it execute Brownian motion that carrie s
+them along a jerky path many times their own length each minute. Give n
+the diﬃculty of isolating low-mass systems, and the tremendous obs tacles
+that have to be surmounted if we are to expand the system to the p oint at
+which all inﬂuences on the object of interest become causal, it is nat ural that
+the physics of small systems is invariably probabilistic in nature. Quan tum
+mechanics describes the dynamics of all systems, great and small. R ather
+than making ﬁrm predictions, it enables us to calculate probabilities. I f the
+system is massive, the probabilities of interest may be so near zero o r unity
+that we have eﬀective certainty. If the system is small, the probab ilistic
+aspect of the theory will be more evident.
+Thescaleofatomsispreciselythescaleonwhichthe probabilisticaspe ct
+is predominant. Its predominance reﬂects two facts. First, ther e is no such
+thing as an isolated atom because all atoms are inherently coupled to the
+electromagnetic ﬁeld, and to the ﬁelds associated with electrons, n eutrinos,
+quarks, and various ‘gauge bosons’. Since we have incomplete inform ation
+about the states of these ﬁelds, we cannot hope to make precise p redictions
+about the behaviour of an individual atom. Second, we cannot build m ea-
+suring instruments of arbitrary delicacy. The instruments we use t o measure
+[Page 11]
+1.1 The laws of probability 3
+atoms are usually themselves made of atoms, and employ electrons o r pho-
+tons that carry suﬃcient energy to change an atom signiﬁcantly. W e rarely
+know the exact state that our measuring instrument is in before we bring it
+into contact with the system we have measured, so the result of th e measure-
+ment of the atom would be uncertain even if we knew the precise stat e that
+the atom was in before we measured it, which of course we do not. Mo re-
+over, the act of measurement inevitably disturbs the atom, and lea ves it in a
+diﬀerent state from the one it was in before we made the measureme nt. On
+account of the uncertainty inherent in the measuring process, we cannot be
+sure what this ﬁnal state may be. Quantum mechanics allows us to ca lculate
+probabilities for each possible ﬁnal state. Perhaps surprisingly, fr om the the-
+ory it emerges that even when we have the most complete informatio n about
+the state of a system that is is logically possible to have, the outcome s of
+some measurements remain uncertain. Thus whereas in the classica l world
+uncertainties can be made as small as we please by suﬃciently carefu l work,
+in the quantum world uncertainty is woven into the fabric of reality.
+1.1The laws of probability
+Events are frequently one-oﬀs: Pretty Lady will run in the 4.20 at S andown
+Park only once this year, and if she enters the race next year, her form and
+the ﬁeld will be diﬀerent. The probability that we want is for this year’s
+race. Sometimes events can be repeated, however. For example, there is
+no obvious diﬀerence between one throw of a die and the next throw , so
+it makes sense to assume that the probability of throwing a 5 is the sa me
+on each throw. When events can be repeated in this way we seek to a ssign
+probabilities in such a way that when we make a very large number Nof
+trials, the number nAof trials in which event Aoccurs (for example 5 comes
+up) satisﬁes
+nA≃pAN. (1.1)
+In any realistic sequence of throws, the ratio nA/Nwill vary with N, while
+the probability pAdoes not. So the relation (1.1) is rarely an equality. The
+idea is that we should choose pAso thatnA/Nﬂuctuates in a smaller and
+smaller interval around pAasNis increased.
+Events can be logically combined to form composite events: if Ais the
+event that a certain red die falls with 1 up, and Bis the event that a white
+die falls with 5 up, ABis the event that when both dice are thrown, the red
+die shows 1 and the white one shows 5. If the probability of AispAand the
+probability of BispB, then in a fraction ∼pAof throws of the two dice the
+red die will show 1, and in a fraction ∼pBof these throws, the white die
+will have 5 up. Hence the fraction of throws in which the event ABoccurs is
+∼pApBso we should take the probability of ABto bepAB=pApB. In this
+exampleAandBareindependent events because we see no reason why
+the number shown by the white die could be inﬂuenced by the number t hat
+happens to come up on the red one, and vice versa. The rule for com bining
+the probabilities of independent events to get the probability of bot h events
+happening, is to multiply them:
+p(AandB) =p(A)p(B) (independent events) . (1.2)
+Since only one number can come up on a die in a given throw, the
+eventAabove excludes the event Cthat the red die shows 2; AandCare
+exclusive events. Theprobabilitythat eithera1 ora2 will showisobtained
+by addingpAandpC. Thus
+p(AorC) =p(A)+p(C) (exclusive events) . (1.3)
+In the case of reproducible events, this rule is clearly consistent wit h the
+principle that the fraction of trials in which either AorCoccurs should be
+[Page 12]
+4 Chapter 1: Probability and probability amplitudes
+the sum of the fractions of the trials in which one or the other occur s. If
+we throw our die, the number that will come up is certainly one of 1, 2, 3,
+4, 5 or 6. So by the rule just given, the sum of the probabilities assoc iated
+with each of these numbers coming up has to be unity. Unless we know that
+the die is loaded, we assume that no number is more likely to come up tha n
+another, so all six probabilities must be equal. Hence, they must all e qual
+1
+6. Generalising this example we have the rules
+With justNmutually exclusive outcomes,N/summationdisplay
+i=1pi= 1.
+If all outcomes are equally likely, pi= 1/N.(1.4)
+1.1.1 Expectation values
+Arandom variable xis a quantity that we can measure and the value that
+we get is subject to uncertainty. Suppose for simplicity that only dis crete
+valuesxican be measured. In the case of a die, for example, xcould be the
+number that comes up, so xhas six possible values, x1= 1 tox6= 6. Ifpi
+is the probability that we shall measure xi, then the expectation value of
+xis
+∝an}b∇acketle{tx∝an}b∇acket∇i}ht ≡/summationdisplay
+ipixi. (1.5)
+If the event is reproducible, it is easy to show that the average of t he values
+that we measure on Ntrials tends to ∝an}b∇acketle{tx∝an}b∇acket∇i}htasNbecomes very large. Conse-
+quently, ∝an}b∇acketle{tx∝an}b∇acket∇i}htis often referred to as the average of x.
+Suppose we have two random variables, xandy. Letpijbe the proba-
+bility that our measurement returns xifor the value of xandyjfor the value
+ofy. Then the expectation of the sum x+yis
+∝an}b∇acketle{tx+y∝an}b∇acket∇i}ht=/summationdisplay
+ijpij(xi+yj) =/summationdisplay
+ijpijxi+/summationdisplay
+ijpijyj (1.6)
+But/summationtext
+jpijis the probability that we measure xiregardless of what we
+measure for y, so it must equal pi. Similarly/summationtext
+ipij=pj, the probability of
+measuringyjirrespective of what we get for x. Inserting these expressions
+in to (1.6) we ﬁnd
+∝an}b∇acketle{tx+y∝an}b∇acket∇i}ht=∝an}b∇acketle{tx∝an}b∇acket∇i}ht+∝an}b∇acketle{ty∝an}b∇acket∇i}ht. (1.7)
+That is, the expectation value of the sum of two random variables is t he
+sum of the variables’ individual expectation values, regardless of w hether
+the variables are independent or not.
+A useful measure of the amount by which the value of a random varia ble
+ﬂuctuates from trial to trial is the variance ofx:
+/angbracketleftbig
+(x−∝an}b∇acketle{tx∝an}b∇acket∇i}ht)2/angbracketrightbig
+=/angbracketleftbig
+x2/angbracketrightbig
+−2∝an}b∇acketle{tx∝an}b∇acketle{tx∝an}b∇acket∇i}ht∝an}b∇acket∇i}ht+/angbracketleftig
+∝an}b∇acketle{tx∝an}b∇acket∇i}ht2/angbracketrightig
+, (1.8)
+where we have made use of equation (1.7). The expectation ∝an}b∇acketle{tx∝an}b∇acket∇i}htis not a
+random variable, but has a deﬁnite value. Consequently ∝an}b∇acketle{tx∝an}b∇acketle{tx∝an}b∇acket∇i}ht∝an}b∇acket∇i}ht=∝an}b∇acketle{tx∝an}b∇acket∇i}ht2and/angbracketleftig
+∝an}b∇acketle{tx∝an}b∇acket∇i}ht2/angbracketrightig
+=∝an}b∇acketle{tx∝an}b∇acket∇i}ht2, so the variance of xis related to the expectations of xand
+x2by/angbracketleftbig
+∆2
+x/angbracketrightbig
+≡/angbracketleftbig
+(x−∝an}b∇acketle{tx∝an}b∇acket∇i}ht)2/angbracketrightbig
+=/angbracketleftbig
+x2/angbracketrightbig
+−∝an}b∇acketle{tx∝an}b∇acket∇i}ht2. (1.9)
+[Page 13]
+1.2 Probability amplitudes 5
+Figure 1.1 The two-slit interference experiment.
+1.2Probability amplitudes
+Many branches of the social, physical and medical sciences make ex tensive
+use of probabilities, but quantum mechanics stands alone in the waythat it
+calculates probabilities, for it always evaluates a probability pas the mod-
+square of a certain complex number A:
+p=|A|2. (1.10)
+The complex number Ais called the probability amplitude forp.
+Quantum mechanics is the only branch of knowledge in which proba-
+bility amplitudes appear, and nobody understands why they arise. T hey
+give rise to phenomena that have no analogues in classical physics th rough
+the following fundamental principle. Suppose something can happen by two
+(mutually exclusive) routes, SorT, and let the probability amplitude for it
+to happen by route SbeA(S) and the probability amplitude for it to happen
+by routeTbeA(T). Then the probability amplitude for it to happen by one
+route or the other is
+A(SorT) =A(S)+A(T). (1.11)
+This rule takes the place of the sum rule for probabilities, equation (1 .3).
+However, it is incompatible with equation (1.3), because it implies that t he
+probability that the event happens regardless of route is
+p(SorT) =|A(SorT)|2=|A(S)+A(T)|2
+=|A(S)|2+A(S)A∗(T)+A∗(S)A(T)+|A(T)|2
+=p(S)+p(T)+2ℜe(A(S)A∗(T)).(1.12)
+That is, the probability that an event will happen is not merely the sum
+of the probabilities that it will happen by each of the two possible rout es:
+there is an additional term 2 ℜe(A(S)A∗(T)). This term has no counterpart
+in standard probability theory, and violates the fundamental rule ( 1.3) of
+probability theory. It depends on the phases of the probability amp litudes
+for the individual routes, which do not contribute to the probabilitie sp(S) =
+|A(S)|2of the routes.
+Whenever the probability of an event diﬀers from the sum of the pro b-
+abilities associated with the various mutually exclusive routes by which it
+can happen, we say we have a manifestation of quantum interference .
+The term 2 ℜe(A(S)A∗(T)) in equation (1.12) is what generates quantum
+interference mathematically. We shall see that in certain circumsta nces the
+violations of equation (1.3) that are caused by quantum interferen ce are not
+detectable, so standard probability theory appears to be valid.
+Howdoweknowthat theprinciple(1.11), which hasthese extraordin ary
+consequences, is true? The soundest answer is that it is a fundame ntal
+postulate of quantum mechanics, and that every time you look at a d igital
+watch, or touch a computer keyboard, or listen to a CD player, or in teract
+with any other electronic device that has been engineered with the h elp
+of quantum mechanics, you are testing and vindicating this theory. Our
+civilisation now quite simply depends on the validity of equation (1.11).
+[Page 14]
+6 Chapter 1: Probability and probability amplitudes
+Figure 1.2 The probability distribu-
+tions of passing through each of the
+two closely spaced slits overlap.
+1.2.1 Two-slit interference
+An imaginary experiment will clarify the physical implications of the prin -
+ciple and suggest how it might be tested experimentally. The apparat us
+consists of an electron gun, G, a screen with two narrow slits S 1and S2,
+and a photographic plate P, which darkens when hit by an electron (s ee
+Figure 1.1).
+When an electron is emitted by G, it has an amplitude to pass through
+slit S1and then hit the screen at the point x. This amplitude will clearly
+depend on the point x, so we label it A1(x). Similarly, there is an amplitude
+A2(x) that the electron passed through S 2before reaching the screen at x.
+Hence the probability that the electron arrives at xis
+P(x) =|A1(x)+A2(x)|2=|A1(x)|2+|A2(x)|2+2ℜe(A1(x)A∗
+2(x)).(1.13)
+|A1(x)|2is simply the probability that the electron reaches the plate after
+passing through S 1. We expect this to be a roughly Gaussian distribution
+p1(x) that is centred on the value x1ofxat which a straight line from G
+throughthemiddleofS 1hitstheplate. |A2(x)|2shouldsimilarlybearoughly
+Gaussian function p2(x) centred on the intersection at x2of the screen and
+the straight line from G through the middle of S 2. It is convenient to write
+Ai=|Ai|eiφi=√pieiφi, whereφiis the phase of the complex number Ai.
+Then equation (1.13) can be written
+p(x) =p1(x)+p2(x)+I(x), (1.14a)
+where the interference term Iis
+I(x) = 2/radicalbig
+p1(x)p2(x)cos(φ1(x)−φ2(x)). (1.14b)
+Consider the behaviour of I(x) near the point that is equidistant from the
+slits. Then (see Figure 1.2) p1≃p2and the interference term is comparable
+in magnitude to p1+p2, and, by equations (1.14), the probability of an
+electron arriving at xwill oscillate between ∼2p1and 0 depending on the
+value of the phase diﬀerence φ1(x)−φ2(x). In§2.3.4 we shall show that the
+phasesφi(x) are approximately linear functions of x, so after many electrons
+have been ﬁred from G to P in succession, the blackening of P at x, which
+will be roughly proportional to the number of electrons that have a rrived at
+x, will show a sinusoidal pattern.
+Let’s replace the electrons by machine-gun bullets. Then everyday ex-
+perience tells us that classical physics applies, and it predicts that t he prob-
+abilityp(x) of a bullet arriving at xis just the sum p1(x) +p2(x) of the
+probabilities of a bullet coming through S 1or S2. Hence classical physics
+does not predict a sinusoidal pattern in p(x). How do we reconcile the very
+diﬀerentpredictionsofclassicalandquantummechanics? Firearms manufac-
+turers have for centuries used classical mechanics with deadly suc cess, so is
+[Page 15]
+1.3 Quantum states 7
+the resolution that bullets do not obey quantum mechanics? We believ e they
+do, and the probability distribution for the arrival of bullets shouldshow a
+sinusoidal pattern. However, in §2.3.4 we shall ﬁnd that quantum mechanics
+predicts that the distance ∆ between the peaks and troughs of th is pattern
+becomes smaller and smaller as we increase the mass of the particles w e are
+ﬁring through the slits, and by the time the particles are as massive a s a
+bullet, ∆ is fantastically small ∼10−29m. Consequently, it is not exper-
+imentally feasible to test whether p(x) becomes small at regular intervals.
+Any feasible experiment will probe the value of p(x) averaged over many
+peaks and troughs of the sinusoidal pattern. This averaged value ofp(x)
+agrees with the probability distribution we derive from classical mech anics
+because the average value of I(x) in equation (1.14) vanishes.
+1.2.2 Matter waves?
+The sinusoidal pattern of blackening on P that quantum mechanics p redicts
+proves to be identical to the interference pattern that is observ ed in Young’s
+double-slit experiment. This experiment established that light is a wav ephe-
+nomenon because the wave theory could readily explain the existenc e of the
+interference pattern. It is natural to infer from the existence o f the sinusoidal
+pattern in the quantum-mechanical case, that particles are manif estations of
+waves in some medium. There is much truth in this inference, and at an
+advanced level this idea is embodied in quantum ﬁeld theory. However , in
+the present context of non-relativistic quantum mechanics, the c oncept of
+matter waves is unhelpful. Particles are particles, not waves, and t hey pass
+through one slit or the other. The sinusoidal pattern arises becau se proba-
+bility amplitudes are complex numbers, which add in the same way as wav e
+amplitudes. Moreover, the energy density (intensity) associated with a wave
+is proportional to the mod square of the wave amplitude, just as th e proba-
+bility density of ﬁnding a particle is proportional to the mod square of the
+probability amplitude. Hence, on a mathematical level, there is a one- to-one
+correspondence between what happens when particles are ﬁred t owards a
+pair of slits and when light diﬀracts through similar slits. But we cannot
+consistently infer from this correspondence that particles are ma nifestations
+of waves because quantum interference occurs in quantum syste ms that are
+much more complex than a single particle, and indeed in contexts wher e
+motion through space plays no role. In such contexts we cannot as cribe the
+interference phenomenon to interference between real physica l waves, so it is
+inconsistent to take this step in the case of single-particle mechanic s.
+1.3Quantum states
+1.3.1 Quantum amplitudes and measurements
+Physics is about the quantitative description of natural phenomen a. A quan-
+titative description of a system inevitably starts by deﬁning ways in w hich
+it can be measured. If the system is a single particle, quantities that we can
+measure are its x,yandzcoordinates with respect to some choice of axes,
+and the components of its momentum parallel to these axes. We can also
+measure its energy, and its angular momentum. The more complex a s ystem
+is, the more ways there will be in which we can measure it.
+Associated with every measurement, there will be a set of possible n u-
+merical values for the measurement – the spectrum of the measurement.
+For example, the spectrum of the xcoordinate of a particle in empty space
+is the interval ( −∞,∞), while the spectrum of its kinetic energy is (0 ,∞).
+We shall encounter cases in which the spectrum of a measurement c on-
+sists of discrete values. For example, in Chapter 7 we shall show tha t
+the angular momentum of a particle parallel to any given axis has spec -
+trum (...,(k−1)¯h,k¯h,(k+ 1)¯h,...), where ¯his Planck’s constant h=
+[Page 16]
+8 Chapter 1: Probability and probability amplitudes
+6.63×10−34Js divided by 2 π, andkis either 0 or1
+2. When the spectrum is
+a set of discrete numbers, we say that those numbers are the allowed values
+of the measurement.
+With every value in the spectrum of a given measurement there will be
+a quantum amplitude that we will ﬁnd this value if we make the relevant
+measurement. Quantum mechanics is the science of how to calculate such
+amplitudes given the results of a suﬃcient number of prior measurem ents.
+Imagine that you’re investigating some physical system: some part icles
+in an ion trap, a drop of liquid helium, the electromagneticﬁeld in a reson ant
+cavity. Whatdoyouknowaboutthestateofthissystem? Youhave twotypes
+of knowledge: (1) a speciﬁcation of the physical nature of the sys tem (e.g.,
+size & shape of the resonant cavity), and (2) information about th e current
+dynamical state of the system. In quantum mechanics information of type
+(1) is used to deﬁne an object called the Hamiltonian Hof the system that
+is deﬁned by equation (2.5) below. Information of type (2) is more su btle.
+It must consist of predictions for the outcomes of measurements you could
+make on the system. Since these outcomes are inherently uncerta in, your
+information must relate to the probabilities of diﬀerent outcomes, a nd in the
+simplest case consists of values for the relevant probability amplitud es. For
+example, your knowledgemight consist of amplitudes for the various possible
+outcomes of a measurement of energy, or of a measurement of mo mentum.
+In quantum mechanics, then, knowledge about the current dynam ical
+state of a system is embodied in a set of quantum amplitudes. In class ical
+physics, bycontrast,wecanstatewith certaintywhichvalue wewill measure,
+and we characterise the system’s current dynamical state by simp ly giving
+this value. Such values are often called ‘coordinates’ of the system . Thus
+in quantum mechanics a whole set of quantum amplitudes replaces a sin gle
+number.
+Complete sets of amplitudes Given the amplitudes for a certain set of
+events, it is often possible to calculate amplitudes for other events . The phe-
+nomenon of particle spin provides the neatest illustration of this sta tement.
+Electrons, protons, neutrinos, quarks, and many other element ary par-
+ticles turn out to be tiny gyroscopes: they spin. The rate at which t hey
+spin and therefore the the magnitude of their spin angular momentu m never
+changes; it is always/radicalbig
+3/4¯h. Particles with this amount of spin are called
+spin-half particles for reasons that will emerge shortly. Although the spin
+of a spin-half particle is ﬁxed in magnitude, its direction can change. C onse-
+quently, the value of the spin angular momentum parallel to any given axis
+can take diﬀerent values. In §7.4.2 we shall show that parallel to any given
+axis, the spin angular momentum of a spin-half particle can be either ±1
+2¯h.
+Consequently, the spin parallel to the zaxis is denoted sz¯h, wheresz=±1
+2
+is an observable with the spectrum {−1
+2,1
+2}.
+In§7.4.2 we shall show that if we know boththe amplitude a+thatsz
+will be measured to be +1
+2andthe amplitude a−that a measurement will
+yieldsz=−1
+2, then we can calculate from these two complex numbers the
+amplitudes b+andb−for the two possible outcomes of the measurement of
+the spin along anydirection. If we know only a+(or onlya−), then we can
+calculate neither b+norb−foranyother direction.
+Generalising from this example, we have the concept of a complete
+set of amplitudes : the set contains enough information to enable one
+to calculate amplitudes for the outcome of anymeasurement whatsoever.
+Hence, such a set gives a complete speciﬁcation of the physical sta te of the
+system. Acompletesetofamplitudesisgenerallyunderstoodtobea minimal
+setinthesensethatnoneoftheamplitudescanbecalculatedfromt heothers.
+The set{a−,a+}constitutes a complete set of amplitudes for the spin of an
+electron.
+[Page 17]
+1.3 Quantum states 9
+1.3.2 Dirac notation
+Dirac introduced the symbol |ψ∝an}b∇acket∇i}ht, pronounced ‘ket psi’, to denote a complete
+set of amplitudes for the system. If the system consists ofa part icle1trapped
+in a potential well, |ψ∝an}b∇acket∇i}htcould consist of the amplitudes anthat the energy
+isEn, where (E1,E2,...) is the spectrum of possible energies, or it might
+consist of the amplitudes ψ(x) that the particle is found at x, or it might
+consist of the amplitudes a(p) that the momentum is measured to be p.
+Using the abstract symbol |ψ∝an}b∇acket∇i}htenables us to think about the system without
+committing ourselves to what complete set of amplitudes we are going to
+use, in the same way that the position vector xenables us to think about
+a geometrical point independently of the coordinates ( x,y,z), (r,θ,φ) or
+whatever by which we locate it. That is, |ψ∝an}b∇acket∇i}htis a container for a complete set
+of amplitudes in the same way that a vector xis a container for a complete
+set of coordinates.
+Theket|ψ∝an}b∇acket∇i}htencapsulatesthecrucialconceptofa quantum state , which
+is independent of the particular set of amplitudes that we choose to quantify
+it, and is fundamental to several branches of physics.
+We saw in the last section that amplitudes must sometimes be added: if
+an outcome can be achieved by two diﬀerent routes and we do not mo nitor
+the routeby which it is achieved, we add the amplitudes associatedwit h each
+route to get the overallamplitude for the outcome. In view of this a dditivity,
+we write
+|ψ3∝an}b∇acket∇i}ht=|ψ1∝an}b∇acket∇i}ht+|ψ2∝an}b∇acket∇i}ht (1.15)
+to mean that every amplitude in the complete set |ψ3∝an}b∇acket∇i}htis the sum of the
+corresponding amplitudes in the complete sets |ψ1∝an}b∇acket∇i}htand|ψ2∝an}b∇acket∇i}ht. This rule is
+exactly analogousto the rule for adding vectors because b3=b1+b2implies
+that each component of b3is the sum of the corresponding components of
+b1andb2.
+Since amplitudes are complex numbers, for any complex number αwe
+can deﬁne
+|ψ′∝an}b∇acket∇i}ht=α|ψ∝an}b∇acket∇i}ht (1.16)
+to mean that every amplitude in the set |ψ′∝an}b∇acket∇i}htisαtimes the corresponding
+amplitude in |ψ∝an}b∇acket∇i}ht. Again there is an obvious parallel in the case of vectors:
+3bis the vector that has xcomponent 3 bx, etc.
+1.3.3 Vector spaces and their adjoints
+The analogy between kets and vectors proves extremely fruitful and is worth
+developing. For a mathematician, objects, like kets, that you can a dd and
+multiply by arbitrary complex numbers inhabit a vector space . Since we
+live in a (three-dimensional) vector space, we have a strong intuitive feel for
+the structures that arise in general vector spaces, and this intu ition helps
+us to understand problems that arise with kets. Unfortunately ou r every-
+day experience does not prepare us for an important property of a general
+vector space, namely the existence of an associated ‘adjoint’ spa ce, because
+the space adjoint to real three-dimensional space is indistinguisha ble from
+real space. In quantum mechanics and in relativity the two spaces a re dis-
+tinguishable. We now take a moment to develop the mathematical the ory
+of general vector spaces in the context of kets in order to explain the re-
+lationship between a general vector space and its adjoint space. W hen we
+are merely using kets as examples of vectors, we shall call them “ve ctors”.
+Appendix G explains how these ideas are relevant to relativity.
+1Most elementary particles have intrinsic angular momentum or ‘spin’ ( §7.4). A com-
+plete set of amplitudes for a particle such as electron or pro ton that has spin, includes
+information about the orientation of the spin. In the intere sts of simplicity, in our discus-
+sions particles are assumed to have no spin unless the contra ry is explicitly stated, even
+though spinless particles are rather rare.
+[Page 18]
+10 Chapter 1: Probability and probability amplitudes
+For any vector space Vit is natural to choose a set of basis vectors ,
+that is, a set of vectors |i∝an}b∇acket∇i}htthat is large enough for it to be possible to
+express any given vector |ψ∝an}b∇acket∇i}htas a linear combination of the set’s members.
+Speciﬁcally, for any ket |ψ∝an}b∇acket∇i}htthere are complex numbers aisuch that
+|ψ∝an}b∇acket∇i}ht=/summationdisplay
+iai|i∝an}b∇acket∇i}ht. (1.17)
+The set should be minimal in the sense that none of its members can be
+expressed as a linear combination of the remaining ones. In the case of ordi-
+nary three-dimensional space, basis vectors are provided by the unit vectors
+i,jandkalong the three coordinate axes, and any vector bcan be expressed
+as the sum b=a1i+a2j+a3k, which is the analogue of equation (1.17).
+In quantum mechanics an important role is played by complex-valued
+linear functions on the vector space Vbecause these functions extract the
+amplitude for something to happen given that the system is in the sta te|ψ∝an}b∇acket∇i}ht.
+Let∝an}b∇acketle{tf|(pronounced ‘ braf’) be such a function. We denote by ∝an}b∇acketle{tf|ψ∝an}b∇acket∇i}htthe
+result of evaluating this function on the ket |ψ∝an}b∇acket∇i}ht. Hence, ∝an}b∇acketle{tf|ψ∝an}b∇acket∇i}htis a complex
+number (a probability amplitude) that in the ordinary notation of fun ctions
+would be written f(|ψ∝an}b∇acket∇i}ht). The linearity of the function ∝an}b∇acketle{tf|implies that for
+any complex numbers α,βand kets |ψ∝an}b∇acket∇i}ht,|φ∝an}b∇acket∇i}ht, it is true that
+∝an}b∇acketle{tf|/parenleftbig
+α|ψ∝an}b∇acket∇i}ht+β|φ∝an}b∇acket∇i}ht/parenrightbig
+=α∝an}b∇acketle{tf|ψ∝an}b∇acket∇i}ht+β∝an}b∇acketle{tf|φ∝an}b∇acket∇i}ht. (1.18)
+Noticethatthe rightsideofthis equationisasumoftwoproductsof complex
+numbers, so it is well deﬁned.
+To deﬁne a function on Vwe have only to give a rule that enables us
+to evaluate the function on any vector in V. Hence we can deﬁne the sum
+∝an}b∇acketle{th| ≡ ∝an}b∇acketle{tf|+∝an}b∇acketle{tg|of two bras ∝an}b∇acketle{tf|and∝an}b∇acketle{tg|by the rule
+∝an}b∇acketle{th|ψ∝an}b∇acket∇i}ht=∝an}b∇acketle{tf|ψ∝an}b∇acket∇i}ht+∝an}b∇acketle{tg|ψ∝an}b∇acket∇i}ht (1.19)
+Similarly, we deﬁne the bra ∝an}b∇acketle{tp| ≡α∝an}b∇acketle{tf|to be result of multiplying ∝an}b∇acketle{tf|by
+some complex number αthrough the rule
+∝an}b∇acketle{tp|ψ∝an}b∇acket∇i}ht=α∝an}b∇acketle{tf|ψ∝an}b∇acket∇i}ht. (1.20)
+Since we now know what it means to add these functions and multiply th em
+by complex numbers, they form a vector space V′, called the adjoint space
+ofV.
+Thedimension of a vector space is the number of vectors required to
+make up a basis for the space. We now show that VandV′have the same
+dimension. Let2{|i∝an}b∇acket∇i}ht}fori= 1,Nbe a basis for V. Then a linear function
+∝an}b∇acketle{tf|onVis fully deﬁned once we have given the Nnumbers ∝an}b∇acketle{tf|i∝an}b∇acket∇i}ht. To see
+that this is true, we use (1.17) and the linearity of ∝an}b∇acketle{tf|to calculate ∝an}b∇acketle{tf|ψ∝an}b∇acket∇i}htfor
+an arbitrary vector |ψ∝an}b∇acket∇i}ht=/summationtext
+iai|i∝an}b∇acket∇i}ht:
+∝an}b∇acketle{tf|ψ∝an}b∇acket∇i}ht=N/summationdisplay
+i=1ai∝an}b∇acketle{tf|i∝an}b∇acket∇i}ht. (1.21)
+This result implies that we can deﬁne Nfunctions ∝an}b∇acketle{tj|(j= 1,N) through
+the equations
+∝an}b∇acketle{tj|i∝an}b∇acket∇i}ht=δij, (1.22)
+whereδijis 1 ifi=jand zero otherwise, because these equations specify the
+value that each bra ∝an}b∇acketle{tj|takes on every basis vector |i∝an}b∇acket∇i}htand therefore through
+2Throughout this book the notation {xi}means ‘the set of objects xi’.
+[Page 19]
+1.3 Quantum states 11
+(1.21) the value that ∝an}b∇acketle{tj|takes on any vector |ψ∝an}b∇acket∇i}ht. Now consider the following
+linear combination of these bras:
+∝an}b∇acketle{tF| ≡N/summationdisplay
+j=1∝an}b∇acketle{tf|j∝an}b∇acket∇i}ht∝an}b∇acketle{tj|. (1.23)
+It is trivial to check that for any iwe have ∝an}b∇acketle{tF|i∝an}b∇acket∇i}ht=∝an}b∇acketle{tf|i∝an}b∇acket∇i}ht, and from this
+it follows that ∝an}b∇acketle{tF|=∝an}b∇acketle{tf|because we have already agreed that a bra is fully
+speciﬁed by the valuesit takeson the basisvectors. Since we haven owshown
+thatanybra can be expressedas a linear combination of the Nbras speciﬁed
+by (1.22), and the latter are manifestly linearly independent, it follow s that
+the dimensionality of V′isN, the dimensionality of V.
+In summary, we have established that every N-dimensional vector space
+Vcomes with an N-dimensional space V′of linear functions on V, called the
+adjoint space. Moreover, we have shown that once we have chose n a basis
+{|i∝an}b∇acket∇i}ht}forV, there is an associated basis {∝an}b∇acketle{ti|}forV′. Equation (1.22) shows
+that there is an intimate relation between the ket |i∝an}b∇acket∇i}htand the bra ∝an}b∇acketle{ti|:∝an}b∇acketle{ti|i∝an}b∇acket∇i}ht= 1
+while∝an}b∇acketle{tj|i∝an}b∇acket∇i}ht= 0 forj∝ne}ationslash=i. We acknowledge this relationship by saying that ∝an}b∇acketle{ti|
+is theadjoint of|i∝an}b∇acket∇i}ht. We extend this deﬁnition of an adjoint to an arbitrary
+ket|ψ∝an}b∇acket∇i}htas follows: if
+|ψ∝an}b∇acket∇i}ht=/summationdisplay
+iai|i∝an}b∇acket∇i}htthen∝an}b∇acketle{tψ| ≡/summationdisplay
+ia∗
+i∝an}b∇acketle{ti|. (1.24)
+With this choice, when we evaluate the function ∝an}b∇acketle{tψ|on the ket |ψ∝an}b∇acket∇i}htwe ﬁnd
+∝an}b∇acketle{tψ|ψ∝an}b∇acket∇i}ht=/parenleftbigg/summationdisplay
+ia∗
+i∝an}b∇acketle{ti|/parenrightbigg/parenleftbigg/summationdisplay
+jaj|j∝an}b∇acket∇i}ht/parenrightbigg
+=/summationdisplay
+i|ai|2≥0. (1.25)
+Thus for any state the number ∝an}b∇acketle{tψ|ψ∝an}b∇acket∇i}htis real and non-negative, and it can
+vanish only if |ψ∝an}b∇acket∇i}ht= 0 because every aivanishes. We call this number the
+lengthof|ψ∝an}b∇acket∇i}ht.
+The components of an ordinary three-dimensional vector b=bxi+
+byj+bzkare real. Consequently, we evaluate the length-square of bas
+simply (bxi+byj+bzk)·(bxi+byj+bzk) =b2
+x+b2
+y+b2
+z. The vector on the
+extreme left of this expression is strictly speaking the adjoint of bbut it is
+indistinguishable from it because we have not modiﬁed the component s in
+any way. In the quantum mechanical case eq. 1.25, the component s of the
+adjoint vector are complex conjugates of the components of the vector, so
+the diﬀerence between a vector and its adjoint is manifest.
+If|φ∝an}b∇acket∇i}ht=/summationtext
+ibi|i∝an}b∇acket∇i}htand|ψ∝an}b∇acket∇i}ht=/summationtext
+iai|i∝an}b∇acket∇i}htare any two states, a calculation
+analogous to that in equation (1.25) shows that
+∝an}b∇acketle{tφ|ψ∝an}b∇acket∇i}ht=/summationdisplay
+ib∗
+iai. (1.26)
+Similarly, we can show that ∝an}b∇acketle{tψ|φ∝an}b∇acket∇i}ht=/summationtext
+ia∗
+ibi, and from this it follows that
+∝an}b∇acketle{tψ|φ∝an}b∇acket∇i}ht=/parenleftbig
+∝an}b∇acketle{tφ|ψ∝an}b∇acket∇i}ht/parenrightbig∗. (1.27)
+We shall make frequent use of this equation.
+Equation (1.26) shows that there is a close connection between ext ract-
+ing the complex number ∝an}b∇acketle{tφ|ψ∝an}b∇acket∇i}htfrom∝an}b∇acketle{tφ|and|ψ∝an}b∇acket∇i}htand the operation of taking
+the dot product between two vectors banda.
+[Page 20]
+12 Chapter 1: Probability and probability amplitudes
+1.3.4 The energy representation
+Suppose our system is a particle that is trapped in some potential we ll. Then
+the spectrum of allowed energies will be a set of discrete numbers E0,E1,...
+and a complete set of amplitudes are the amplitudes aiwhose mod squares
+give the probabilities piof measuring the energy to be Ei. Let{|i∝an}b∇acket∇i}ht}be a set
+of basis kets for the space Vof the system’s quantum states. Then we use
+the set of amplitudes aito associate them with a ket |ψ∝an}b∇acket∇i}htthrough
+|ψ∝an}b∇acket∇i}ht=/summationdisplay
+iai|i∝an}b∇acket∇i}ht. (1.28)
+This equation relates a complete set of amplitudes {ai}to a certain ket
+|ψ∝an}b∇acket∇i}ht. We discover the physical meaning of a particular basis ket, say |k∝an}b∇acket∇i}ht, by
+examining the values that the expansion coeﬃcients aitake when we apply
+equation (1.28) in the case |k∝an}b∇acket∇i}ht=|ψ∝an}b∇acket∇i}ht. We clearly then have that ai= 0 for
+i∝ne}ationslash=kandak= 1. Consequently, the quantum state |k∝an}b∇acket∇i}htis that in which
+we are certain to measure the value Ekfor the energy. We say that |k∝an}b∇acket∇i}htis
+a state of well deﬁned energy. It will help us remember this important
+identiﬁcation if we relabel the basis kets, writing |Ei∝an}b∇acket∇i}htinstead of just |i∝an}b∇acket∇i}ht, so
+that (1.28) becomes
+|ψ∝an}b∇acket∇i}ht=/summationdisplay
+iai|Ei∝an}b∇acket∇i}ht. (1.29)
+Suppose we multiply this equation through by ∝an}b∇acketle{tEk|. Then by the lin-
+earity of this operation and the orthogonality relation (1.22) (which in our
+new notation reads ∝an}b∇acketle{tEk|Ei∝an}b∇acket∇i}ht=δik) we ﬁnd
+ak=∝an}b∇acketle{tEk|ψ∝an}b∇acket∇i}ht. (1.30)
+Thisisanenormouslyimportantresultbecauseittellsushowtoextra ctfrom
+an arbitrary quantum state |ψ∝an}b∇acket∇i}htthe amplitude for ﬁnding that the energy is
+Ek.
+Equation (1.25) yields
+∝an}b∇acketle{tψ|ψ∝an}b∇acket∇i}ht=/summationdisplay
+i|ai|2=/summationdisplay
+ipi= 1, (1.31)
+where the last equality follows because if we measure the energy, we must
+ﬁndsomevalue, so the probabilities pimust sum to unity. Thus kets that
+describe real quantum states must have unit length: we call kets w ith unit
+lengthproperly normalised . During calculations we frequently encounter
+kets that are not properly normalised, and it is important to rememb er that
+the key rule (1.30) can be used to extract predictions only from pro perly
+normalised kets. Fortunately, any ket |φ∝an}b∇acket∇i}ht=/summationtext
+ibi|i∝an}b∇acket∇i}htis readily normalised: it
+is straightforward to check that
+|ψ∝an}b∇acket∇i}ht ≡/summationdisplay
+ibi/radicalbig
+∝an}b∇acketle{tφ|φ∝an}b∇acket∇i}ht|i∝an}b∇acket∇i}ht (1.32)
+is properly normalised regardless of the values of the bi.
+1.3.5 Orientation of a spin-half particle
+Formulae for the components of the spin angular momentum of a spin -half
+particle that we shall derive in §7.4.2 provide a nice illustration of how the
+abstract machinery just introduced enables us to predict the res ults of ex-
+periments.
+If you measure one component, say sz, of the spin sof an electron, you
+will obtain one of two results, either sz=1
+2orsz=−1
+2. Moreover the state
+==================================================
+--- qm.pdf ---
+==================================================
+
+[Page 1]
+Quantum Mechanics
+David Tong
+Department of Applied Mathematics and Theoretical Physics,
+Centre for Mathematical Sciences,
+Wilberforce Road,
+Cambridge, CB3 OBA, UK
+http://www.damtp.cam.ac.uk/user/tong/quantum.html
+d.tong@damtp.cam.ac.uk
+[Page 2]
+Recommended Books and Resources
+There is no shortage of excellent textbooks on quantum mechanics. Two good
+introductory books, at a similar level to this course, are:
+•David. J. Griths, \ Introduction to Quantum Mechanics "
+•Alasdair Rae, \ Quantum Mechanics "
+Both books excel in providing clear and straightforward explanations and if you're
+struggling with the basics are good places to turn. They don't however do anything
+sophisticated and won't help much for later courses.
+If you want a book to last a lifetime, rather than just one year, there are also many
+options. Here are some that I like.
+•Shankar, \ Principles of Quantum Mechanics "
+A long and detailed book, but one where the author takes you by the hand and leads
+you gently through some challenging calculations.
+•Landau and Lifshitz Volume 3 \ Quantum Mechanics: Non-Relativistic Theory "
+There's no hand holding in Landau's theoretical minimum, just encyclopedic informa-
+tion, explained without fuss. It is, however, remarkably readable.
+•Steven Weinberg, \ Lectures on Quantum Mechanics "
+Weinberg is always worth listening to.
+[Page 3]
+Contents
+1 Introduction 2
+1.1 The Wavefunction 3
+1.1.1 Normalisation 6
+1.1.2 Superposition 7
+1.2 The Schr odinger Equation 9
+1.2.1 The Hamiltonian 10
+1.2.2 Conservation of Probability 11
+1.2.3 The Collapse of the Wavefunction 13
+1.3 The Double Slit Experiment 14
+2 A Quantum Particle in One Dimension 19
+2.1 The Free Particle 20
+2.1.1 A Particle on a Circle 22
+2.1.2 The Innite Potential Well 24
+2.1.3 The Gaussian Wavepacket 27
+2.1.4 A First Look at Expectation Values 30
+2.2 The Harmonic Oscillator 34
+2.2.1 The Energy Spectrum 35
+2.2.2 The Wavefunctions 37
+2.3 Bound States 41
+2.3.1 A Finite Potential Well 42
+2.3.2 A Delta Function Potential 48
+2.3.3 Some General Results 49
+2.3.4 The Double Well Potential 52
+2.4 Scattering 54
+2.4.1 A Step Potential 56
+2.4.2 Tunnelling 60
+3 The Formalism of Quantum Mechanics 63
+3.1 States 63
+3.1.1 The Inner Product 64
+3.2 Operators and Observables 66
+3.2.1 Eigenfunctions and Eigenvalues 68
+3.2.2 Hermitian Operators 71
+3.2.3 Momentum Eigenstates and the Fourier Transform 75
+{ i {
+[Page 4]
+3.3 Measurement 76
+3.3.1 Expectation Values 79
+3.4 Commutation Relations 81
+3.4.1 The Heisenberg Uncertainty Principle 84
+3.5 Interpretations of Quantum Mechanics 88
+3.5.1 Hidden Variables 89
+3.5.2 Copenhagen and Many Worlds 91
+3.5.3 Shut Up and Calculate 93
+4 A Quantum Particle in Three Dimensions 95
+4.1 Angular Momentum 96
+4.1.1 Angular Momentum Commutation Relations 96
+4.1.2 The Eigenfunctions are Spherical Harmonics 99
+4.2 Solving the 3d Schr odinger Equation 104
+4.2.1 The 3d Harmonic Oscillator 105
+4.2.2 Bound States in 3d 108
+4.2.3 Why Can't the Wavefunction Diverge at the Origin? 110
+4.3 The Hydrogen Atom 111
+4.3.1 The Energy Spectrum 112
+4.3.2 The Wavefunctions 116
+4.4 A Pre-Quantum Quantum History 118
+4.4.1 The Bohr Model 119
+4.4.2 What About the Photon? 121
+4.5 A First Look at Renormalisation 122
+4.5.1 A Delta Function Potential in the Plane 124
+4.5.2 Renormalisation in Quantum Mechanics 127
+{ 1 {
+[Page 5]
+1 Introduction
+Without wishing to overstate the case, the discovery of quantum mechanics is the single
+greatest achievement in the history of human civilisation.
+Quantum mechanics is an outrageous departure from our classical, comforting, com-
+mon sense view of the world. It is more baing and disturbing than anything dreamt
+up by science ction writers. And yet it is undoubtably the correct description of the
+universe we inhabit, providing insights into many aspects of the world around us.
+Among the many successes of quantum mechanics are answers to old and very basic
+questions. Like why is matter stable? And why does the sun shine and why is it yellow?
+And why are all solids either conductors or insulators? But quantum mechanics also
+opens up vistas that we didn't previously know existed, from novel states of matter
+where the constituent particles become so entangled that they can be coaxed to perform
+seemingly impossible tasks, to the subatomic world of uctuating ethereal elds, to a
+revised understanding of the meaning of information and what one can achieve with it.
+Although quantum mechanics gives the right answers to all questions, it does so at
+a price. The answers are always statistical in nature. There are few certainties in the
+quantum world. Of course, there are few certainties in the classical world too, but
+we can always strive to eliminate them. In classical physics, knowledge is power: the
+more you know, the better o and less uncertain you are. This is because classical
+probabilities are always about our ignorance and any classical system that appears
+random does so because it is somehow dicult, but never impossible, for us to know
+what's going on inside.
+This is is not the way of the quantum world. The randomness is real, the unpre-
+dictability inherent. There is no way to game the system or gain some illicit knowledge
+of underlying quantum properties that would reduce the uncertainty. If, for example, a
+particle has probability1
+2to be in one place and probability1
+2to be elsewhere, this may
+well be because the particle really is in both places at the same time. Any attempt to
+eliminate the quantum uncertainty will simply shift it, like a bubble in wallpaper, else-
+where. As we will see, quantum particles are fragile objects and the very act of looking
+changes them, disturbing many of the other delicate properties that they possess.
+The purpose of these lectures is to begin to get to grips with the quantum world and
+understand some of the strange behaviour that it exhibits. As should be clear already,
+this is something of a step into the unknown and our classical intuition will not be a
+great guide in the quantum realm. Fortunately we have a better guide because, for
+{ 2 {
+[Page 6]
+reasons that we do not fully understand, the quantum world is described astonishingly
+well by the language of mathematics. Our strategy in these lectures, and later ones, will
+be to embrace this mathematical description and leverage it to build a new intuition
+for how the universe really works.
+1.1 The Wavefunction
+The dierence between quantum and classical mechanics does not involve just a small
+tweak. Instead it is a root and branch overhaul of the entire framework.
+This is manifest from the very beginning as we can see by comparing how we describe
+thestate of a system in the two frameworks. The state is the information that tells us all
+we need to know about the system at a xed time, with the idea that the laws of physics
+will then dictate how the state evolves at all later times. Throughout these lectures we
+will deal only with the dynamics of a single particle. For the present discussion, we'll
+think about a particle moving in R3.
+In the classical world, the state of the particle is determined by its position xand its
+velocity v=_x. If you specify both bits of information at some time t0then you can use
+the equation of motion F=mxto determine x(t) and v(t) for all time. Importantly,
+it's not enough to just know only, say, the position of the particle at t=t0. You
+need both x(t0) and _x(t0). Mathematically, this is because the equation of motion is a
+second order dierential equation and so you need to specify two integration constants
+to get a unique solution.
+In the quantum world, the state of a particle is determined by its wavefunction . This
+is a complex valued function
+ (x;t)
+As we will see, if you know the wavefunction at some time, say t0, then you have all
+the information that you need to determine the state at all other times.
+The description in terms of the wavefunction is not a small amendment to classi-
+cal mechanics. We've replaced the three position coordinates x2R3with an innite
+amount of information, a functions worth of information. Moreover, we haven't speci-
+ed anything about the particle's velocity; that information must also be contained, in
+some manner, in the wavefunction  (x;t).
+{ 3 {
+[Page 7]
+The wavefunction has a very simple interpretation. Or, more precisely, the mod-
+square of the wavefunction has a very simple interpretation. It tells us the probability
+that we will nd a particle at a given position. The probability density Pfor a particle
+to sit at point xis
+P(x;t) =j (x;t)j2
+This is known as the Born rule , after Max Born who rst understood that quantum
+mechanics is a theory of probability rather than certainty.
+From the probability density, you can compute actual probabilities by multiplying
+by a volume: the probability that the particle sits in some small volume dVcentred
+around point xisP(x;t)dV.
+In all other realms of science, probability arises because of our ignorance. If you
+throw a classical dice, and know its initial state with complete precision, then there
+is no doubt about what will happen. Once the dice leaves your hand, the probability
+that you will roll a six is either 0 or 1. If you were really good at solving dierential
+equations, you could just gure out the answer and impress your friends. But, in most
+circumstances we don't have a good knowledge of the initial state of the dice and,
+besides, dierential equations are hard. So we just give up, admit that we don't know
+what will happen, and say that the probability of rolling a six is1
+6. Crucially, however,
+the introduction of probability is entirely due to our lack of knowledge; it is not an
+inherent property of the dice.
+This is not the case in quantum mechanics. The state  (x;t) contains all the in-
+formation about a particle and the probabilistic interpretation is not because of any
+failing on our part, but instead due to an inherent randomness in the quantum world.
+This is, to put it mildly, something of a departure from the Newtonian way of thinking.
+The novelty in the wavefunction description of the particle might suggest other in-
+terpretations of the function  (x;t). You might, for example, wonder if perhaps we
+shouldn't think of a particle at all, but rather some uid-like object, spread out over
+space. Such objects are commonplace in physics and are known as elds . The electric
+and magnetic elds are familiar examples. But that's notthe right way to think about
+the wavefunction. This is because we never observe a fragmented particle, one that's
+lost its particle form and starts spreading jell-o like throughout space. Any measuring
+device that will allow you to determine whether a particle is in some designated region
+of space will return the answer yes or no. It won't tell you \well, the particle's a lit-
+tle bit here but mostly somewhere over there to the left". The wavefunction doesn't
+describe some real uid; it is more nebulous. It is a wave only of probability.
+{ 4 {
+[Page 8]
+Figure 1 . In any particular experiment, you only detect particles with very denite trajec-
+tories and no hint of the more nebulous underlying wavefunction.
+This is illustrated in Figure 1 which shows the tracks left by electrons and positrons as
+they pass through a detector known as a bubble chamber. The fast travelling particles
+move in approximately straight lines, while those that are slower spiral in circles due
+to an applied magnetic eld. The electrons bend one way, the positrons the other,
+giving the back-to-back spirals that you can see. For our purposes, the key point is
+that when the particles entered the detector, they were described by a wavefunction
+that was spread out over a large part of space. Yet, the particles don't appear as uy,
+insubstantial clouds of probability. Instead, they leave clear tracks, with a denite
+trajectory.
+The introduction of probability at such a fundamental level means that we must
+abandon the idea of predicting, with certainty, what will happen in a given experiment.
+There is no way to say when and where the spirals will appear in the picture above.
+We can only compute the likelihood for this to happen. Clearly this is retrograde
+step from the Newtonian (strictly, Laplacian) dream of knowing everything that will
+happen, from the beginning to the end of time.
+One might wonder if perhaps it's possible to restore this dream at some deeper level.
+Maybe the wavefunction  (x;t) is just some coarse-grained description of something
+ner and more subtle that's going on underneath. Maybe another layer of reality awaits
+discovery, one that allows us to bring back our comfortable deterministic, Newtonian
+way of thinking. There is good reason to think that this is not the case. Reality
+is, at heart, probabilistic. We'll mention some of the arguments for this in Section
+3.5 where we touch upon some of the interpretations of quantum mechanics. A fuller
+description of why a deterministic world is incompatible with experiment will be given
+in the lectures on Topics in Quantum Mechanics (see, in particular, the section on
+{ 5 {
+[Page 9]
+Quantum Foundations). For now, you'll just have to accept that the world in which
+we live is not the one our forefathers grew up believing in. It is random and uncertain.
+It is also, as we will see, considerably more interesting because of it.
+1.1.1 Normalisation
+The probabilistic interpretation means that the wavefunction can't just be any old
+function. The particle has to be somewhere, and this translates to the requirement
+Z
+d3x P(x;t) =Z
+d3xj (x;t)j2= 1
+Wavefunctions that have this property are said to be normalised .
+In practice, this isn't such a big deal. Suppose that we have a wavefunction 	( x;t)
+that isn't normalised but instead obeys
+Z
+d3xj	(x;t)j2=N <1
+IfNis nite we say that the wavefunction is normalisable . Clearly a wavefunction
+is normalisable only if  (x;t)!0 suciently fast as jxj!1 . In this case, we can
+always construct a normalised wavefunction
+ (x;t) =1p
+N	(x;t)
+Quite often in these lectures, it will turn out to be useful to work with un-normalised
+wavefunctions 	 and then remember to include the normalisation factor only at the
+end when computing probabilities.
+From the discussion above, it should be clear that we will have little use for wave-
+functions that cannot be normalised because
+Z
+d3xj (x;t)j2=1
+These have no probabilistic interpretation and should be discarded. They do not de-
+scribe quantum states. (I should warn you that this statement, while mostly true,
+comes with small and annoying caveat that will rear its head fairly soon. We will
+address this in Section 2.1.)
+{ 6 {
+[Page 10]
+There is one other relation between wavefunctions that is important: two wavefunc-
+tions that dier by a constant, complex phase should actually be viewed as describing
+equivalent states
+ (x;t)ei (x;t)
+for any constant, real . Note, in particular, that this doesn't change the probability
+distribution P=j j2. Nor, it will turn out, does it change anything else either. (The
+\anything else" argument is important here. As we'll see later, if you multiplied the
+wavefunction by a spatially varying phase ei(x)then it doesn't change the probability
+distribution P=j j2but it does change other observable quantities and so multiplying
+by such a factor does not give back the same state.)
+Combining the need for normalisation, together with the phase ambiguity, it is some-
+times useful think of states as the collection of normalisable, complex functions with
+the equivalence relation
+ (x;t) (x;t)
+for any complex 2Cwith6= 0. The wavefunctions  and should be viewed as
+describing the same physical state.
+1.1.2 Superposition
+The set of wavefunctions form a vector space . This means that if  1(x;t) and 2(x;t)
+are both possible states of the system, then so too is
+ 3(x;t) = 1(x;t) + 2(x;t)
+for any;2C. This is known as the principle of superposition .
+The mathematics underlying this statement is simple. If  1and 2are states of the
+system then both must be normalisable. They may, indeed, be normalised but for now
+let's just assume that
+Z
+d3xj i(x;t)j2=Ni<1 fori= 1;2
+Then 3is also a possible state of the system provided that it too is normalisable. But
+it is straightforward to show that it has this property. First we have
+Z
+d3xj 3j2=Z
+d3xj 1+ 2j2Z
+d3x
+j 1j+j 2j2
+{ 7 {
+[Page 11]
+where we've used the triangle inequality jz1+z2jjz1j+jz2jfor anyz1;z22C.
+Continuing, we have
+Z
+d3xj 3j2Z
+d3x
+j 1j2+j 2j2+ 2j 1jj 2j
+Z
+d3x
+2j 1j2+ 2j 2j2
+where, now, in the last step we've used the fact that ( jz1j jz2j)20 which, rearranging,
+gives 2jz1jjz2jjz1j2+jz2j2. So, nally, we get the result we wanted
+Z
+d3xj 3j22jj2N1+ 2jj2N2<1
+We learn that  3is normalisable, and hence also an allowed state of the system.
+The idea that functions form a vector space might be novel. There is a simple
+notational trick that should help convince you that it's not too far from things you've
+seen already. If we have some n-dimensional vector ~ y, then we often use subscript
+notation and write it as yiwithi= 1;:::;N . We could equally well write it as y(i)
+withi= 1;:::;N . A function y(x) is a similar kind of object, but now with a continuous
+labelx2Rrather than the discrete label i= 1;:::;N .
+Of course, the big dierence is that we're now dealing with an innite dimensional
+vector space rather than a nite dimensional vector space, and I would be lying if I
+told you that this doesn't bring new issues to the table. Indeed, we've already met one
+of them above: we don't consider any old function  (x) to be in our vector space, but
+rather only normalisable functions. There are many further subtleties in store but we
+will be best served by simply ignoring them at this point. We'll return to some issues
+in Section 3.
+The principle of superposition has profound physical consequences. Suppose that
+you have a particle that, at some time t0, you know is localised somewhere near the
+point X. For example, we could describe it by the Gaussian wavefunction
+ (x) =1p
+Ne a(x X)2
+for some choice of athat tells you how spread out the wavefunction is. Here Nis
+a normalisation factor that won't concern us. (For what it's worth, we should take
+N= (=2a)3=2if we want to ensure that  is normalised.) This is a state in which you
+might imagine that the particle still retains something of its classical particle nature, at
+least in the sense that the probability distribution is not spread out over long distances.
+{ 8 {
+[Page 12]
+However, the superposition principle tells us that we should also entertain the idea that
+the particle can sit in a state
+ (x) =1p
+N0
+e a(x X1)2+e a(x X2)2
+for arbitrary positions X1andX2. But now the cat is really out of the bag! The
+interpretation of this state is that the particle has somehow split and now sits both
+nearX1and near X2. Indeed, we'll shortly see clear experimental consequences of
+states like the one above, where elementary particles { which are, as far as we can tell,
+indivisible { are coaxed into travelling along two or more dierent paths simultaneously.
+Taken to the logical extreme, it is states like the one above that lead us to seemingly
+paradoxical situations with cats that are both alive and dead.
+1.2 The Schr odinger Equation
+The wavefunction gives us a description of the state of the system. The next step is
+to understand how these states evolve in time. This is described by the Schr odinger
+equation ,
+i~@ 
+@t=^H (1.1)
+Here ~isPlanck's constant , a fundamental constant of nature. Its value is
+~1:0510 34Js
+In the quantum world, the energy unit of choice is the electronvolt, dened by the
+kinetic energy that an electron picks up when accelerated over a potential dierence of
+1 volt. It is related to the Joule as 1 eV 1:610 19J. In these units, we have
+~= 6:5810 16eV s
+The numerical value of ~is important for specic applications. But, conceptually, the
+units that ~carries are more important. It has dimension of energy time. This is
+the same dimension as angular momentum L=m_xx. It is also the same dimension
+as the action in classical mechanics, S=R
+dt1
+2m_x2 V.
+A slightly old-fashioned convention is to dene Planck's constant to be h= 2~. This
+is bad practice. First, ~appears in equations much more often than the combination
+2~. But, more importantly, the quantity ~is used exclusively for Planck's constant
+and its appearance in any equation is jumping up and down and screaming at you that
+quantum mechanics is at play. Meanwhile, hcan mean many things in physics, from
+\height" to \magnetic eld density". In these lectures we'll use only ~.
+{ 9 {
+[Page 13]
+1.2.1 The Hamiltonian
+The next object in the Schr odinger equation that needs explanation is ^H. This is
+known as the Hamiltonian . Dierent choices of Hamiltonian describe dierent laws of
+physics. In these lectures, we will restrict ourselves to non-relativistic particles moving
+in three dimensions in the presence of a potential energy V(x). For such a system, the
+Hamiltonian is given by
+^H= ~2
+2mr2+V(x) (1.2)
+This is an example of a dierential operator . It takes a function  (x) and gives you
+back a new function, but only after dierentiating by the Laplacian
+r2=@2
+@x2+@2
+@y2+@2
+@z2
+For much of these lectures, we will denote operators with a hat, like ^H. I should
+mention, however, that this notation is a little like training wheels on a bike and in
+future lecture courses hats will be discarded and you just have to remember what
+objects are operators.
+A few comments are in order about the Schr odinger equation and Hamiltonian.
+First, the Schr odinger equation replaces the venerable F=main classical mechanics.
+Importantly, the Schr odinger equation is rst order in time, rather than second order.
+This, ultimately, is why the state of a quantum system is described by  (x) and not
+both (x) and _ (x).
+Next, the \Hamiltonian" is not something entirely novel to quantum physics. It is
+actually a concept that arises in more sophisticated presentations of Newtonian physics.
+You can read about this approach in the lectures on Classical Dynamics. In the classical
+world, the Hamiltonian is closely related to the energy of the system which, for us, is
+E=1
+2mp2+V(x) (1.3)
+where p=m_xis the momentum of the particle. As these lectures proceed, we will also
+see the connection between the operator Hamiltonian ^Hand energy. For now, we can
+just note that there is clearly a similarity in structure between the equations (1.2) and
+(1.3). If we wanted to push this analogy further, we might postulate some relationship
+in which momentum is replaced by a derivative operator,
+p!i~r?
+{ 10 {
+[Page 14]
+where it's not clear whether we should take + or  since the energy depends only on
+p2. More importantly, it's not at all clear what a relationship of this kind would mean!
+How could the momentum of a particle { which, after all, is just a number | possibly
+be related to something as abstract as taking a derivative? As these lectures proceed,
+we'll see the connection between momentum and derivatives more clearly. (We'll also
+see that we should actually take the minus sign!)
+It turns out that not all classical theories can be written using a Hamiltonian.
+Roughly speaking, only those theories that have conservation of energy can be for-
+mulated in this way. Importantly, the same is true of quantum mechanics. This means,
+in particular, that there is no Schr odinger equation for theories with friction. In many
+ways that's no big loss. The friction forces that dominate our world are not funda-
+mental, but the result of interactions between many (say 1023) atoms. There are no
+such friction forces in the atomic and subatomic worlds and, moreover, the formalism
+of quantum mechanics does not allow us to easily incorporate such forces.
+(If, for some reason, you really do want to consider quantum friction then you're
+obliged to include the direct coupling to the 1023other atoms and track what happens.
+There are interesting applications of this, not least an idea known as decoherence .)
+One nal comment: as we proceed to more advanced physical theories, whether
+relativistic quantum eld theory or even more speculative endeavours like string theory,
+the Schr odinger equation (1.1) remains the correct description for the evolution of
+the quantum state. All that changes is the Hamiltonian (1.2), which is replaced by
+something more complicated, as too are the wavefunctions on which the Hamiltonian
+acts.
+1.2.2 Conservation of Probability
+We made a big deal about insisting that our wavefunctions are normalised so that they
+have a probability interpretation. But now we have the Schr odinger equation that tells
+us how the wavefunction evolves in time and we should make sure that this does not
+mess up a previously normalised wavefunction.
+To this end, let's look at how the probability density changes in time. We have
+P=j j2and so,
+@P
+@t= ?@ 
+@t+@ ?
+@t (1.4)
+The Schr odinger equation (1.1) and its complex conjugate give
+@ 
+@t= i
+~
+ ~2
+2mr2 +V 
+and@ ?
+@t=i
+~
+ ~2
+2mr2 ?+V ?
+{ 11 {
+[Page 15]
+We see that the terms with the potential Vcancel out when inserted in (1.4) and we're
+left with
+@P
+@t=i~
+2m 
+ ?r2   r2 ?
+=i~
+2mr( ?r   r ?)
+We write this as
+@P
+@t+rJ= 0 (1.5)
+where Jis known as the probability current and is given by
+J= i~
+2m( ?r   r ?) (1.6)
+Equations of the form (1.5) have a special place in the laws of physics. They are known
+ascontinuity equations and arises whenever there is a conserved quantity. (For example,
+the same equation appears in Electromagnetism where it relates the charge density to
+the electric current and ensures the conservation of electric charge.)
+To see that the continuity equation implies a conservation law, consider some region
+VR3with boundary S. We then integrate to get the probability PVthat the particle
+lies somewhere in this region.
+PV(t) =Z
+Vd3x P(x;t)
+The continuity equation tells us that this probability changes as
+@PV
+@t= Z
+Vd3xrJ= Z
+SdSJ (1.7)
+where, in the nal step, we have used the divergence theorem. We see that the prob-
+ability that the particle lies in Vcan change, but only if there is a ow of probability
+through the surface Sthat bounds V. If we know for sure that J= 0 everywhere on
+the surface S, then the probability that the particle is in the region Vdoesn't change:
+@PV=@t= 0.
+The importance of the continuity equation is that it doesn't just tell us that some
+quantity is conserved: it tells us that the object is conserved locally . In the present
+context, this quantity is probability. The probability density can't just vanish in one
+region of space, to reappear in some far ung region of the universe. Instead, the
+evolution of the probability density is local. If it does change in some region of space
+then it's because it has moved into a neighbouring region. The current Jtells you how
+it does this.
+{ 12 {
+[Page 16]
+As a special case, if we take the region Vto be all of space, so V=R3, then
+Panywhere =Z
+d3xj (x;t)j2
+As we've already seen, Panywhere = 1. The change in the probability is, using (1.7),
+@Panywhere
+@t= Z
+S21dSJ
+whereS2
+1is the asymptotic 2-sphere at the innity of R3. Any normalised wavefunction
+must have  !0 asjxj!1 and, for all but the most pathological wavefunctions,
+this ensures that the current (1.6) also decays suitably quickly, J!0 asjxj!1 , so
+that
+@Panywhere
+@t= 0
+This is the statement that if the wavefunction is normalised at some time, then it
+remains normalised for all time.
+1.2.3 The Collapse of the Wavefunction
+There is one situation where the Schr odinger equation (1.1) does not describe the
+evolution of a quantum state. This occurs when we do a measurement.
+As an example, suppose that at time t0we have a particle sitting in a superposition
+of two well-separated positions, X1andX2, something like
+ (x;t0) =1p
+N0
+e a(x X1)2+e a(x X2)2
+Left to its own devices, this state will evolve through the Schr odinger equation. But
+suppose instead that we chose to do a measurement of the particle. For example, we
+can put a detector in the vicinity of X1and see if it registers.
+Suppose that the detector does indeed see the particle. Then we know for sure that
+the particle is sitting near X1and that means that it can't possibly be elsewhere.
+The probability that it sits near X2must then vanish! Correspondingly, after the
+measurement, the wavefunction can't have any support near X2. Instead, at time t+
+immediately after the measurement the wavefunction must jump to something localised
+nearX1, like
+ (x;t+) =1p
+Ne a(x X1)2
+This is known as the collapse of the wavefunction .
+{ 13 {
+[Page 17]
+There is something more than a little disconcerting about this aspect of quantum
+mechanics. Just a few pages ago, I told you that the probability in the wavefunction
+was not due to our ignorance, but instead to an inherent randomness of the system.
+Yet now we see that once we gain additional knowledge about the system { like where
+the particle actually is { the wavefunction necessarily changes. Which makes it sound
+like the wavefunction is describing some aspect of what we know after all!
+The collapse of the wavefunction also demonstrates that our gain in knowledge is far
+from innocent. There is no way to learn something about a quantum system without
+perturbing that system, sometimes violently so. In the discussion above, it may appear
+that the collapse of the wavefunction only increases knowledge since we now have a
+better understanding of the particle's position. However, the wavefunction contains
+other, more subtle information and this too has been disturbed by the collapse which,
+typically, will lead to an increase of uncertainty in other properties.
+Furthermore, the collapse of the wavefunction doesn't happen locally. Now the prob-
+ability density really does just vanish from one region of space and re-emerge in the
+region where we detected the particle. You might worry that this will lead to contra-
+diction with causality or with special relativity. It turns out that it doesn't but we
+won't get to fully understand why until later lectures. (See, for example, the section
+on Bell's inequality in the lectures on Topics in Quantum Mechanics.)
+The fact that the wavefunction can evolve in two very dierent ways { the rst
+through the smooth development of the Schr odinger equation, the second from the
+abrupt collapse after measurement { is one of the most unsettling aspects of quantum
+mechanics. It has led to much handwringing and philosophising and gnashing of teeth
+and mumbling of words like \ontic" and \epistemic", none of which seems to be quite
+enough to calm the nerves. We'll say more about these issues in Section 3.5 when we
+discuss the dierent interpretations of quantum mechanics.
+1.3 The Double Slit Experiment
+The double slit set-up is a simple but iconic experiment that vividly demonstrates some
+of the stranger aspects of quantum mechanics.
+To set the scene, we rst describe two experiments from classical physics. The set-up
+in both is the same: there is a wall, with two openings in it. These are the eponymous
+double slits. Behind the wall is a detector. You stand in front of the wall and throw
+things. The only dierence between the two experiments lies in what you throw.
+{ 14 {
+[Page 18]
+Figure 2 . The distribution for classical
+particles.First, we throw particles. These are boring
+classical particles, like tennis balls. You throw
+randomly in the direction of the wall. Some
+simply bounce o the wall, while others get
+lucky and go through the slits. Then you mea-
+sure the distribution of balls seen in the detec-
+tor.
+In this case, things are nice and simple. Sup-
+pose that you close the bottom slit, keeping
+only the top slit open, and then measure the
+distribution of balls reaching the detector. The
+resulting distribution looks something like the
+yellow curve shown in Figure 2. Call this P1.
+Similarly, if you close the top slit, but keep the
+bottom slit open then you measure the same
+distribution just shifted downwards. This is the blue curve in the gure. Now open
+both slits. What you see is the sum of the previous distributions,
+P12=P1+P2
+Figure 3 . The distribution for classical
+waves.This is the green curve in the gure. So far, so
+good.
+Our second experiment is the same, but now
+with waves rather than particles. For our pur-
+poses, these can be water waves, sound waves
+or light waves. For any kind of wave, there is a
+new ingredient that dramatically changes the
+outcome: this is interference. Here we give a
+broad brush description of the physics.
+First, we open one slit and not the other.
+The waves are diracted at the slit and prop-
+agate out radially towards the detector where
+we can measure their intensity. The end result
+is very similar to that of a particle: a distribu-
+tion spread out, peaked around the position of the rst slit. This is shown in the yellow
+{ 15 {
+[Page 19]
+Figure 4 . The interference of light waves through a double slit taken from this website.
+and blue curves in Figure 3, corresponding to keeping only the top, or only the bottom,
+slit open respectively.
+The real dierence comes when we open both slits. The waves pass through along two
+paths and, when they recombine on the other side, add constructively or destructively.
+The result is the distinctive interference pattern shown in the green curve. Crucially,
+at some positions the intensity when both slits are open can be less than when any
+single slit is open. This happens, for example, at positions where the two waves cancel
+themselves out completely so the intensity on the screen vanishes. An interference
+pattern of this kind can be seen vividly using lasers, as shown in Figure 4.
+With this classical intuition in place, we now turn to the quantum world. We will
+perform the double slit experiment one last time, now with quantum particles, say
+electrons. For appropriately sized slits, the result is a combination of the two classical
+experiments described above. First, when we detect an electron it appears just like
+a classical particle would appear. That means that each time we play the game, the
+electron appears as a point on the detector, rather than something continuous and
+smeared out like a wave. However, after playing the game many times, the probability
+distribution seen on the screen agrees with that of a classical wave, exhibiting an
+interference pattern. An example is shown in Figure 5.
+Perhaps the most striking aspect of this result is that there are certain places on the
+screen where fewer electrons are detected when both slits are open than when any one
+slit is open. There's no way to explain this from a classical worldview where the particle
+follows a trajectory that goes either through the rst slit orthrough the second. It
+must be that each particle somehow knows about the presence of both slits.
+We can understand this behaviour from what little we know about quantum mechan-
+ics. First, when one slit is open, the particle is described by a wavefunction  1(x) and
+{ 16 {
+[Page 20]
+Figure 5 . The double slit experiment, performed by Hitachi. The results show the build up
+the interference pattern from 8 electrons, to 270 electrons, to 2000 electrons and, nally, to
+160,000 electrons where the interference fringes are clearly visible.
+the probability distribution that we see on the screen is
+P1(x) =j 1(x)j2
+Similarly, with the second slit open and the rst closed, we have P2(x) =j 2(x)j2.
+But when both slits are open, the principle of superposition tells us that it is the
+wavefunctions that add, not the probabilities. This means that we have  12(x) =
+ 1(x) + 2(x) and so the new probability distribution is
+P12(x) =j 1(x) + 2(x)j2=P1+P2+ ?
+1(x) 2(x) + ?
+2(x) 1(x)
+We see that the cross-terms mean that P126=P1+P2. These cross-terms are responsible
+for the interference pattern.
+The conclusion that each electron necessarily passes through both slits is, to say
+the least, a little surprising. One could try to nd a clever way to evade it, perhaps
+by setting up some ingenious apparatus near one of the slits that will tell us for sure
+which slit the particle travelled through. It turns out that any attempt to do this will
+necessarily disturb the state of the particle. For example, if you know for sure that the
+particle passed through slit 1 (or, equivalently, that it did not pass through slit 2) then
+the wavefunction collapses to
+ 12(x) ! 1(x)
+and the interference pattern disappears. There are general principles { notably the
+Heisenberg uncertainty relation that we will meet in Section 3 { that say that any
+apparatus that can determine through which slit the particle passed will necessarily
+also disturb the state of particle enough to destroy the interference fringes.
+{ 17 {

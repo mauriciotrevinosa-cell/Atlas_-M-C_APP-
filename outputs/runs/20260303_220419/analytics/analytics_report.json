@@ -1,0 +1,19 @@
+{
+  "symbols": [
+    "AAPL"
+  ],
+  "vol_window": 20,
+  "corr_window": 20,
+  "rows_in_returns_panel": 20,
+  "symbol_summary": {
+    "AAPL": {
+      "rows": 21,
+      "latest_simple_return": -0.01935772050829554,
+      "latest_log_return": -0.019547534753510575,
+      "latest_rolling_volatility": 0.21111115932965724,
+      "doji_count": 3,
+      "bullish_engulfing_count": 0,
+      "bearish_engulfing_count": 1
+    }
+  }
+}

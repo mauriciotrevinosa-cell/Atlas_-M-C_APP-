@@ -1,0 +1,80 @@
+{
+  "symbol": "AAPL",
+  "provider": "cache",
+  "interval": "1d",
+  "as_of_utc": "2026-03-02T22:07:15.343790+00:00",
+  "fetched_at_utc": "2026-03-02T22:07:15.435010+00:00",
+  "date_range": {
+    "start": "2024-01-02 00:00:00+00:00",
+    "end": "2024-02-29 00:00:00+00:00"
+  },
+  "rows": 41,
+  "timezone": "UTC",
+  "pit": {
+    "version": "v1",
+    "dataset_hash": "714841b970384f1b",
+    "as_of_utc": "2026-03-02T22:07:15.343790+00:00"
+  },
+  "cache": {
+    "enabled": true,
+    "key": "phase1_AAPL_2024-01-01_2024-03-01_1d",
+    "hit": true,
+    "stale": false,
+    "metadata": {
+      "cached_at": 1772489225.9118207,
+      "rows": 41,
+      "columns": [
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume"
+      ],
+      "date_range": {
+        "start": "2024-01-02 00:00:00+00:00",
+        "end": "2024-02-29 00:00:00+00:00"
+      },
+      "custom": {
+        "symbol": "AAPL",
+        "provider": "yahoo",
+        "as_of_utc": "2026-03-02T22:06:59.610261+00:00",
+        "pit_version": "v1",
+        "dataset_hash": "714841b970384f1b"
+      },
+      "stale": false
+    }
+  },
+  "offline_fallback": false,
+  "provider_attempt_errors": {},
+  "validation": {
+    "is_valid": true,
+    "total_rows": 41,
+    "issues": [],
+    "warnings": [],
+    "checks": {
+      "nan_ratio": 0.0,
+      "spike_count": 0,
+      "ohlc_inconsistencies": 0,
+      "zero_volume_ratio": 0.0,
+      "duplicate_timestamps": 0,
+      "gap_ratio": 0.0488,
+      "gap_count": 2
+    }
+  },
+  "integrity": {
+    "nan_ratio": 0.0,
+    "nan_by_column": {
+      "open": 0,
+      "high": 0,
+      "low": 0,
+      "close": 0,
+      "volume": 0
+    },
+    "gap_count": 4,
+    "gap_ratio": 0.088889,
+    "split_candidates": [],
+    "trading_calendar": "weekday_business_day",
+    "expected_bars": 45,
+    "observed_bars": 41
+  }
+}

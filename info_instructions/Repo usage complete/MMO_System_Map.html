@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mau's Market Ontology — System Map</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --border: #1e1e2e;
+    --text: #e0e0e8;
+    --dim: #6a6a80;
+    --accent-quantum: #00d4ff;
+    --accent-energy: #ff6b35;
+    --accent-structure: #7b68ee;
+    --accent-surface: #50fa7b;
+    --accent-string: #ff79c6;
+    --accent-entropy: #f1fa8c;
+    --glow-quantum: rgba(0, 212, 255, 0.15);
+    --glow-energy: rgba(255, 107, 53, 0.15);
+    --glow-structure: rgba(123, 104, 238, 0.15);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 60px;
+    position: relative;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-quantum), transparent);
+  }
+
+  .header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--accent-quantum), var(--accent-string), var(--accent-energy));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+
+  .header .subtitle {
+    font-size: 0.75rem;
+    color: var(--dim);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+
+  /* Layer sections */
+  .layer-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 60px;
+  }
+
+  .layer {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 28px 32px;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    overflow: hidden;
+  }
+
+  .layer::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    transition: width 0.3s ease;
+  }
+
+  .layer:hover {
+    transform: translateX(4px);
+  }
+
+  .layer:hover::before {
+    width: 6px;
+  }
+
+  .layer-surface::before { background: var(--accent-surface); }
+  .layer-thermal::before { background: var(--accent-energy); }
+  .layer-energy::before { background: var(--accent-quantum); }
+  .layer-structure::before { background: var(--accent-structure); }
+
+  .layer:hover.layer-surface { background: rgba(80, 250, 123, 0.04); border-color: rgba(80, 250, 123, 0.2); }
+  .layer:hover.layer-thermal { background: rgba(255, 107, 53, 0.04); border-color: rgba(255, 107, 53, 0.2); }
+  .layer:hover.layer-energy { background: rgba(0, 212, 255, 0.04); border-color: rgba(0, 212, 255, 0.2); }
+  .layer:hover.layer-structure { background: rgba(123, 104, 238, 0.04); border-color: rgba(123, 104, 238, 0.2); }
+
+  .layer-label {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .layer-surface .layer-label { color: var(--accent-surface); }
+  .layer-thermal .layer-label { color: var(--accent-energy); }
+  .layer-energy .layer-label { color: var(--accent-quantum); }
+  .layer-structure .layer-label { color: var(--accent-structure); }
+
+  .layer-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .layer-desc {
+    font-size: 0.75rem;
+    color: var(--dim);
+    line-height: 1.5;
+  }
+
+  .layer-depth {
+    position: absolute;
+    right: 32px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.6rem;
+    color: var(--dim);
+    letter-spacing: 2px;
+    opacity: 0.5;
+  }
+
+  /* Arrow between layers */
+  .layer-arrow {
+    text-align: center;
+    color: var(--dim);
+    font-size: 0.7rem;
+    padding: 4px 0;
+    opacity: 0.4;
+  }
+
+  /* Concept Grid */
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-title .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .section-desc {
+    font-size: 0.75rem;
+    color: var(--dim);
+    margin-bottom: 32px;
+    max-width: 600px;
+  }
+
+  .concept-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 64px;
+  }
+
+  .concept-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .concept-card:hover {
+    border-color: rgba(255,255,255,0.1);
+    transform: translateY(-2px);
+  }
+
+  .concept-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 60px;
+    height: 60px;
+    border-radius: 0 6px 0 60px;
+    opacity: 0.06;
+    transition: opacity 0.3s;
+  }
+
+  .concept-card:hover::after { opacity: 0.12; }
+
+  .card-quantum::after { background: var(--accent-quantum); }
+  .card-energy::after { background: var(--accent-energy); }
+  .card-structure::after { background: var(--accent-structure); }
+  .card-string::after { background: var(--accent-string); }
+  .card-entropy::after { background: var(--accent-entropy); }
+  .card-surface::after { background: var(--accent-surface); }
+
+  .concept-card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .concept-card p {
+    font-size: 0.72rem;
+    line-height: 1.7;
+    color: var(--dim);
+  }
+
+  .concept-card .tag {
+    display: inline-block;
+    font-size: 0.55rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 3px;
+    margin-bottom: 12px;
+  }
+
+  .tag-quantum { color: var(--accent-quantum); background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.15); }
+  .tag-energy { color: var(--accent-energy); background: rgba(255,107,53,0.08); border: 1px solid rgba(255,107,53,0.15); }
+  .tag-structure { color: var(--accent-structure); background: rgba(123,104,238,0.08); border: 1px solid rgba(123,104,238,0.15); }
+  .tag-string { color: var(--accent-string); background: rgba(255,121,198,0.08); border: 1px solid rgba(255,121,198,0.15); }
+  .tag-entropy { color: var(--accent-entropy); background: rgba(241,250,140,0.08); border: 1px solid rgba(241,250,140,0.15); }
+  .tag-surface { color: var(--accent-surface); background: rgba(80,250,123,0.08); border: 1px solid rgba(80,250,123,0.15); }
+  .tag-meta { color: var(--dim); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+
+  .concept-card .math {
+    font-size: 0.65rem;
+    color: var(--accent-quantum);
+    background: rgba(0,212,255,0.05);
+    padding: 8px 12px;
+    border-radius: 3px;
+    margin-top: 10px;
+    border-left: 2px solid rgba(0,212,255,0.2);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .concept-card .math.math-energy {
+    color: var(--accent-energy);
+    background: rgba(255,107,53,0.05);
+    border-left-color: rgba(255,107,53,0.2);
+  }
+
+  .concept-card .math.math-structure {
+    color: var(--accent-structure);
+    background: rgba(123,104,238,0.05);
+    border-left-color: rgba(123,104,238,0.2);
+  }
+
+  .concept-card .math.math-string {
+    color: var(--accent-string);
+    background: rgba(255,121,198,0.05);
+    border-left-color: rgba(255,121,198,0.2);
+  }
+
+  .concept-card .math.math-entropy {
+    color: var(--accent-entropy);
+    background: rgba(241,250,140,0.05);
+    border-left-color: rgba(241,250,140,0.2);
+  }
+
+  /* Connections visualization */
+  .connections-section {
+    margin-bottom: 64px;
+  }
+
+  .conn-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-size: 0.72rem;
+  }
+
+  .conn-from, .conn-to {
+    padding: 4px 10px;
+    border-radius: 3px;
+    font-size: 0.6rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+    min-width: 120px;
+    text-align: center;
+  }
+
+  .conn-arrow {
+    color: var(--dim);
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+
+  .conn-label {
+    color: var(--dim);
+    font-style: italic;
+  }
+
+  /* Declaration */
+  .declaration {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 40px;
+    text-align: center;
+    margin-bottom: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .declaration::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(0,212,255,0.03), transparent 70%);
+  }
+
+  .declaration h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+    position: relative;
+  }
+
+  .declaration .is-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    max-width: 700px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .is-col h4 {
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .is-col.is-yes h4 { color: var(--accent-surface); }
+  .is-col.is-no h4 { color: var(--accent-energy); }
+
+  .is-col li {
+    list-style: none;
+    font-size: 0.72rem;
+    color: var(--dim);
+    padding: 4px 0;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    font-size: 0.6rem;
+    color: var(--dim);
+    opacity: 0.4;
+    padding: 32px 0;
+    letter-spacing: 2px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .header h1 { font-size: 2rem; }
+    .concept-grid { grid-template-columns: 1fr; }
+    .layer-depth { display: none; }
+    .declaration .is-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .layer, .concept-card, .conn-row {
+    animation: fadeIn 0.5s ease both;
+  }
+
+  .layer:nth-child(1) { animation-delay: 0.05s; }
+  .layer:nth-child(3) { animation-delay: 0.1s; }
+  .layer:nth-child(5) { animation-delay: 0.15s; }
+  .layer:nth-child(7) { animation-delay: 0.2s; }
+
+  .concept-card:nth-child(1) { animation-delay: 0.05s; }
+  .concept-card:nth-child(2) { animation-delay: 0.1s; }
+  .concept-card:nth-child(3) { animation-delay: 0.15s; }
+  .concept-card:nth-child(4) { animation-delay: 0.2s; }
+  .concept-card:nth-child(5) { animation-delay: 0.25s; }
+  .concept-card:nth-child(6) { animation-delay: 0.3s; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>Mau's Market Ontology</h1>
+    <div class="subtitle">Multi-Scale Financial Ecosystem Map</div>
+  </div>
+
+  <!-- LAYERED WORLD VIEW -->
+  <div class="section-title"><span class="dot" style="background: var(--accent-structure)"></span> Layered World View</div>
+  <div class="section-desc">Markets modeled as a layered ecosystem. The surface reflects — it does not decide.</div>
+
+  <div class="layer-stack">
+    <div class="layer layer-surface">
+      <div class="layer-label">Layer 04 — Surface</div>
+      <div class="layer-title">Observable</div>
+      <div class="layer-desc">Price, volatility, charts, narratives. What we see. The projection, not the source.</div>
+      <div class="layer-depth">SHALLOW</div>
+    </div>
+    <div class="layer-arrow">↕ reflects</div>
+    <div class="layer layer-thermal">
+      <div class="layer-label">Layer 03 — Thermal</div>
+      <div class="layer-title">State</div>
+      <div class="layer-desc">Inflation, bubbles, fatigue, overheating, entropy. The temperature of the system.</div>
+      <div class="layer-depth">MID</div>
+    </div>
+    <div class="layer-arrow">↕ feeds</div>
+    <div class="layer layer-energy">
+      <div class="layer-label">Layer 02 — Subsurface</div>
+      <div class="layer-title">Energy</div>
+      <div class="layer-desc">Capital flows, leverage, credit, market injections (QE, bailouts). Money in motion.</div>
+      <div class="layer-depth">DEEP</div>
+    </div>
+    <div class="layer-arrow">↕ constrains</div>
+    <div class="layer layer-structure">
+      <div class="layer-label">Layer 01 — Deep</div>
+      <div class="layer-title">Structure / Geology</div>
+      <div class="layer-desc">Regulation, institutional strength, monetary architecture. The bedrock that shapes everything above.</div>
+      <div class="layer-depth">FOUNDATION</div>
+    </div>
+  </div>
+
+  <!-- QUANTUM LAYER -->
+  <div class="section-title"><span class="dot" style="background: var(--accent-quantum)"></span> Quantum Layer</div>
+  <div class="section-desc">Micro-level view inspired by quantum physics as a visualization framework. Not literal physics — a way to define where price can and cannot exist.</div>
+
+  <div class="concept-grid">
+    <div class="concept-card card-quantum">
+      <div class="tag tag-quantum">Atomic Model</div>
+      <h3>Asset as Atom</h3>
+      <p>Each asset is an atomic system. The company = nucleus (protons + neutrons, structural stability). Price = electron (probabilistic motion). Valid class: ETFs, commodities, blue-chip stocks.</p>
+      <div class="math">nucleus → structural identity<br>electron → price behavior</div>
+    </div>
+
+    <div class="concept-card card-quantum">
+      <div class="tag tag-quantum">States</div>
+      <h3>Electron States & Energy</h3>
+      <p>Price doesn't occupy a fixed position — it exists in states. More energy (money in motion) → more accessible states → more volatility → wider bracket.</p>
+      <div class="math">E↑ → states↑ → σ(price)↑</div>
+    </div>
+
+    <div class="concept-card card-quantum">
+      <div class="tag tag-quantum">Probability</div>
+      <h3>Probability Cloud</h3>
+      <p>Price is a cloud, not a point. The cloud defines where price can be found. Observation reveals probability, not certainty. We know likelihood, not location.</p>
+      <div class="math">P(x) = probability density<br>∫P(x)dx = 1 over state space</div>
+    </div>
+
+    <div class="concept-card card-quantum">
+      <div class="tag tag-quantum">Exclusion</div>
+      <h3>Nodes — Where Price Cannot Exist</h3>
+      <p>The cloud contains nodes: zones of zero probability. Structurally impossible states. The model defines exclusion zones, not exact outcomes.</p>
+      <div class="math">P(x_node) = 0 (structural)</div>
+    </div>
+
+    <div class="concept-card card-quantum">
+      <div class="tag tag-quantum">Transitions</div>
+      <h3>Quantum Tunneling</h3>
+      <p>Rare transitions between states that don't follow continuous paths. Market gaps, crashes, squeezes. Probability is low, not zero.</p>
+      <div class="math">P(tunnel) ≈ 0 but ≠ 0<br>→ gaps, crashes, squeezes</div>
+    </div>
+
+    <div class="concept-card card-quantum">
+      <div class="tag tag-quantum">Superposition</div>
+      <h3>Superposition of Outcomes</h3>
+      <p>Multiple outcomes coexist simultaneously. No single outcome dominates until energy redistribution occurs. Schrödinger interpretation: where it can be, not where it is.</p>
+      <div class="math">Ψ = Σ cᵢ|stateᵢ⟩<br>until energy resolves</div>
+    </div>
+
+    <div class="concept-card card-quantum">
+      <div class="tag tag-quantum">Simulation</div>
+      <h3>State Space (Cubes)</h3>
+      <p>Each cube = a full simulation with hidden internal dimensions. Only the final state is projected. Dimensional compression via marginalization allows thousands of simulations to coexist.</p>
+      <div class="math">Cube(d₁,d₂,d₃) → Project(terminal)<br>marginalize hidden dims</div>
+    </div>
+
+    <div class="concept-card card-quantum">
+      <div class="tag tag-quantum">Symmetry</div>
+      <h3>Matter / Antimatter</h3>
+      <p>Every possible state has a mirrored counterpart. Most mirrors have probability → 0. Symmetry exists mathematically, not observationally. Ensures completeness of state space.</p>
+      <div class="math">∀ state S, ∃ S̄ (mirror)<br>P(S̄) → 0 for most S̄</div>
+    </div>
+  </div>
+
+  <!-- STRING THEORY LAYER -->
+  <div class="section-title"><span class="dot" style="background: var(--accent-string)"></span> String Theory Layer</div>
+  <div class="section-desc">The fundamental object under price movement is a vibrating string. Charts are the visible trace — the surface imprint of deeper oscillations.</div>
+
+  <div class="concept-grid">
+    <div class="concept-card card-string">
+      <div class="tag tag-string">Strings</div>
+      <h3>Price as Vibration</h3>
+      <p>The fundamental object under price movement is a string. Price history (charts) is the visible trace of string vibration over time. Trends and patterns = interference outcomes.</p>
+      <div class="math math-string">chart = projection(vibration)<br>trend = interference pattern</div>
+    </div>
+
+    <div class="concept-card card-string">
+      <div class="tag tag-string">Vertices</div>
+      <h3>Vertices — Interaction Points</h3>
+      <p>Strings interact through vertices. A vertex = a discrete interaction event (information, flow, impact) that changes vibration. Where energy transfers, splits, or connects.</p>
+      <div class="math math-string">vertex = event(info ∪ flow ∪ impact)<br>→ Δvibration</div>
+    </div>
+
+    <div class="concept-card card-string">
+      <div class="tag tag-string">Nodes</div>
+      <h3>Nodes — Standing Waves</h3>
+      <p>Nodes = boundary/constraint points where motion is restricted or cancels. Create standing-wave behavior: repeated levels, magnet zones, structural boundaries.</p>
+      <div class="math math-string">node → standing wave<br>→ support/resistance (structural)</div>
+    </div>
+
+    <div class="concept-card card-string">
+      <div class="tag tag-string">Waves</div>
+      <h3>Wave Properties</h3>
+      <p>Magnitude = strength/amplitude (energy expression). Frequency = how quickly states change (turbulence). Past charts are wave-traces — projections, not the full object.</p>
+      <div class="math math-string">A = amplitude (energy)<br>f = frequency (state switching)</div>
+    </div>
+  </div>
+
+  <!-- ENERGY & ENTROPY -->
+  <div class="section-title"><span class="dot" style="background: var(--accent-energy)"></span> Energy, Entropy & Dynamics</div>
+  <div class="section-desc">Energy is money in motion. Entropy is dispersion. The system always seeks balance, not stillness.</div>
+
+  <div class="concept-grid">
+    <div class="concept-card card-energy">
+      <div class="tag tag-energy">Energy</div>
+      <h3>Energy = Money in Motion</h3>
+      <p>Money is finite as stock, infinite as circulation. More energy → more accessible states → higher volatility → bracket expansion. Energy drives everything.</p>
+      <div class="math math-energy">E = f(capital flow, leverage, credit)<br>E↑ → vol↑ → bracket↑</div>
+    </div>
+
+    <div class="concept-card card-energy">
+      <div class="tag tag-entropy">Entropy</div>
+      <h3>Entropy — Dispersion of States</h3>
+      <p>High entropy = disagreement, fragility. Low entropy = crowding, stability illusion. Entropy signals the system's internal coherence or lack thereof.</p>
+      <div class="math math-entropy">H = -Σ pᵢ log(pᵢ)<br>H↑ → fragility | H↓ → crowding</div>
+    </div>
+
+    <div class="concept-card card-energy">
+      <div class="tag tag-energy">Balance</div>
+      <h3>Balance & Brackets</h3>
+      <p>Markets exist within dynamic brackets. Bullish and bearish forces in tension. Balance is sustained pressure, not equilibrium. Price is a range phenomenon.</p>
+      <div class="math math-energy">balance = tension(bull, bear)<br>≠ equilibrium</div>
+    </div>
+
+    <div class="concept-card card-energy">
+      <div class="tag tag-energy">Cooling</div>
+      <h3>Cooling Mechanisms</h3>
+      <p>Regulation, institutional strength, monetary policy, cost of capital. These dissipate energy naturally. When blocked (QE, bailouts, cheap credit), energy accumulates → pressure rises.</p>
+      <div class="math math-energy">cooling blocked → ΔE accumulates<br>→ pressure → fragility</div>
+    </div>
+
+    <div class="concept-card card-energy">
+      <div class="tag tag-energy">Fatigue</div>
+      <h3>Fatigue & Bubbles</h3>
+      <p>Fatigue: more energy produces less movement. Bubbles: energy is trapped, cannot dissipate. Expansion continues until structural failure. 2008 = canonical breach.</p>
+      <div class="math math-energy">dP/dE → 0 (fatigue)<br>E trapped → bubble → breach</div>
+    </div>
+
+    <div class="concept-card card-energy">
+      <div class="tag tag-energy">Crash</div>
+      <h3>Crash / Breach Events</h3>
+      <p>Structural failure, not emotional panic. Probability space collapses and reforms. The system fractures at geological level, not at surface narrative.</p>
+      <div class="math math-energy">breach = structural fracture<br>P-space collapses → reforms</div>
+    </div>
+  </div>
+
+  <!-- GEOLOGY & CLIMATE -->
+  <div class="section-title"><span class="dot" style="background: var(--accent-structure)"></span> Geology, Ocean & Climate</div>
+  <div class="section-desc">Structural metaphors that connect deep system architecture to observable surface behavior.</div>
+
+  <div class="concept-grid">
+    <div class="concept-card card-structure">
+      <div class="tag tag-structure">Geology</div>
+      <h3>Geology vs. Topography</h3>
+      <p>Geology = structural value (deep, slow-moving). Topography = price (surface, fast-moving). Surface movement does not alter deep structure. Structure constrains surface.</p>
+      <div class="math math-structure">geology → constrains → topography<br>Δsurface ≠ Δstructure</div>
+    </div>
+
+    <div class="concept-card card-structure">
+      <div class="tag tag-structure">Ocean</div>
+      <h3>Ocean & Climate Model</h3>
+      <p>Capital flows behave as ocean currents. Temperature = optimism/fear. Volatility = turbulence. Deep currents (structural) move differently from surface waves (price).</p>
+      <div class="math math-structure">current = capital flow<br>temp = sentiment | turb = volatility</div>
+    </div>
+
+    <div class="concept-card card-structure">
+      <div class="tag tag-structure">Emergence</div>
+      <h3>Micro → Macro Emergence</h3>
+      <p>Micro rules generate macro behavior. No agent psychology required. Emergence replaces prediction. The ontology is multi-scale by design.</p>
+      <div class="math math-structure">micro rules → macro patterns<br>prediction ← emergence</div>
+    </div>
+  </div>
+
+  <!-- CONNECTIONS -->
+  <div class="connections-section">
+    <div class="section-title"><span class="dot" style="background: var(--dim)"></span> Key Connections</div>
+    <div class="section-desc">How concepts link across layers.</div>
+
+    <div class="conn-row">
+      <span class="conn-from tag-energy" style="color: var(--accent-energy); background: rgba(255,107,53,0.1);">Energy</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to tag-quantum" style="color: var(--accent-quantum); background: rgba(0,212,255,0.1);">Quantum States</span>
+      <span class="conn-label">more energy expands accessible states</span>
+    </div>
+    <div class="conn-row">
+      <span class="conn-from tag-quantum" style="color: var(--accent-quantum); background: rgba(0,212,255,0.1);">Probability Cloud</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to tag-surface" style="color: var(--accent-surface); background: rgba(80,250,123,0.1);">Price Surface</span>
+      <span class="conn-label">cloud projects onto observable price</span>
+    </div>
+    <div class="conn-row">
+      <span class="conn-from tag-structure" style="color: var(--accent-structure); background: rgba(123,104,238,0.1);">Geology</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to tag-quantum" style="color: var(--accent-quantum); background: rgba(0,212,255,0.1);">Nodes</span>
+      <span class="conn-label">structure defines exclusion zones</span>
+    </div>
+    <div class="conn-row">
+      <span class="conn-from tag-energy" style="color: var(--accent-energy); background: rgba(255,107,53,0.1);">Blocked Cooling</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to tag-energy" style="color: var(--accent-energy); background: rgba(255,107,53,0.1);">Fatigue / Bubble</span>
+      <span class="conn-label">trapped energy creates fragility</span>
+    </div>
+    <div class="conn-row">
+      <span class="conn-from tag-entropy" style="color: var(--accent-entropy); background: rgba(241,250,140,0.1);">High Entropy</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to tag-energy" style="color: var(--accent-energy); background: rgba(255,107,53,0.1);">Breach Risk</span>
+      <span class="conn-label">dispersion signals systemic fragility</span>
+    </div>
+    <div class="conn-row">
+      <span class="conn-from tag-string" style="color: var(--accent-string); background: rgba(255,121,198,0.1);">String Nodes</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to tag-quantum" style="color: var(--accent-quantum); background: rgba(0,212,255,0.1);">Quantum Nodes</span>
+      <span class="conn-label">standing waves define structural boundaries</span>
+    </div>
+    <div class="conn-row">
+      <span class="conn-from tag-string" style="color: var(--accent-string); background: rgba(255,121,198,0.1);">Vertices</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to tag-energy" style="color: var(--accent-energy); background: rgba(255,107,53,0.1);">Energy Transfer</span>
+      <span class="conn-label">interaction events redistribute energy</span>
+    </div>
+    <div class="conn-row">
+      <span class="conn-from tag-quantum" style="color: var(--accent-quantum); background: rgba(0,212,255,0.1);">Tunneling</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to tag-energy" style="color: var(--accent-energy); background: rgba(255,107,53,0.1);">Crash / Breach</span>
+      <span class="conn-label">rare discontinuous transitions cause structural events</span>
+    </div>
+  </div>
+
+  <!-- DECLARATION -->
+  <div class="declaration">
+    <h2>Ontology Declaration</h2>
+    <div class="is-grid">
+      <div class="is-col is-yes">
+        <h4>This IS</h4>
+        <ul>
+          <li>A systems ontology</li>
+          <li>A visualization framework</li>
+          <li>A state-based ecosystem</li>
+          <li>Multi-scale (micro → macro)</li>
+          <li>Interdisciplinary</li>
+        </ul>
+      </div>
+      <div class="is-col is-no">
+        <h4>This IS NOT</h4>
+        <ul>
+          <li>A price predictor</li>
+          <li>A formula</li>
+          <li>A universal theory</li>
+          <li>A trading strategy</li>
+          <li>Literal quantum physics</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">MAU'S MARKET ONTOLOGY — v0.2 — SYSTEM MAP</div>
+
+</div>
+
+</body>
+</html>

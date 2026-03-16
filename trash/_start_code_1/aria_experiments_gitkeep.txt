@@ -1,0 +1,4 @@
+# This file exists to make Git track the experiments/ folder
+# (Git doesn't track empty folders by default)
+
+# You can delete this file once you add your first experiment.

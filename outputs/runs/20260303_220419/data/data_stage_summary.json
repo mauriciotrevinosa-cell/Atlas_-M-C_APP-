@@ -1,0 +1,68 @@
+{
+  "AAPL": {
+    "cache_hit": false,
+    "source": "yahoo",
+    "files": {
+      "dataset_csv": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260303_220419\\data\\AAPL\\dataset.csv",
+      "metadata_json": "C:\\Users\\mauri\\OneDrive\\Desktop\\Atlas\\outputs\\runs\\20260303_220419\\data\\AAPL\\metadata.json"
+    },
+    "metadata": {
+      "symbol": "AAPL",
+      "provider": "yahoo",
+      "interval": "1d",
+      "as_of_utc": "2026-03-03T22:04:19.572746+00:00",
+      "fetched_at_utc": "2026-03-03T22:04:20.985699+00:00",
+      "date_range": {
+        "start": "2024-01-02 00:00:00+00:00",
+        "end": "2024-01-31 00:00:00+00:00"
+      },
+      "rows": 21,
+      "timezone": "UTC",
+      "pit": {
+        "version": "v1",
+        "dataset_hash": "3ad32eb5ab4c83b2",
+        "as_of_utc": "2026-03-03T22:04:19.572746+00:00"
+      },
+      "cache": {
+        "enabled": true,
+        "key": "phase1_AAPL_2024-01-01_2024-02-01_1d",
+        "hit": false,
+        "stale": false,
+        "metadata": {}
+      },
+      "offline_fallback": false,
+      "provider_attempt_errors": {},
+      "validation": {
+        "is_valid": true,
+        "total_rows": 21,
+        "issues": [],
+        "warnings": [],
+        "checks": {
+          "nan_ratio": 0.0,
+          "spike_count": 0,
+          "ohlc_inconsistencies": 0,
+          "zero_volume_ratio": 0.0,
+          "duplicate_timestamps": 0,
+          "gap_ratio": 0.0476,
+          "gap_count": 1
+        }
+      },
+      "integrity": {
+        "nan_ratio": 0.0,
+        "nan_by_column": {
+          "open": 0,
+          "high": 0,
+          "low": 0,
+          "close": 0,
+          "volume": 0
+        },
+        "gap_count": 3,
+        "gap_ratio": 0.125,
+        "split_candidates": [],
+        "trading_calendar": "weekday_business_day",
+        "expected_bars": 24,
+        "observed_bars": 21
+      }
+    }
+  }
+}

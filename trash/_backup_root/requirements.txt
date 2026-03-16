@@ -1,0 +1,6 @@
+ollama
+yfinance
+pandas
+pytest
+flake8
+mypy
