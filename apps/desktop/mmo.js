@@ -872,13 +872,13 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
         </div>
       </div>
       ${nodes.length || extraNodes.length ? `
-      <div style="font-size:9px;color:#556;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">
+      <div style="font-size:9px;color:#778;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">
         Potential Nodes V(x) — WKB Tunneling T = e^(−2κa)
       </div>
       <div style="display:flex;flex-direction:column;gap:3px;">
         ${nodeHTML}${extraHTML}
       </div>
-      <div style="font-size:9px;color:#334;margin-top:5px;">T→1: barrier breakout likely · T→0: wall holds</div>` : ''}
+      <div style="font-size:9px;color:#667;margin-top:5px;">T→1: barrier breakout likely · T→0: wall holds</div>` : ''}
       ${_renderPathIntegral(d.path_integral)}
     `;
   }
@@ -1031,7 +1031,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
 
     return `
       <div style="margin-top:8px;">
-        <div style="font-size:8px;color:#445;font-family:monospace;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">
+        <div style="font-size:8px;color:#778;font-family:monospace;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">
           State Transition Currents J_{n→n+1}
         </div>
         <div class="mmo-jflow-chain">${cells.join('')}</div>
@@ -1072,7 +1072,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
         </div>
       </div>
       <div style="border-top:1px solid rgba(255,255,255,0.06);margin:8px 0;padding-top:8px;">
-        <div style="font-size:9px;color:#556;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">Quantum Fisher Info</div>
+        <div style="font-size:9px;color:#778;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">Quantum Fisher Info</div>
         <div class="mmo-heis-grid">
           <div class="mmo-heis-kpi">
             <div class="mmo-heis-val" style="color:${qfiColor}">${(qfi.F_Q || 0).toFixed(3)}</div>
@@ -1089,7 +1089,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
         </div>
       </div>
       <div style="border-top:1px solid rgba(255,255,255,0.06);margin:8px 0;padding-top:8px;">
-        <div style="font-size:9px;color:#556;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">Probability Current J</div>
+        <div style="font-size:9px;color:#778;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">Probability Current J</div>
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:20px;color:${jColor};">${jArrow}</span>
           <div>
@@ -1103,9 +1103,9 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
         ${_renderJFlowsChain(d.j_flows)}
       </div>
       <div style="border-top:1px solid rgba(255,255,255,0.06);margin:8px 0;padding-top:8px;">
-        <div style="font-size:9px;color:#556;margin-bottom:4px;font-family:monospace;text-transform:uppercase;">QFI-Adjusted Position Sizing</div>
+        <div style="font-size:9px;color:#778;margin-bottom:4px;font-family:monospace;text-transform:uppercase;">QFI-Adjusted Position Sizing</div>
         <div style="font-size:11px;color:#bd93f9;font-family:monospace;">${h.qfi_sizing || '—'}</div>
-        <div style="font-size:9px;color:#556;margin-top:3px;">ψ_survival = ${(h.psi_survival || 0).toFixed(4)} · σ_CR = ${(h.cramer_rao || 0).toFixed(4)}</div>
+        <div style="font-size:9px;color:#778;margin-top:3px;">ψ_survival = ${(h.psi_survival || 0).toFixed(4)} · σ_CR = ${(h.cramer_rao || 0).toFixed(4)}</div>
       </div>
     `;
   }
@@ -1143,7 +1143,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
             text-shadow:${glowShadow};
             display:inline-block;
           ">${tau.toFixed(2)}</div>
-          <div style="font-size:9px;color:#556;">τ (trading days)</div>
+          <div style="font-size:9px;color:#778;">τ (trading days)</div>
         </div>
         <div style="flex:1;">
           <div style="display:flex;align-items:center;margin-bottom:4px;">
@@ -1153,13 +1153,13 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
           <div style="height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;">
             <div style="height:100%;width:${tauNorm*100}%;background:${tauColor};border-radius:3px;transition:width 0.6s;box-shadow:0 0 6px ${tauColor}55;"></div>
           </div>
-          <div style="font-size:9px;color:#445;margin-top:4px;font-family:monospace;">
+          <div style="font-size:9px;color:#778;margin-top:4px;font-family:monospace;">
             τ = 1/(σ_CIR × H) · Signal expires in ~${tau < 1 ? (tau * 6.5).toFixed(1) + 'h' : tau.toFixed(1) + ' days'}
           </div>
         </div>
       </div>
       <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">
-        <div style="font-size:9px;color:#556;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">CIR Thermal State</div>
+        <div style="font-size:9px;color:#778;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">CIR Thermal State</div>
         <div class="mmo-heis-grid">
           <div class="mmo-heis-kpi">
             <div class="mmo-heis-val" style="color:#ff79c6">${cirTemp.toFixed(4)}</div>
@@ -1174,7 +1174,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
             <div class="mmo-heis-label">dr_CIR</div>
           </div>
         </div>
-        <div style="font-size:9px;color:#445;margin-top:6px;">τ ∝ 1/(T_CIR · H) — Phase 3A coupled</div>
+        <div style="font-size:9px;color:#778;margin-top:6px;">τ ∝ 1/(T_CIR · H) — Phase 3A coupled</div>
       </div>
     `;
   }
@@ -1234,7 +1234,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
         <div style="text-align:center;">
           <div style="font-size:22px;font-weight:900;color:${survColor};font-family:monospace;
             text-shadow:0 0 10px ${survColor}88;">${(P_NH * 100).toFixed(1)}%</div>
-          <div style="font-size:8px;color:#556;font-family:monospace;">P_NH survival</div>
+          <div style="font-size:8px;color:#778;font-family:monospace;">P_NH survival</div>
         </div>
         <div style="flex:1;">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
@@ -1247,20 +1247,20 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
             <div style="height:100%;width:${P_NH*100}%;background:${survColor};border-radius:3px;
               transition:width 0.6s;box-shadow:0 0 5px ${survColor}66;"></div>
           </div>
-          <div style="font-size:8px;color:#445;margin-top:3px;font-family:monospace;">
+          <div style="font-size:8px;color:#778;margin-top:3px;font-family:monospace;">
             P_loss=${(P_loss*100).toFixed(1)}% · Γ_global=${gamma_g.toFixed(3)} · EP gap=${ep_gap.toFixed(4)}
           </div>
         </div>
         <div style="text-align:center;">
           <div style="font-size:16px;font-weight:700;color:${epColor};font-family:monospace;">${ep_gap.toFixed(4)}</div>
-          <div style="font-size:8px;color:#556;">EP gap |Δε|</div>
+          <div style="font-size:8px;color:#778;">EP gap |Δε|</div>
         </div>
       </div>
-      <div style="font-size:8px;color:#445;text-transform:uppercase;font-family:monospace;margin-bottom:4px;">
+      <div style="font-size:8px;color:#778;text-transform:uppercase;font-family:monospace;margin-bottom:4px;">
         H_eff eigenvalues — ε_k = E_k − iΓ_k/2
       </div>
       <div class="mmo-nh-ev-table">${evRows}</div>
-      <div style="font-size:8px;color:#334;margin-top:5px;font-family:monospace;">
+      <div style="font-size:8px;color:#667;margin-top:5px;font-family:monospace;">
         Open system: env. coupling Γ leaks probability — Phase 3C
       </div>
     `;
@@ -1324,7 +1324,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
         }).join('');
         overlapHtml = `
           <div style="border-top:1px solid rgba(255,255,255,0.06);margin:8px 0;padding-top:8px;">
-            <div style="font-size:9px;color:#556;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">
+            <div style="font-size:9px;color:#778;margin-bottom:5px;font-family:monospace;text-transform:uppercase;">
               State Fidelity |⟨ψ_A|ψ_B⟩|² — Phase 3B Quantum Overlap
             </div>
             ${overlapRows}
@@ -1468,7 +1468,7 @@ ${overlapHtml}
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;">
         <div style="text-align:center;min-width:52px;">
           <div style="font-size:26px;font-weight:900;font-family:monospace;color:${cycleCol};">${gamma_pi >= 0 ? '+' : ''}${gamma_pi}π</div>
-          <div style="font-size:8px;color:#556;letter-spacing:0.5px;text-transform:uppercase;">Berry γ</div>
+          <div style="font-size:8px;color:#778;letter-spacing:0.5px;text-transform:uppercase;">Berry γ</div>
         </div>
         <div style="flex:1;">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
@@ -1479,7 +1479,7 @@ ${overlapHtml}
             <div style="height:100%;width:${gaugePct}%;background:linear-gradient(90deg,#ff4757,${cycleCol});border-radius:3px;transition:width 0.6s;"></div>
             <div style="position:absolute;top:-3px;left:50%;transform:translateX(-50%);width:1px;height:11px;background:rgba(255,255,255,0.18);"></div>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:8px;color:#334;margin-top:2px;font-family:monospace;">
+          <div style="display:flex;justify-content:space-between;font-size:8px;color:#667;margin-top:2px;font-family:monospace;">
             <span>−π</span><span>0</span><span>+π</span>
           </div>
         </div>
@@ -1503,7 +1503,7 @@ ${overlapHtml}
       <div style="margin-top:8px;font-size:9px;color:#2a2a4a;font-style:italic;">
         γ = Im log ∏⟨ψₖ|ψₖ₊₁⟩ — loop in (T_CIR, trend) space
       </div>
-      <div style="margin-top:4px;font-size:9px;color:#334;">${cycleDesc}</div>
+      <div style="margin-top:4px;font-size:9px;color:#667;">${cycleDesc}</div>
     `;
   }
 
@@ -1526,11 +1526,11 @@ ${overlapHtml}
     const rangePct = (pi.range * 100).toFixed(1);
     return `
       <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">
-        <div style="font-size:9px;color:#556;margin-bottom:4px;font-family:monospace;text-transform:uppercase;">
+        <div style="font-size:9px;color:#778;margin-bottom:4px;font-family:monospace;text-transform:uppercase;">
           Path Integral K(R) — Feynman Amplitude Distribution
         </div>
         <div class="mmo-pi-bars">${bars}</div>
-        <div style="display:flex;justify-content:space-between;font-size:8px;color:#334;font-family:monospace;">
+        <div style="display:flex;justify-content:space-between;font-size:8px;color:#667;font-family:monospace;">
           <span>−${rangePct}%</span><span>Return</span><span>+${rangePct}%</span>
         </div>
         <div style="font-size:9px;color:#2a2a4a;margin-top:4px;font-style:italic;">
@@ -2257,7 +2257,7 @@ ${overlapHtml}
     <div class="mmo-hud-left">
       <div class="mmo-card mmo-layer-detail-card">
         <div class="mmo-card-title" style="color:#9b8ee8">Interactive Layer Explorer</div>
-        <div id="mmo-layer-detail"><div style="font-size:10px;color:#55606f;">Select a layer or example to inspect the current ontology.</div></div>
+        <div id="mmo-layer-detail"><div style="font-size:10px;color:#778;">Select a layer or example to inspect the current ontology.</div></div>
       </div>
       <div class="mmo-card mmo-energy-card">
         <div class="mmo-card-title" style="color:#ff6b35">Thermodynamics | Energy & Fatigue</div>

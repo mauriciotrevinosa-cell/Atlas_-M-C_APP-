@@ -776,7 +776,7 @@ window.IndicatorTerminal = (() => {
 .ind-brand { display:flex; align-items:center; gap:10px; }
 .ind-logo { font-size:22px; }
 .ind-title { font-size:15px; font-weight:700; color:#fff; font-family:monospace; }
-.ind-sub { font-size:11px; color:#556; font-family:monospace; }
+.ind-sub { font-size:11px; color:#778; font-family:monospace; }
 .ind-controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .ind-input { background:#141420; border:1px solid #2a2a44; color:#e8eaf6; padding:6px 10px; font-size:13px; font-family:monospace; border-radius:6px; width:90px; text-transform:uppercase; }
 .ind-btn { background:#1e3a5f; border:1px solid #2a5a8f; color:#7ec8ff; padding:6px 12px; font-size:12px; font-family:monospace; border-radius:6px; cursor:pointer; }
@@ -786,7 +786,7 @@ window.IndicatorTerminal = (() => {
 .ind-signal-badge { padding:3px 10px; border-radius:12px; font-size:11px; font-family:monospace; font-weight:600; }
 .ind-body { display:flex; flex:1; overflow:hidden; }
 .ind-sidebar { width:220px; flex-shrink:0; overflow-y:auto; background:#0c0c18; border-right:1px solid #1a1a30; padding:8px 0; }
-.ind-sidebar-title { color:#445; font-size:10px; font-family:monospace; padding:4px 12px; letter-spacing:1px; text-transform:uppercase; }
+.ind-sidebar-title { color:#778; font-size:10px; font-family:monospace; padding:4px 12px; letter-spacing:1px; text-transform:uppercase; }
 .ind-category { color:#4488ff; font-size:10px; font-family:monospace; padding:8px 12px 2px; letter-spacing:1px; text-transform:uppercase; border-top:1px solid #1a1a30; margin-top:4px; }
 .ind-category:first-child { border-top:none; }
 .ind-item { display:flex; align-items:center; justify-content:space-between; padding:6px 10px; }
@@ -797,8 +797,8 @@ window.IndicatorTerminal = (() => {
 .ind-toggle-knob { position:absolute; top:2px; left:2px; width:11px; height:11px; border-radius:50%; background:#445; transition:left .2s, background .2s; }
 .ind-toggle.on .ind-toggle-knob { left:17px; background:#00e5a0; }
 .ind-item-label { font-size:12px; color:#c8d0e0; font-family:monospace; font-weight:600; }
-.ind-item-desc { font-size:10px; color:#445; font-family:monospace; }
-.ind-config-btn { background:none; border:none; color:#445; font-size:14px; cursor:pointer; padding:2px 4px; }
+.ind-item-desc { font-size:10px; color:#778; font-family:monospace; }
+.ind-config-btn { background:none; border:none; color:#778; font-size:14px; cursor:pointer; padding:2px 4px; }
 .ind-config-btn:hover { color:#7ec8ff; }
 .ind-sim-btn { margin:12px; width:calc(100% - 24px); background:linear-gradient(135deg,#1e3a5f,#0d2040); border:1px solid #2a5a8f; color:#7ec8ff; padding:10px 0; font-size:13px; font-family:monospace; border-radius:8px; cursor:pointer; }
 .ind-sim-btn:hover { background:linear-gradient(135deg,#1e4a7f,#0d2a50); }
@@ -812,7 +812,7 @@ window.IndicatorTerminal = (() => {
 /* ── Trend Scorecard ─────────────────────────────────────── */
 .ind-scorecard { background:#09090f; border-top:1px solid #1a1a30; padding:12px 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start; min-height:48px; }
 .ind-sc-section { flex:1; min-width:160px; }
-.ind-sc-title { font-size:9px; color:#445; font-family:monospace; letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px; }
+.ind-sc-title { font-size:9px; color:#778; font-family:monospace; letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px; }
 .ind-sc-pills { display:flex; flex-wrap:wrap; gap:4px; }
 .ind-sc-pill { padding:2px 8px; border-radius:10px; font-size:10px; font-family:monospace; font-weight:600; border:1px solid transparent; }
 .ind-sc-pill.bull  { color:#00ff88; background:rgba(0,255,136,0.08); border-color:rgba(0,255,136,0.2); }
@@ -1055,7 +1055,7 @@ window.IndicatorTerminal = (() => {
       badges.push(`<span class="ind-signal-badge" style="background:${colour}22;color:${colour};border:1px solid ${colour}44;">${def.label}: ${sig}</span>`);
     });
 
-    container.innerHTML = badges.join('') || '<span style="color:#334;font-size:11px;font-family:monospace;">Toggle indicators to see signals</span>';
+    container.innerHTML = badges.join('') || '<span style="color:#778;font-size:11px;font-family:monospace;">Toggle indicators to see signals</span>';
     _renderScorecard();
   }
 
@@ -1128,7 +1128,7 @@ window.IndicatorTerminal = (() => {
       const catCol   = avgScore > 0.2 ? '#00ff88' : avgScore < -0.2 ? '#ff4757' : '#778';
       return `
 <div class="ind-sc-section">
-  <div class="ind-sc-title" style="color:${catCol}">${name} <span style="color:#445">(${items.length})</span></div>
+  <div class="ind-sc-title" style="color:${catCol}">${name} <span style="color:#778">(${items.length})</span></div>
   <div class="ind-sc-pills">
     ${items.map(x => `<span class="ind-sc-pill ${pillClass(x.sig)}">${x.label} ${x.sig}</span>`).join('')}
   </div>
@@ -1138,7 +1138,7 @@ window.IndicatorTerminal = (() => {
     const noActive = allSigs.length === 0;
 
     el.innerHTML = noActive
-      ? `<span style="color:#334;font-size:11px;font-family:monospace;padding:6px 0;">Enable indicators to see the scorecard</span>`
+      ? `<span style="color:#778;font-size:11px;font-family:monospace;padding:6px 0;">Enable indicators to see the scorecard</span>`
       : `
 ${catHtml}
 <div class="ind-sc-composite">
@@ -1147,7 +1147,7 @@ ${catHtml}
   <div class="ind-sc-bar">
     <div class="ind-sc-bar-fill" style="width:${compPct}%;background:${compCol}"></div>
   </div>
-  <div style="font-size:8px;color:#445;margin-top:4px;font-family:monospace">${allSigs.length} signal${allSigs.length !== 1 ? 's' : ''}</div>
+  <div style="font-size:8px;color:#778;margin-top:4px;font-family:monospace">${allSigs.length} signal${allSigs.length !== 1 ? 's' : ''}</div>
 </div>`;
   }
 

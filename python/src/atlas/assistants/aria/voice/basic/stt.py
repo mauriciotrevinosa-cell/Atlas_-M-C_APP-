@@ -7,7 +7,7 @@ class BasicSTT:
             import speech_recognition as sr
             self.recognizer = sr.Recognizer()
             self.available = True
-        except:
+        except ImportError:
             self.available = False
     
     def listen(self) -> str:

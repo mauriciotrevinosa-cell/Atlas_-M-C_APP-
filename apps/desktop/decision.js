@@ -490,12 +490,12 @@ window.DecisionModule = (() => {
       <div class="guardrail-bar">
         <span class="guardrail-label">Daily P&L</span>
         <span class="guardrail-value ${dailyCls}">${(_dailyPnl * 100).toFixed(2)}%</span>
-        <span style="color:#334155;font-size:0.7rem">limit: −${(dailyLimit * 100).toFixed(0)}%</span>
+        <span style="color:#778;font-size:0.7rem">limit: −${(dailyLimit * 100).toFixed(0)}%</span>
       </div>
       <div class="guardrail-bar">
         <span class="guardrail-label">Drawdown</span>
         <span class="guardrail-value ${ddCls}">${(_drawdown * 100).toFixed(2)}%</span>
-        <span style="color:#334155;font-size:0.7rem">limit: ${(ddLimit * 100).toFixed(0)}%</span>
+        <span style="color:#778;font-size:0.7rem">limit: ${(ddLimit * 100).toFixed(0)}%</span>
       </div>
       <div class="guardrail-bar">
         <span class="guardrail-label">Capital</span>

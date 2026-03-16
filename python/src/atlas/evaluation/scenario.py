@@ -385,14 +385,39 @@ class NewsEngine:
         self.events = self._load_events()
 
     def _load_events(self):
-        # Basic events for SPY/BTC to demonstrate functionality
+        # Significant macro / market events by date (used as scenario context overlay)
         return {
+            # ── 2020 (COVID crash & recovery) ──────────────────────────────
             "2020-02-20": ["Market jitters increase as virus concerns spread globally.", "Goldman Sachs warns of potential correction."],
             "2020-03-09": ["BLACK MONDAY: Market crashes amidst oil price war and pandemic fears.", "Trading halted as circuit breakers trigger."],
             "2020-03-12": ["Fed injects $1.5 Trillion into repo market.", "Selling intensifies across all asset classes."],
             "2020-03-23": ["Fed announces unlimited QE to support economy.", "Market creates a potential bottom structure."],
             "2020-11-09": ["Vaccine breakthrough announced by Pfizer.", "Markets rally on reopening hopes."],
-            "2021-01-04": ["New year begins with high volatility.", "Tech sector leads market gains."]
+            # ── 2021 ───────────────────────────────────────────────────────
+            "2021-01-04": ["New year begins with high volatility.", "Tech sector leads market gains."],
+            "2021-01-28": ["GameStop short-squeeze forces hedge funds to cover.", "Retail broker Robinhood restricts buying — regulatory scrutiny."],
+            "2021-11-26": ["Omicron variant discovered; markets sell off sharply.", "Travel and hospitality stocks hit hard."],
+            # ── 2022 (rate-hike cycle) ─────────────────────────────────────
+            "2022-01-24": ["S&P 500 enters correction territory on Fed hawkishness.", "Nasdaq down 15% YTD — worst start in decades."],
+            "2022-02-24": ["Russia invades Ukraine — global risk-off selloff.", "Commodity prices spike; energy and wheat in focus."],
+            "2022-03-16": ["Fed raises interest rates 25bps — first hike since 2018.", "Markets initially rally on 'buy the news' reaction."],
+            "2022-05-09": ["Nasdaq confirms bear market, down 30% from ATH.", "LUNA/UST stablecoin collapse wipes $60B from crypto."],
+            "2022-06-13": ["Bitcoin falls below $24,000 — crypto market in freefall.", "S&P 500 enters official bear market territory."],
+            "2022-09-13": ["CPI prints hotter than expected; market drops 4% intraday.", "Fed rate hike path revised sharply higher by traders."],
+            "2022-11-08": ["FTX exchange suspends withdrawals amid insolvency fears.", "Crypto market loses $200B in 24 hours."],
+            # ── 2023 (banking stress & AI boom) ───────────────────────────
+            "2023-03-10": ["Silicon Valley Bank collapses — largest US bank failure since 2008.", "FDIC takes over; contagion fears spread to regional banks."],
+            "2023-03-19": ["UBS acquires Credit Suisse in emergency deal.", "AT1 bonds zeroed out — $17B wiped from bondholders."],
+            "2023-07-26": ["Fed raises rates to 22-year high of 5.25–5.50%.", "Core PCE remains sticky; higher-for-longer narrative solidifies."],
+            "2023-10-19": ["10-year Treasury yield hits 5% — 16-year high.", "Stocks sell off as 'risk-free' rate competes with equities."],
+            # ── 2024 (AI rally, carry-trade unwind) ───────────────────────
+            "2024-01-10": ["SEC approves spot Bitcoin ETFs — institutional floodgates open.", "Bitcoin surges past $47,000 on first trading day."],
+            "2024-07-31": ["Bank of Japan hikes rates; yen carry trade unwinds violently.", "Global risk assets sell off as yen strengthens sharply."],
+            "2024-08-05": ["Nikkei drops 12% — worst single-day crash since 1987.", "VIX spikes above 65; S&P 500 futures limit-down overnight."],
+            "2024-11-06": ["Trump wins US presidential election.", "Markets rally on deregulation and fiscal expansion expectations."],
+            # ── 2025 ───────────────────────────────────────────────────────
+            "2025-01-13": ["DeepSeek R1 open-source AI shocks market.", "Nvidia drops 17% intraday — $600B market cap erased in one session."],
+            "2025-03-04": ["Trump announces broad tariffs on Canada, Mexico, China.", "S&P 500 falls 2.5%; supply-chain fears resurface."],
         }
 
     def get_news(self, date_str):

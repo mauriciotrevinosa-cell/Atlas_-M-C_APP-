@@ -117,5 +117,5 @@ class YahooProvider(DataProvider):
             # Check if we got valid data
             return 'symbol' in info or 'shortName' in info
             
-        except:
+        except Exception:
             return False

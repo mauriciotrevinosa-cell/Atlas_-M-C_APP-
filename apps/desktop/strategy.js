@@ -159,7 +159,7 @@ function _renderStrategyResult(data) {
   function _appendEngineRow(key, sectionLabel) {
     if (sectionLabel) {
       const sep = document.createElement("div");
-      sep.style.cssText = "font-size:10px; color:#445; text-transform:uppercase; letter-spacing:1px; margin-top:6px; padding:0 2px;";
+      sep.style.cssText = "font-size:10px; color:#778; text-transform:uppercase; letter-spacing:1px; margin-top:6px; padding:0 2px;";
       sep.textContent = sectionLabel;
       rowsEl.appendChild(sep);
     }
@@ -175,7 +175,7 @@ function _renderStrategyResult(data) {
       <div style="min-width:48px; padding:2px 8px; border-radius:4px; text-align:center; font-weight:700; font-family:monospace; font-size:11px; color:${ec.text}; background:${ec.bg}; border:1px solid ${ec.border};">${(sig.action || "HOLD").toUpperCase()}</div>
       <div style="flex:1; height:4px; border-radius:2px; background:#1a2030; overflow:hidden;"><div style="height:100%; width:${bar}%; background:${_confColor(sig.confidence)}; border-radius:2px;"></div></div>
       <div style="color:#667; width:34px; text-align:right;">${bar}%</div>
-      <div style="color:#445; width:38px; text-align:right; font-size:10px;">w=${weight}</div>
+      <div style="color:#778; width:38px; text-align:right; font-size:10px;">w=${weight}</div>
     `;
     rowsEl.appendChild(row);
   }
@@ -190,7 +190,7 @@ function _renderStrategyResult(data) {
     mlKeys.forEach((key, i) => _appendEngineRow(key, i === 0 ? "ML Engines" : null));
   } else {
     const hint = document.createElement("div");
-    hint.style.cssText = "font-size:10px; color:#334; margin-top:8px; padding:6px 10px; border-radius:4px; border:1px dashed #1a2030;";
+    hint.style.cssText = "font-size:10px; color:#667; margin-top:8px; padding:6px 10px; border-radius:4px; border:1px dashed #1a2030;";
     hint.textContent = "ML engines not trained — click Train Models to enable XGBoost + RF signals.";
     rowsEl.appendChild(hint);
   }
@@ -210,22 +210,22 @@ function _renderStrategyResult(data) {
       diagEl.style.display = 'flex';
       diagEl.innerHTML = `
         <div style="flex:1; text-align:center;">
-          <div style="font-size:10px; color:#556; text-transform:uppercase; letter-spacing:.8px; margin-bottom:3px;">RSI-14</div>
+          <div style="font-size:10px; color:#778; text-transform:uppercase; letter-spacing:.8px; margin-bottom:3px;">RSI-14</div>
           <div style="font-size:16px; font-weight:700; color:${rsiColor}; font-family:monospace;">${diag.rsi_14 ?? '—'}</div>
           <div style="font-size:10px; color:${rsiColor};">${diag.rsi_zone ?? ''}</div>
         </div>
         <div style="flex:1; text-align:center; border-left:1px solid #1e2030; border-right:1px solid #1e2030;">
-          <div style="font-size:10px; color:#556; text-transform:uppercase; letter-spacing:.8px; margin-bottom:3px;">MACD</div>
+          <div style="font-size:10px; color:#778; text-transform:uppercase; letter-spacing:.8px; margin-bottom:3px;">MACD</div>
           <div style="font-size:16px; font-weight:700; color:${macdColor}; font-family:monospace;">${diag.macd ?? '—'}</div>
           <div style="font-size:10px; color:${macdColor};">${diag.macd_bias ?? ''} · hist ${diag.macd_hist ?? '—'}</div>
         </div>
         <div style="flex:1; text-align:center; border-right:1px solid #1e2030;">
-          <div style="font-size:10px; color:#556; text-transform:uppercase; letter-spacing:.8px; margin-bottom:3px;">SMA Spread</div>
+          <div style="font-size:10px; color:#778; text-transform:uppercase; letter-spacing:.8px; margin-bottom:3px;">SMA Spread</div>
           <div style="font-size:16px; font-weight:700; color:${smaColor}; font-family:monospace;">${diag.sma_spread_pct != null ? diag.sma_spread_pct + '%' : '—'}</div>
           <div style="font-size:10px; color:${smaColor};">${diag.sma_bias ?? ''}</div>
         </div>
         <div style="flex:1; text-align:center;">
-          <div style="font-size:10px; color:#556; text-transform:uppercase; letter-spacing:.8px; margin-bottom:3px;">ATR%</div>
+          <div style="font-size:10px; color:#778; text-transform:uppercase; letter-spacing:.8px; margin-bottom:3px;">ATR%</div>
           <div style="font-size:16px; font-weight:700; color:#607d8b; font-family:monospace;">${diag.atr_pct != null ? diag.atr_pct + '%' : '—'}</div>
           <div style="font-size:10px; color:#546e7a;">volatility</div>
         </div>

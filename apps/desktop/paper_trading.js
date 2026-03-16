@@ -402,7 +402,7 @@ window.PaperTrading = (() => {
     <div class="pt-log-panel">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #1a1a30;">
         <div class="pt-panel-title" style="margin:0;">Trade Audit Log</div>
-        <div style="font-size:10px;font-family:monospace;color:#445;" id="pt-trade-count">0 trades</div>
+        <div style="font-size:10px;font-family:monospace;color:#778;" id="pt-trade-count">0 trades</div>
       </div>
       <div id="pt-trade-log" class="pt-trade-log"></div>
     </div>
@@ -423,7 +423,7 @@ window.PaperTrading = (() => {
 .pt-return { font-size:13px; font-family:monospace; margin-top:2px; }
 .pt-analytics { display:flex; gap:8px; padding:8px 16px; background:#0c0c18; border-bottom:1px solid #1a1a30; flex-wrap:wrap; }
 .pt-stat { background:#111128; border:1px solid #1a1a40; border-radius:8px; padding:6px 12px; min-width:100px; }
-.pt-stat-label { font-size:9px; color:#445; font-family:monospace; text-transform:uppercase; letter-spacing:.08em; }
+.pt-stat-label { font-size:9px; color:#778; font-family:monospace; text-transform:uppercase; letter-spacing:.08em; }
 .pt-stat-val { font-size:14px; font-weight:700; font-family:monospace; color:#e8eaf6; margin-top:2px; }
 .pt-controls { display:flex; align-items:center; gap:8px; padding:8px 16px; background:#0e0e1a; border-bottom:1px solid #1a1a30; flex-wrap:wrap; }
 .pt-select { background:#141420; border:1px solid #2a2a44; color:#e8eaf6; padding:5px 8px; font-size:12px; font-family:monospace; border-radius:6px; }
@@ -448,12 +448,12 @@ window.PaperTrading = (() => {
 .pt-trade-log { flex:1; overflow-y:auto; }
 .pt-trade-row { display:grid; grid-template-columns:80px 60px 70px 80px 80px 80px 1fr; gap:4px; align-items:center; padding:5px 12px; border-bottom:1px solid #111128; font-size:11px; font-family:monospace; }
 .pt-trade-row:hover { background:#0e0e1a; }
-.pt-trade-header { color:#445; font-size:10px; background:#0c0c18; border-bottom:1px solid #1a1a30; position:sticky; top:0; z-index:1; }
+.pt-trade-header { color:#778; font-size:10px; background:#0c0c18; border-bottom:1px solid #1a1a30; position:sticky; top:0; z-index:1; }
 .pt-buy { color:#00e5a0; }
 .pt-sell { color:#ff4d4d; }
 .pt-pnl-pos { color:#00e5a0; }
 .pt-pnl-neg { color:#ff4d4d; }
-.pt-reason { color:#445; font-size:10px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.pt-reason { color:#778; font-size:10px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 </style>
     `;
   }
@@ -502,7 +502,7 @@ window.PaperTrading = (() => {
     const el = document.getElementById('pt-holdings');
     if (!el) return;
     if (!Object.keys(_portfolio).length) {
-      el.innerHTML = '<div style="color:#334;font-size:11px;font-family:monospace;padding:8px;">No open positions</div>';
+      el.innerHTML = '<div style="color:#778;font-size:11px;font-family:monospace;padding:8px;">No open positions</div>';
       return;
     }
     el.innerHTML = Object.entries(_portfolio).map(([ticker, pos]) => {
@@ -543,7 +543,7 @@ window.PaperTrading = (() => {
     if (!logEl) return;
     if (cntEl) cntEl.textContent = `${_trades.length} trades`;
     if (!_trades.length) {
-      logEl.innerHTML = '<div style="color:#334;font-size:11px;font-family:monospace;padding:16px;">No trades yet — run a strategy or buy manually</div>';
+      logEl.innerHTML = '<div style="color:#778;font-size:11px;font-family:monospace;padding:16px;">No trades yet — run a strategy or buy manually</div>';
       return;
     }
 
@@ -556,7 +556,7 @@ window.PaperTrading = (() => {
       const ac   = t.action === 'BUY' ? 'pt-buy' : 'pt-sell';
       const pnlC = t.pnl >= 0 ? 'pt-pnl-pos' : 'pt-pnl-neg';
       return `<div class="pt-trade-row">
-        <span style="color:#445;">${t.time}</span>
+        <span style="color:#778;">${t.time}</span>
         <span class="${ac}">${t.action}</span>
         <span style="color:#e8eaf6;font-weight:700;">${t.ticker}</span>
         <span>${t.shares}</span>

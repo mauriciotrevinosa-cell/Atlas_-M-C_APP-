@@ -179,7 +179,7 @@ const AriaTrader = (() => {
           <button class="trader-btn-mini" id="t-disc-btn" onclick="AriaTrader.loadDiscrepancy()">Run Analysis</button>
         </div>
         <div id="t-discrepancy-content">
-          <div style="font-size:11px;color:#556;font-family:monospace;padding:12px 0;">
+          <div style="font-size:11px;color:#778;font-family:monospace;padding:12px 0;">
             Click "Run Analysis" to compare all 5 strategy engines and reveal signal disagreements.
           </div>
         </div>
@@ -736,7 +736,7 @@ const AriaTrader = (() => {
     const card = document.getElementById('trader-fundamental-card');
     const el   = document.getElementById('t-fundamental-grid');
     if (!card || !el) return;
-    el.innerHTML = `<div style="color:#556;font-family:monospace;font-size:11px;padding:8px 0;">Loading fundamentals…</div>`;
+    el.innerHTML = `<div style="color:#778;font-family:monospace;font-size:11px;padding:8px 0;">Loading fundamentals…</div>`;
     card.style.display = 'block';
     try {
       const resp = await fetch(`${CONFIG.serverUrl}/api/fundamental/${ticker}`);
@@ -774,7 +774,7 @@ const AriaTrader = (() => {
     `).join('');
 
     el.innerHTML = `
-      <div class="tfund-header">${d.name || d.ticker} · <span style="color:#556;">${d.sector||''}</span></div>
+      <div class="tfund-header">${d.name || d.ticker} · <span style="color:#778;">${d.sector||''}</span></div>
       <div class="tfund-grid">${cells}</div>
     `;
   }
@@ -784,7 +784,7 @@ const AriaTrader = (() => {
     const card = document.getElementById('trader-dcf-card');
     const el   = document.getElementById('t-dcf-content');
     if (!card || !el) return;
-    el.innerHTML = `<div style="color:#556;font-family:monospace;font-size:11px;padding:8px 0;">Computing DCF…</div>`;
+    el.innerHTML = `<div style="color:#778;font-family:monospace;font-size:11px;padding:8px 0;">Computing DCF…</div>`;
     card.style.display = 'block';
     try {
       const resp = await fetch(`${CONFIG.serverUrl}/api/dcf/${ticker}`);
@@ -838,7 +838,7 @@ const AriaTrader = (() => {
     const card = document.getElementById('trader-chaos-card');
     const el   = document.getElementById('t-chaos-content');
     if (!card || !el) return;
-    el.innerHTML = `<div style="color:#556;font-family:monospace;font-size:11px;padding:8px 0;">Analysing chaos dynamics…</div>`;
+    el.innerHTML = `<div style="color:#778;font-family:monospace;font-size:11px;padding:8px 0;">Analysing chaos dynamics…</div>`;
     card.style.display = 'block';
     try {
       const resp = await fetch(`${CONFIG.serverUrl}/api/chaos/${ticker}`);
@@ -890,7 +890,7 @@ const AriaTrader = (() => {
         ${stat('Permutation Entropy', permEnt)}
         ${stat('Realized Vol (ann)', realized)}
       </div>
-      ${d.synthetic ? '<div style="font-size:9px;color:#556;font-family:monospace;margin-top:6px;">⚠ Synthetic data</div>' : ''}
+      ${d.synthetic ? '<div style="font-size:9px;color:#778;font-family:monospace;margin-top:6px;">⚠ Synthetic data</div>' : ''}
     `;
   }
 
@@ -905,7 +905,7 @@ const AriaTrader = (() => {
     const btn = document.getElementById('t-disc-btn');
     if (!el) return;
     if (btn) btn.textContent = 'Running…';
-    el.innerHTML = `<div style="color:#556;font-family:monospace;font-size:11px;padding:8px 0;">Running 5 strategy engines…</div>`;
+    el.innerHTML = `<div style="color:#778;font-family:monospace;font-size:11px;padding:8px 0;">Running 5 strategy engines…</div>`;
     try {
       const resp = await fetch(`${CONFIG.serverUrl}/api/discrepancy/${_currentTicker}`);
       if (!resp.ok) throw new Error(resp.status);
@@ -947,7 +947,7 @@ const AriaTrader = (() => {
           Agreement: <strong style="color:${agreeColor};">${(agreement*100).toFixed(0)}%</strong>
           ${consensus ? `· Consensus: <strong style="color:#ccc;">${consensus}</strong>` : ''}
         </div>` : ''}
-      <div class="tdisc-list">${rows || '<div style="color:#556;font-size:11px;font-family:monospace;">No signal data returned.</div>'}</div>
+      <div class="tdisc-list">${rows || '<div style="color:#778;font-size:11px;font-family:monospace;">No signal data returned.</div>'}</div>
     `;
   }
 

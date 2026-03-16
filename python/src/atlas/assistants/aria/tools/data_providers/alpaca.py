@@ -187,5 +187,5 @@ class AlpacaProvider(DataProvider):
         try:
             self.get_latest_quote(symbol)
             return True
-        except:
+        except Exception:
             return False

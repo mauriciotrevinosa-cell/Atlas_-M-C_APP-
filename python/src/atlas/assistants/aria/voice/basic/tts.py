@@ -6,7 +6,7 @@ class BasicTTS:
         try:
             from gtts import gTTS
             self.available = True
-        except:
+        except ImportError:
             self.available = False
     
     def speak(self, text: str):

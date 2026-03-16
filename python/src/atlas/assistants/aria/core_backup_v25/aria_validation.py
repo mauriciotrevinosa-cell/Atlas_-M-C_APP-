@@ -154,7 +154,7 @@ class ParameterValidator:
         if not isinstance(value, str):
             try:
                 value = str(value)
-            except:
+            except Exception:
                 raise ValidationError(
                     parameter=name,
                     message=f"Expected string, got {type(value).__name__}",
@@ -320,7 +320,7 @@ class ParameterValidator:
         if not isinstance(value, str):
             try:
                 value = str(value)
-            except:
+            except Exception:
                 raise ValidationError(
                     parameter=name,
                     message=f"Expected symbol string, got {type(value).__name__}",

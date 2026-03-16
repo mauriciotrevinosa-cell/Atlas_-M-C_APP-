@@ -71,7 +71,7 @@ class VoiceTerminal:
                 self.engine = pyttsx3.init()
                 self.tts_available = True
                 print("✅ Text-to-Speech: pyttsx3 (Offline)")
-            except:
+            except Exception:
                 self.tts_available = False
                 print("❌ Text-to-Speech not available. Install: pip install gtts pygame")
     
