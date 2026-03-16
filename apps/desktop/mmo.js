@@ -329,8 +329,8 @@
       <div class="mmo-card mmo-action-card" style="flex:1;display:flex;flex-direction:column;">
         <div class="mmo-card-title" style="color:#00ff88">EXECUTION PROTOCOLS</div>
         <div id="mmo-action-display" style="padding:15px;flex:1;display:flex;flex-direction:column;justify-content:center;">
-          <button class="mmo-btn-action mmo-btn-breakout" onclick="console.log('Breakout prepared')">[ PREPARE TUNNEL BREAKOUT ]</button>
-          <button class="mmo-btn-action mmo-btn-hedge" onclick="console.log('Delta hedge initiated')">[ INITIATE DELTA HEDGE ]</button>
+          <button class="mmo-btn-action mmo-btn-breakout" onclick="MMO.launchViz('blackhole')">[ LIQUIDITY BLACK HOLE ]</button>
+          <button class="mmo-btn-action mmo-btn-hedge" onclick="MMO.launchViz('galaxy3d')">[ MARKET GALAXY 3D ]</button>
         </div>
       </div>
     </div>

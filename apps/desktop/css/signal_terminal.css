@@ -214,6 +214,10 @@
   color: var(--text-primary);
   line-height: 1.4;
   margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .st-sig-tickers {
   display: flex;
@@ -459,7 +463,7 @@
   border-color: var(--accent-green);
 }
 .st-form-field select option {
-  background: var(--panel-bg, #1a1d24);
+  background: var(--bg-surface);
 }
 .st-alert-form-footer {
   display: flex;
@@ -556,7 +560,7 @@
   display: flex;
 }
 .st-modal-box {
-  background: var(--panel-bg, #1a1d24);
+  background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   width: min(680px, 92vw);

@@ -341,8 +341,10 @@ window.SignalTerminal = (() => {
   // ── Feed ──────────────────────────────────────────────────────────────────
 
   async function _loadFeed(silent = false) {
+    if (_state.loading) return;
     const list = document.getElementById('st-feed-list');
     if (!list) return;
+    _state.loading = true;
     if (!silent) list.innerHTML = '<div class="st-placeholder">Loading…</div>';
 
     const qs = _buildFeedQuery(0);
@@ -353,7 +355,9 @@ window.SignalTerminal = (() => {
       const more = document.getElementById('st-load-more');
       if (more) more.style.display = _state.signals.length >= _state.filters.limit ? '' : 'none';
     } catch (e) {
-      list.innerHTML = `<div class="st-error">Cannot reach server — is Atlas server running?<br><small>${e.message}</small></div>`;
+      list.innerHTML = `<div class="st-error">Cannot reach server — is Atlas running?<br><small>${e.message}</small></div>`;
+    } finally {
+      _state.loading = false;
     }
   }
 
@@ -483,8 +487,8 @@ window.SignalTerminal = (() => {
 
   async function _addWatch() {
     const ticker = (document.getElementById('st-w-ticker')?.value || '').trim().toUpperCase();
-    if (!ticker) return;
-    const name     = (document.getElementById('st-w-name')?.value || '').trim();
+    if (!ticker) { _flash('st-w-ticker', '⚠ enter a ticker', 'err'); return; }
+    const name      = (document.getElementById('st-w-name')?.value || '').trim();
     const assetType = document.getElementById('st-w-type')?.value    || 'stock';
     const priority  = document.getElementById('st-w-priority')?.value || 'medium';
     try {
@@ -493,12 +497,15 @@ window.SignalTerminal = (() => {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ ticker, name, asset_type: assetType, priority }),
       });
-      document.getElementById('st-w-ticker').value = '';
-      document.getElementById('st-w-name').value   = '';
+      document.getElementById('st-w-ticker').value     = '';
+      document.getElementById('st-w-name').value       = '';
+      document.getElementById('st-w-type').value       = 'stock';
+      document.getElementById('st-w-priority').value   = 'medium';
+      _flash('st-w-ticker', `✓ ${ticker} added`, 'ok');
       await _loadWatchlist();
       await _loadStats();
     } catch (e) {
-      alert(`Failed to add ${ticker}: ${e.message}`);
+      _flash('st-w-ticker', `✗ ${e.message}`, 'err');
     }
   }
 
@@ -507,9 +514,7 @@ window.SignalTerminal = (() => {
       await _api(`/watchlist/${ticker}`, { method: 'DELETE' });
       await _loadWatchlist();
       await _loadStats();
-    } catch (e) {
-      alert(`Failed to remove ${ticker}: ${e.message}`);
-    }
+    } catch { /* row already gone */ }
   }
 
   // ── Whale Events ──────────────────────────────────────────────────────────
@@ -600,7 +605,8 @@ window.SignalTerminal = (() => {
       await _api(`/sources/${id}/toggle?enabled=${enabled}`, { method: 'PATCH' });
       await _loadSources();
     } catch (e) {
-      alert(`Toggle failed: ${e.message}`);
+      const list = document.getElementById('st-source-list');
+      if (list) list.insertAdjacentHTML('afterbegin', `<div class="st-error" style="margin-bottom:6px">Toggle failed: ${_esc(e.message)}</div>`);
     }
   }
 
@@ -613,13 +619,14 @@ window.SignalTerminal = (() => {
       const result = await _api('/collect/now', { method: 'POST' });
       const ins    = result.total_inserted || 0;
       const dup    = result.total_dupes    || 0;
-      if (btn) btn.textContent = `✓ +${ins} (${dup} dup)`;
+      if (btn) btn.textContent = `✓ +${ins} new`;
       setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = '⟳ Collect'; } }, 3000);
       await _loadFeed();
       await _loadStats();
     } catch (e) {
       if (btn) { btn.disabled = false; btn.textContent = '⟳ Collect'; }
-      alert(`Collect failed: ${e.message}`);
+      const badge = document.getElementById('st-server-badge');
+      if (badge) { badge.textContent = '● error'; badge.className = 'st-badge st-badge-off'; }
     }
   }
 
@@ -704,7 +711,7 @@ window.SignalTerminal = (() => {
 
   async function _createAlert() {
     const name    = (document.getElementById('st-al-name')?.value || '').trim();
-    if (!name) { alert('Please enter a rule name.'); return; }
+    if (!name) { _flash('st-al-name', '⚠ name required', 'err'); return; }
 
     const conditions = {};
     const ticker  = (document.getElementById('st-al-ticker')?.value || '').trim().toUpperCase();
@@ -722,7 +729,7 @@ window.SignalTerminal = (() => {
     if (kwsRaw)      conditions.keywords_any  = kwsRaw.split(',').map(k => k.trim()).filter(Boolean);
 
     if (!Object.keys(conditions).length) {
-      alert('Please set at least one condition.');
+      _flash('st-al-name', '⚠ set at least one condition', 'err');
       return;
     }
 
@@ -745,9 +752,10 @@ window.SignalTerminal = (() => {
         if (el) el.value = '';
       });
       document.getElementById('st-al-action-cfg-row').style.display = 'none';
+      _flash('st-al-name', '✓ rule created', 'ok');
       await _loadAlerts();
     } catch (e) {
-      alert(`Failed to create rule: ${e.message}`);
+      _flash('st-al-name', `✗ ${e.message}`, 'err');
     }
   }
 
@@ -798,13 +806,16 @@ window.SignalTerminal = (() => {
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
 
+    // Escape key closes modal
+    const _escHandler = (ev) => { if (ev.key === 'Escape') { _closeTickerModal(); document.removeEventListener('keydown', _escHandler); } };
+    document.addEventListener('keydown', _escHandler);
+
     try {
       const data = await _api(`?ticker=${encodeURIComponent(ticker)}&limit=20`);
       if (!data.items?.length) {
         feed.innerHTML = `<div class="st-placeholder">No signals found for $${_esc(ticker)}.</div>`;
         return;
       }
-      // Reuse _renderFeed logic but target modal feed
       _renderFeed(feed, data.items, false);
     } catch (e) {
       feed.innerHTML = `<div class="st-error">${e.message}</div>`;
@@ -823,6 +834,26 @@ window.SignalTerminal = (() => {
   function _el(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = text ?? '—';
+  }
+
+  /** Show a brief inline flash message near a button or container.
+   *  type: 'ok' | 'err' | 'info'  */
+  function _flash(anchorId, msg, type = 'info') {
+    const anchor = document.getElementById(anchorId);
+    if (!anchor) return;
+    const colors = { ok: 'var(--accent-green)', err: '#e74c3c', info: 'var(--txt-muted)' };
+    let chip = anchor.parentElement.querySelector('.st-flash');
+    if (!chip) {
+      chip = document.createElement('span');
+      chip.className = 'st-flash';
+      chip.style.cssText = 'font-size:11px;margin-left:8px;transition:opacity .3s;';
+      anchor.parentElement.appendChild(chip);
+    }
+    chip.textContent = msg;
+    chip.style.color   = colors[type] || colors.info;
+    chip.style.opacity = '1';
+    clearTimeout(chip._t);
+    chip._t = setTimeout(() => { chip.style.opacity = '0'; }, 2800);
   }
 
   function _esc(s) {
