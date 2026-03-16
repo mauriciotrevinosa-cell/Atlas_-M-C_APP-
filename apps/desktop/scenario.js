@@ -453,8 +453,7 @@ async function startScenario(ticker) {
         statusLabel.textContent = "Active";
 
     } catch (e) {
-        alert("Error starting scenario: " + e.message);
-        statusLabel.textContent = "Connection Error";
+        statusLabel.textContent = "⚠ " + e.message;
         startBtn.textContent = "Start New Simulation";
         startBtn.disabled = false;
         if (restartBtn) restartBtn.disabled = true;
@@ -509,10 +508,9 @@ async function nextStep() {
 
         if (data.status === 'finished') {
             stopAutoPlay();
-            alert("Simulation Finished!");
             nextBtn.disabled = true;
             autoPlayBtn.disabled = true;
-            statusLabel.textContent = "Completed";
+            statusLabel.textContent = "✓ Simulation Complete";
             return;
         }
 

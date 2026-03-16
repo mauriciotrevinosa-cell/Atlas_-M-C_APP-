@@ -5476,8 +5476,8 @@ async def broadcast_message(session_id: str, message: dict):
         for connection in active_connections[session_id]:
             try:
                 await connection.send_json(message)
-            except:
-                pass
+            except Exception as _ws_err:
+                logger.debug("[WS] broadcast to session %s failed: %s", session_id, _ws_err)
 
 
 # ==================== SIGNAL TERMINAL ====================

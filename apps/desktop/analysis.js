@@ -93,7 +93,7 @@ async function loadAnalysisData() {
         }
 
     } catch (e) {
-        alert("Error: " + e.message);
+        if (analysisNewsList) analysisNewsList.innerHTML = `<div style="color:#e74c3c;font-size:12px;padding:10px 0">⚠ ${e.message}</div>`;
     } finally {
         analysisLoadBtn.textContent = "Load Data";
     }

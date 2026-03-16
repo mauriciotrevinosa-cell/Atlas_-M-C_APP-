@@ -619,7 +619,7 @@ function initVoiceRecognition() {
 
 function toggleVoice() {
   if (!recognition) {
-    alert('Voice recognition not available');
+    if (voiceBtn) { voiceBtn.disabled = true; voiceBtn.title = 'Voice not supported in this browser'; }
     return;
   }
 
