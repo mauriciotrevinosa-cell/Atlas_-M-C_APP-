@@ -288,15 +288,15 @@
     <div class="mmo-hud-left">
       <div class="mmo-card mmo-energy-card">
         <div class="mmo-card-title" style="color:#ff6b35">THERMODYNAMICS &nbsp;|&nbsp; Energy & Fatigue</div>
-        <div id="mmo-energy-display"><div style="font-size:9px;color:#3a3a5a">—</div></div>
+        <div id="mmo-energy-display"><div style="font-size:9px;color:#667">—</div></div>
       </div>
       <div class="mmo-card mmo-ontology-card">
         <div class="mmo-card-title" style="color:#7b68ee">MARKET ONTOLOGY</div>
-        <div id="mmo-ontology-display"><div style="font-size:9px;color:#3a3a5a">—</div></div>
+        <div id="mmo-ontology-display"><div style="font-size:9px;color:#667">—</div></div>
       </div>
       <div class="mmo-card mmo-entropy-card">
         <div class="mmo-card-title" style="color:#00d4ff">SUPERPOSITION ENTROPY</div>
-        <div id="mmo-entropy-display"><div style="font-size:9px;color:#3a3a5a">—</div></div>
+        <div id="mmo-entropy-display"><div style="font-size:9px;color:#667">—</div></div>
       </div>
     </div>
 
@@ -320,11 +320,11 @@
     <div class="mmo-hud-right">
       <div class="mmo-card mmo-heisenberg-card">
         <div class="mmo-card-title" style="color:#bd93f9">HEISENBERG SIZING &nbsp;|&nbsp; Δp × Δx</div>
-        <div id="mmo-heisenberg-display"><div style="font-size:9px;color:#3a3a5a">—</div></div>
+        <div id="mmo-heisenberg-display"><div style="font-size:9px;color:#667">—</div></div>
       </div>
       <div class="mmo-card mmo-decoherence-card">
         <div class="mmo-card-title" style="color:#ff79c6">DECOHERENCE τ &nbsp;|&nbsp; Wave Stability</div>
-        <div id="mmo-decoherence-display"><div style="font-size:9px;color:#3a3a5a">—</div></div>
+        <div id="mmo-decoherence-display"><div style="font-size:9px;color:#667">—</div></div>
       </div>
       <div class="mmo-card mmo-action-card" style="flex:1;display:flex;flex-direction:column;">
         <div class="mmo-card-title" style="color:#00ff88">EXECUTION PROTOCOLS</div>
@@ -341,7 +341,7 @@
   <div class="mmo-bottom-bar">
     <div class="mmo-card mmo-string-card">
       <div class="mmo-card-title" style="color:#6a3a5a">STRING THEORY &nbsp;|&nbsp; Probabilistic Paths</div>
-      <div id="mmo-string-display"><div style="font-size:9px;color:#3a3a5a">—</div></div>
+      <div id="mmo-string-display"><div style="font-size:9px;color:#667">—</div></div>
     </div>
     <div class="mmo-scanner-card mmo-card">
       <div class="mmo-card-title">QUANTUM SCANNER &nbsp;—&nbsp; Multi-Ticker Superposition</div>
@@ -813,7 +813,7 @@ ${qs.last_close ? `
   <span style="color:#7a6a9a">VOL</span>
   &nbsp;<span style="color:#ffaa00;font-weight:700">${qs.annual_vol_pct}%</span>
 </div>` : ''}
-${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ computed locally</div>' : ''}
+${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#667">⚙ computed locally</div>' : ''}
 `;
   }
 
@@ -922,7 +922,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
   ${_bar(cooling, '#50fa7b')}
   <span class="mmo-metric-val" style="color:#50fa7b">${cooling.toFixed(2)}</span>
 </div>
-<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,107,53,0.1);font-size:9px;color:#2a2a4a;font-style:italic">
+<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,107,53,0.1);font-size:9px;color:#667;font-style:italic">
   E = f(capital flow, leverage, credit) &nbsp;·&nbsp; dP/dE → 0 signals fatigue
 </div>
 `;
@@ -989,7 +989,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
 </div>
 <div class="mmo-entropy-level ${cls}">${level}</div>
 <div class="mmo-entropy-desc">${desc}</div>
-<div style="margin-top:12px;font-size:9px;color:#2a2a4a;text-align:center;font-style:italic">
+<div style="margin-top:12px;font-size:9px;color:#667;text-align:center;font-style:italic">
   H = ${H.toFixed(3)} &nbsp;·&nbsp; H = −Σ pᵢ log(pᵢ) / log(5)
 </div>
 `;
@@ -1189,7 +1189,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
     const el = document.getElementById('mmo-nh-display');
     if (!el) return;
     const nh = qs.non_hermitian;
-    if (!nh) { el.innerHTML = '<div style="font-size:9px;color:#3a3a5a">—</div>'; return; }
+    if (!nh) { el.innerHTML = '<div style="font-size:9px;color:#667">—</div>'; return; }
 
     const P_NH    = typeof nh.P_NH    === 'number' ? nh.P_NH    : 0;
     const P_loss  = typeof nh.P_loss  === 'number' ? nh.P_loss  : 0;
@@ -1277,7 +1277,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
 
     const others = Object.keys(entanglement);
     if (!others.length) {
-      el.innerHTML = '<div style="font-size:9px;color:#3a3a5a;text-align:center;padding:12px">No entanglement data</div>';
+      el.innerHTML = '<div style="font-size:9px;color:#667;text-align:center;padding:12px">No entanglement data</div>';
       return;
     }
 
@@ -1328,7 +1328,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
               State Fidelity |⟨ψ_A|ψ_B⟩|² — Phase 3B Quantum Overlap
             </div>
             ${overlapRows}
-            <div style="margin-top:5px;font-size:9px;color:#2a2a4a;font-style:italic;">
+            <div style="margin-top:5px;font-size:9px;color:#667;font-style:italic;">
               (Σ√(p_as·p_bs))² — 1.0=identical states · 0=orthogonal
             </div>
           </div>
@@ -1342,7 +1342,7 @@ ${qs._local ? '<div style="margin-top:6px;font-size:8px;color:#2a2a4a">⚙ compu
   ⊕ entangled &nbsp;·&nbsp; ⊗ anti-entangled &nbsp;·&nbsp; |ρ|>0.7 = STRONG
 </div>
 ${rows}
-<div style="margin-top:10px;font-size:9px;color:#2a2a4a;font-style:italic">
+<div style="margin-top:10px;font-size:9px;color:#667;font-style:italic">
   Entangled pairs move together — diversification reduces entanglement energy
 </div>
 ${overlapHtml}
@@ -1444,7 +1444,7 @@ ${overlapHtml}
     if (!el || !qs) return;
     const bp = qs.berry_phase;
     if (!bp) {
-      el.innerHTML = '<div style="font-size:9px;color:#3a3a5a">Berry phase requires local quantum state</div>';
+      el.innerHTML = '<div style="font-size:9px;color:#667">Berry phase requires local quantum state</div>';
       return;
     }
     const gamma    = bp.gamma;
@@ -1500,7 +1500,7 @@ ${overlapHtml}
           </div>
         </div>
       </div>
-      <div style="margin-top:8px;font-size:9px;color:#2a2a4a;font-style:italic;">
+      <div style="margin-top:8px;font-size:9px;color:#667;font-style:italic;">
         γ = Im log ∏⟨ψₖ|ψₖ₊₁⟩ — loop in (T_CIR, trend) space
       </div>
       <div style="margin-top:4px;font-size:9px;color:#667;">${cycleDesc}</div>
@@ -1533,7 +1533,7 @@ ${overlapHtml}
         <div style="display:flex;justify-content:space-between;font-size:8px;color:#667;font-family:monospace;">
           <span>−${rangePct}%</span><span>Return</span><span>+${rangePct}%</span>
         </div>
-        <div style="font-size:9px;color:#2a2a4a;margin-top:4px;font-style:italic;">
+        <div style="font-size:9px;color:#667;margin-top:4px;font-style:italic;">
           K(R) = Σ exp(−S/ℏ_eff), S=Σ(ΔP)²/2σ² · ℏ=${pi.hbar_eff}
         </div>
       </div>
@@ -1630,7 +1630,7 @@ ${overlapHtml}
       qs.entanglement = ENTANGLE_TABLE[qs.ticker] || {};
     }
 
-    // Phase 3B + 3C: Berry phase, path integral, Non-Hermitian — always run locally from API data
+    // Phase 3B + 3C: use server-side data when available, fall back to local only if missing
     if (!qs.berry_phase || !qs.path_integral || !qs.non_hermitian) {
       const localAugment = _computeLocalQuantumState(qs.ticker || 'SPY');
       if (!qs.berry_phase)    qs.berry_phase    = localAugment.berry_phase;
@@ -1708,7 +1708,7 @@ ${overlapHtml}
 
     // Show loading state
     const stateEl = document.getElementById('mmo-state-display');
-    if (stateEl) stateEl.innerHTML = `<div class="mmo-superposed-label" style="color:#3a3a6a">Loading ψ(${_ticker})…</div>`;
+    if (stateEl) stateEl.innerHTML = `<div class="mmo-superposed-label" style="color:#667">Loading ψ(${_ticker})…</div>`;
 
     _api.get('/api/mmo/quantum_state/' + _ticker).then(qs => {
       const state = _normalizeQuantumState(qs, _ticker);
@@ -2261,15 +2261,15 @@ ${overlapHtml}
       </div>
       <div class="mmo-card mmo-energy-card">
         <div class="mmo-card-title" style="color:#ff6b35">Thermodynamics | Energy & Fatigue</div>
-        <div id="mmo-energy-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+        <div id="mmo-energy-display"><div style="font-size:9px;color:#667">-</div></div>
       </div>
       <div class="mmo-card mmo-ontology-card">
         <div class="mmo-card-title" style="color:#7b68ee">Market Ontology</div>
-        <div id="mmo-ontology-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+        <div id="mmo-ontology-display"><div style="font-size:9px;color:#667">-</div></div>
       </div>
       <div class="mmo-card mmo-entropy-card">
         <div class="mmo-card-title" style="color:#00d4ff">Superposition Entropy</div>
-        <div id="mmo-entropy-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+        <div id="mmo-entropy-display"><div style="font-size:9px;color:#667">-</div></div>
       </div>
     </div>
 
@@ -2294,16 +2294,16 @@ ${overlapHtml}
     <div class="mmo-hud-right">
       <div class="mmo-card mmo-state-card">
         <div class="mmo-card-title" style="color:#50fa7b">Observable | Quantum State</div>
-        <div id="mmo-state-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
-        <div id="mmo-amplitudes" style="margin-top:14px;"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+        <div id="mmo-state-display"><div style="font-size:9px;color:#667">-</div></div>
+        <div id="mmo-amplitudes" style="margin-top:14px;"><div style="font-size:9px;color:#667">-</div></div>
       </div>
       <div class="mmo-card mmo-heisenberg-card">
         <div class="mmo-card-title" style="color:#bd93f9">Heisenberg Sizing | dp x dx</div>
-        <div id="mmo-heisenberg-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+        <div id="mmo-heisenberg-display"><div style="font-size:9px;color:#667">-</div></div>
       </div>
       <div class="mmo-card mmo-decoherence-card">
         <div class="mmo-card-title" style="color:#ff79c6">Decoherence tau | Wave Stability</div>
-        <div id="mmo-decoherence-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+        <div id="mmo-decoherence-display"><div style="font-size:9px;color:#667">-</div></div>
       </div>
       <div class="mmo-card mmo-action-card" style="flex:1;display:flex;flex-direction:column;">
         <div class="mmo-card-title" style="color:#00ff88">Examples and 3D Launchers</div>
@@ -2326,19 +2326,19 @@ ${overlapHtml}
   <div class="mmo-bottom-bar">
     <div class="mmo-card mmo-string-card">
       <div class="mmo-card-title" style="color:#ff79c6">String Theory | Paths &amp; Integral</div>
-      <div id="mmo-string-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+      <div id="mmo-string-display"><div style="font-size:9px;color:#667">-</div></div>
     </div>
     <div class="mmo-card mmo-berry-card">
       <div class="mmo-card-title" style="color:#bd93f9">Berry Phase γ &nbsp;|&nbsp; Regime Topology</div>
-      <div id="mmo-berry-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+      <div id="mmo-berry-display"><div style="font-size:9px;color:#667">-</div></div>
     </div>
     <div class="mmo-card mmo-nh-card">
       <div class="mmo-card-title" style="color:#ff5555">H<sub>eff</sub> Non-Hermitian &nbsp;|&nbsp; Open System</div>
-      <div id="mmo-nh-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+      <div id="mmo-nh-display"><div style="font-size:9px;color:#667">-</div></div>
     </div>
     <div class="mmo-card mmo-entanglement-card">
       <div class="mmo-card-title" style="color:#8be9fd">Entanglement Matrix &amp; Overlap</div>
-      <div id="mmo-entanglement-display"><div style="font-size:9px;color:#3a3a5a">-</div></div>
+      <div id="mmo-entanglement-display"><div style="font-size:9px;color:#667">-</div></div>
     </div>
   </div>
 

@@ -5253,6 +5253,109 @@ def mmo_quantum_state(ticker: str):
              "value": round(max_prob, 3),           "health": _health(max_prob)},
         ]
 
+        # ── PHASE 3B — BERRY PHASE ───────────────────────────────────────
+        # Geometric phase γ = Im log ∏_k ⟨ψ_k|ψ_{k+1}⟩ as (T_CIR, trend)
+        # traces a closed loop in market-parameter space.
+        BERRY_N      = 8
+        berry_RT     = cir_temperature * 0.28   # temperature oscillation radius
+        berry_Rtr    = min(abs(trend) * 0.18, 0.10)  # trend oscillation radius
+        omega_berry  = np.array([0.8, 0.6, 0.2, 1.2, 1.0])  # per-state frequencies
+
+        def _berry_psi(theta):
+            T_b   = max(0.01, cir_temperature + berry_RT * np.sin(theta))
+            tr_b  = float(np.clip(0.5 + trend * 0.5 + berry_Rtr * np.cos(theta), 0.01, 0.99))
+            beta_b = 1.0 / T_b
+            raw_b = np.array([
+                tr_b * (0.30 + buy_w  * 0.40),
+                (1 - tr_b) * (0.20 + sell_w * 0.35),
+                0.15 + (1 - abs(trend)) * 0.20,
+                (T_b / 0.6) * (0.20 + vol_3mo * 0.30),
+                tr_b * (0.20 + adx_proxy * 0.25),
+            ])
+            raw_b = np.maximum(raw_b, 0.001)
+            mag_b = np.sqrt(raw_b / raw_b.sum())
+            ph_b  = phases + beta_b * omega_berry * dt_CIR * 2 * np.pi
+            return mag_b * np.exp(1j * ph_b)
+
+        g_acc = complex(1.0, 0.0)
+        for bk in range(BERRY_N):
+            th_k   = 2 * np.pi * bk       / BERRY_N
+            th_kp1 = 2 * np.pi * (bk + 1) / BERRY_N
+            pk     = _berry_psi(th_k)
+            pkp    = _berry_psi(th_kp1)
+            overlap = complex(float(np.dot(np.conj(pk), pkp).real),
+                              float(np.dot(np.conj(pk), pkp).imag))
+            g_acc *= overlap
+        berry_gamma = float(np.angle(g_acc))
+        berry_phase = {
+            "gamma":        round(berry_gamma, 4),
+            "gamma_pi":     round(berry_gamma / np.pi, 3),
+            "regime_cycle": "BULL_LOOP" if berry_gamma > 0.3 else ("BEAR_LOOP" if berry_gamma < -0.3 else "NEUTRAL"),
+            "topological":  abs(berry_gamma) > np.pi / 2,
+            "winding":      round(berry_gamma / (2 * np.pi), 3),
+        }
+
+        # ── PHASE 3B — PATH INTEGRAL K(R) ────────────────────────────────
+        # K(R) ∝ Σ_paths exp(−S/ℏ_eff) where S = Σ_steps (ΔP)²/(2σ²)
+        PI_STEPS  = 5
+        PI_PATHS  = 60
+        PI_BINS   = 12
+        PI_HBAR   = 0.2
+        pi_sigma  = max(0.02, vol_3mo / np.sqrt(252))
+        pi_range  = pi_sigma * PI_STEPS * 2.8
+        pi_dist   = np.zeros(PI_BINS)
+        rng_pi    = np.random.default_rng(int(abs(hash(ticker)) % (2**31)))
+        for _ in range(PI_PATHS):
+            steps = rng_pi.normal(0, pi_sigma * 2.2, PI_STEPS)
+            action = float(np.sum(steps ** 2) / (2 * pi_sigma ** 2))
+            total_r = float(np.sum(steps))
+            w = np.exp(-action / PI_HBAR)
+            bin_idx = int(np.clip(
+                np.floor((total_r + pi_range) / (2 * pi_range) * PI_BINS),
+                0, PI_BINS - 1
+            ))
+            pi_dist[bin_idx] += w
+        pi_max = float(pi_dist.max()) if pi_dist.max() > 0 else 1.0
+        path_integral = {
+            "distribution": [round(float(d / pi_max), 3) for d in pi_dist],
+            "hbar_eff":     PI_HBAR,
+            "sigma_daily":  round(float(pi_sigma), 5),
+            "range":        round(float(pi_range), 5),
+        }
+
+        # ── PHASE 3C — NON-HERMITIAN HAMILTONIAN H_eff ───────────────────
+        # H_eff = H − iΓ/2  (open quantum system with environment coupling)
+        # Complex eigenvalues: ε_k = E_k − iΓ_k/2
+        NH_E0    = {"BULL": 0.20, "BEAR": -0.20, "SIDEWAYS": 0.00, "VOLATILE": 0.10, "TRENDING": 0.15}
+        noise_factor = float(np.clip(
+            vol_3mo * (0.5 + entropy * 0.5), 0, 1
+        ))
+        nh_eigenvalues = []
+        for state in states:
+            E_k     = NH_E0.get(state, 0.0)
+            p_k     = amplitudes[state]
+            Gamma_k = round(float(np.clip(noise_factor * (1.2 - p_k), 0.01, 2.0)), 4)
+            surv_k  = round(float(p_k * np.exp(-Gamma_k * decoherence_tau)), 5)
+            nh_eigenvalues.append({
+                "state": state, "E": round(E_k, 4), "Gamma": Gamma_k,
+                "eps_im": round(-Gamma_k / 2, 4), "p": round(p_k, 4),
+                "survival": surv_k,
+            })
+        P_NH = round(float(sum(ev["survival"] for ev in nh_eigenvalues)), 4)
+        nh_sorted = sorted(nh_eigenvalues, key=lambda x: -x["p"])
+        ep_gap = round(float(np.sqrt(
+            (nh_sorted[0]["E"] - nh_sorted[1]["E"]) ** 2 +
+            (nh_sorted[0]["Gamma"] - nh_sorted[1]["Gamma"]) ** 2
+        )), 4) if len(nh_sorted) >= 2 else 1.0
+        non_hermitian = {
+            "gamma_global": round(noise_factor, 4),
+            "eigenvalues":  nh_eigenvalues,
+            "P_NH":         P_NH,
+            "P_loss":       round(1 - P_NH, 4),
+            "ep_gap":       ep_gap,
+            "near_ep":      ep_gap < 0.05,
+        }
+
         result.update({
             "amplitudes":       amplitudes,
             "collapse_prob":    round(max_prob, 3),
@@ -5300,6 +5403,10 @@ def mmo_quantum_state(ticker: str):
             "trend_pct":     round(trend * 100, 2),
             "trend_1mo_pct": round(trend_1mo * 100, 2),
             "annual_vol_pct": round(vol_3mo * 100, 2),
+            # Phase 3B / 3C (computed server-side from real data)
+            "berry_phase":   berry_phase,
+            "path_integral": path_integral,
+            "non_hermitian": non_hermitian,
         })
 
     except Exception as e:
