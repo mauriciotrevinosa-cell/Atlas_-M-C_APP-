@@ -1273,7 +1273,6 @@ ${catHtml}
     // Allow Enter key in ticker input to load data
     const inp = document.getElementById('ind-ticker-input');
     if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') loadTicker(); });
-    console.log('[IndicatorTerminal] init OK');
   }
 
   function toggle(id) {

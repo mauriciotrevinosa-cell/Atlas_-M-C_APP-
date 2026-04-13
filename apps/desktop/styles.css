@@ -1793,6 +1793,79 @@ select option {
   color: var(--txt-muted);
 }
 
+/* ===== Real Estate Tabs ===== */
+.re-tab {
+  padding: 6px 14px;
+  font-size: 11px;
+  font-family: var(--ff-mono);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--txt-muted);
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  margin-bottom: -1px;
+}
+.re-tab:hover { color: var(--text-primary); }
+.re-tab.active {
+  color: var(--accent-orange);
+  border-bottom-color: var(--accent-orange);
+}
+.re-tab-content { display: none; }
+.re-tab-content.active { display: block; }
+
+/* Simulator delta badges */
+.sim-result-delta {
+  font-size: 10px;
+  font-family: var(--ff-mono);
+  margin-top: 2px;
+}
+.sim-result-delta.neutral { color: var(--txt-muted); }
+.sim-result-delta.up      { color: var(--accent-red); }
+.sim-result-delta.down    { color: var(--accent-green); }
+
+/* Simulator alert chips */
+.sim-alerts-container { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.sim-alert {
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border-left: 3px solid;
+  background: rgba(255,255,255,0.03);
+}
+.sim-alert-ok       { border-color: var(--accent-green); color: var(--accent-green); }
+.sim-alert-info     { border-color: #8be9fd; color: #8be9fd; }
+.sim-alert-warning  { border-color: var(--accent-orange); color: var(--accent-orange); }
+.sim-alert-high     { border-color: var(--accent-red); color: var(--accent-red); }
+.sim-alert-critical { border-color: #ff0055; color: #ff0055; background: rgba(255,0,85,.06); }
+.sim-alert-badge {
+  font-size: 9px;
+  font-weight: 700;
+  margin-right: 6px;
+  font-family: var(--ff-mono);
+  letter-spacing: .05em;
+  opacity: .7;
+}
+
+/* CAD tool buttons */
+.cad-tool-btn {
+  padding: 4px 10px;
+  font-size: 10px;
+  font-family: var(--ff-mono);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--txt-muted);
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.cad-tool-btn:hover, .cad-tool-btn.active {
+  color: var(--accent-orange);
+  border-color: var(--accent-orange);
+}
+
 /* ===== Tables ===== */
 table {
   width: 100%;

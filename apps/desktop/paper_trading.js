@@ -581,7 +581,6 @@ window.PaperTrading = (() => {
     _initialized = true;
     // Async: seed real prices from API (non-blocking)
     _seedRealPrices().then(() => { if (_liveSeeded) _renderAll(); });
-    console.log('[PaperTrading] init OK');
   }
 
   function setStrategy(id) {
