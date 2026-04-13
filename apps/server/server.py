@@ -29,6 +29,8 @@ from pathlib import Path
 import sqlite3
 from threading import Lock
 
+from atlas.data_layer import get_provider_registry
+
 try:
     import requests as _requests
     _REQUESTS_OK = True
@@ -260,6 +262,16 @@ _SYSTEM_MODULE_FLAGS: Dict[str, bool] = {
     "cpp_core": False,    # Build pending
 }
 
+_ARIA_REGISTRY_TOOLS = {
+    "atlas_market_data",
+    "atlas_macro_data",
+    "atlas_news",
+    "atlas_filings",
+    "atlas_sentiment",
+}
+_ARIA_AGENT_TOOLS = {"atlas_agent_task"}
+_ARIA_BROWSER_TOOLS = {"web_search", "create_file", "execute_code", "read_file"}
+
 
 def _safe_read_text(path: Path) -> str:
     try:
@@ -336,6 +348,46 @@ def _route_counts() -> Dict[str, int]:
     return {"api_routes": len(api_paths), "websocket_routes": websocket_paths}
 
 
+def _build_aria_runtime_snapshot() -> Dict[str, Any]:
+    tool_map = getattr(aria_instance, "tools", {}) if aria_instance else {}
+    if not isinstance(tool_map, dict):
+        tool_map = {}
+
+    tool_names = sorted(tool_map.keys())
+    registry_tools = sorted(name for name in tool_names if name in _ARIA_REGISTRY_TOOLS)
+    agent_tools = sorted(name for name in tool_names if name in _ARIA_AGENT_TOOLS)
+    browser_tools = sorted(name for name in tool_names if name in _ARIA_BROWSER_TOOLS)
+
+    try:
+        provider_info = get_provider_registry().get_provider_info()
+    except Exception:
+        provider_info = {}
+
+    providers_total = sum(len(items) for items in provider_info.values())
+    providers_available = sum(
+        1
+        for items in provider_info.values()
+        for provider in items
+        if provider.get("available", True)
+    )
+
+    return {
+        "registered_tools": len(tool_names),
+        "tool_sample": tool_names[:10],
+        "live_registry_tools": registry_tools,
+        "live_registry_tools_count": len(registry_tools),
+        "agent_tools": agent_tools,
+        "agent_tools_count": len(agent_tools),
+        "browser_tools": browser_tools,
+        "browser_tools_count": len(browser_tools),
+        "provider_channels": len(provider_info),
+        "provider_channels_list": sorted(provider_info.keys()),
+        "providers_total": providers_total,
+        "providers_available": providers_available,
+        "provider_info": provider_info,
+    }
+
+
 def _build_command_center_snapshot() -> Dict[str, Any]:
     models = _get_local_models()
     modules = dict(_SYSTEM_MODULE_FLAGS)
@@ -345,6 +397,7 @@ def _build_command_center_snapshot() -> Dict[str, Any]:
     desktop_views = _discover_desktop_views()
     desktop_js = _discover_desktop_js_modules()
     run_info = _latest_run_snapshot()
+    aria_runtime = _build_aria_runtime_snapshot()
 
     docs_md = _count_markdown(_ATLAS_ROOT / "docs")
     gov_md = _count_markdown(_ATLAS_ROOT / "project_governance")
@@ -384,6 +437,7 @@ def _build_command_center_snapshot() -> Dict[str, Any]:
             "active_model": _aria_active_model,
             "installed_models": len(models),
             "audit_entries": len(_aria_audit_log),
+            **aria_runtime,
         },
         "runtime": {
             "modules_online": modules_online,
@@ -456,12 +510,28 @@ def _build_connectivity_checks() -> Dict[str, Any]:
             "required": True,
         },
         {
+            "id": "api_provider_inventory",
+            "label": "ARIA provider inventory",
+            "kind": "route",
+            "target": "/api/aria/providers",
+            "connected": "/api/aria/providers" in route_paths,
+            "required": False,
+        },
+        {
             "id": "api_query",
             "label": "ARIA query bridge",
             "kind": "route",
             "target": "/query",
             "connected": "/query" in route_paths,
             "required": True,
+        },
+        {
+            "id": "api_vizlab_brain",
+            "label": "ARIA brain graph",
+            "kind": "route",
+            "target": "/api/vizlab/brain",
+            "connected": "/api/vizlab/brain" in route_paths,
+            "required": False,
         },
         {
             "id": "api_analytics_summary",
@@ -579,17 +649,35 @@ def _build_thought_graph(
     modules_state = _severity_from_ratio(module_ratio)
 
     models_installed = int(aria.get("installed_models") or 0)
-    aria_state = "online" if models_installed > 0 else "degraded"
+    active_model = str(aria.get("active_model") or "unknown")
+    aria_state = "online" if (models_installed > 0 or active_model.startswith("cloud:")) else "degraded"
 
     runs_count = int(runs.get("count") or 0)
     runs_state = "online" if runs_count > 0 else "degraded"
 
-    docs_total = int(project.get("docs_markdown") or 0) + int(project.get("governance_markdown") or 0)
-    docs_state = "online" if docs_total > 0 else "critical"
+    tool_count = int(aria.get("registered_tools") or 0)
+    live_registry_tools = int(aria.get("live_registry_tools_count") or 0)
+    agent_tools = int(aria.get("agent_tools_count") or 0)
+    provider_channels = int(aria.get("provider_channels") or 0)
+    providers_available = int(aria.get("providers_available") or 0)
+    audit_entries = int(aria.get("audit_entries") or 0)
+
+    memory_dir = _ATLAS_ROOT / "python" / "src" / "atlas" / "assistants" / "aria" / "memory"
+    memory_modules = len([p for p in _safe_iterdir(memory_dir) if p.suffix == ".py"])
 
     bridge_state = "online" if connectivity.get("all_connected") else "degraded"
     route_count = int(runtime.get("api_routes") or 0)
     api_state = "online" if route_count >= 1 else "critical"
+    llm_state = "online" if (models_installed > 0 or active_model.startswith("cloud:")) else "critical"
+    memory_state = "online" if memory_modules >= 3 else ("degraded" if memory_modules > 0 else "critical")
+    tool_state = "online" if tool_count >= 4 else ("degraded" if tool_count > 0 else "critical")
+    registry_state = (
+        "online"
+        if provider_channels > 0 and providers_available > 0
+        else ("degraded" if provider_channels > 0 else "critical")
+    )
+    agent_state = "online" if agent_tools > 0 else "degraded"
+    audit_state = "online" if audit_entries > 0 else "degraded"
 
     nodes = [
         {
@@ -604,7 +692,7 @@ def _build_thought_graph(
             "id": "server",
             "label": "FastAPI Core",
             "status": api_state,
-            "x": 30,
+            "x": 24,
             "y": 50,
             "meta": f"{route_count} API routes",
         },
@@ -612,52 +700,96 @@ def _build_thought_graph(
             "id": "aria",
             "label": "ARIA Runtime",
             "status": aria_state,
-            "x": 52,
-            "y": 28,
-            "meta": str(aria.get("active_model") or "unknown"),
+            "x": 42,
+            "y": 50,
+            "meta": active_model,
+        },
+        {
+            "id": "llm",
+            "label": "LLM Layer",
+            "status": llm_state,
+            "x": 58,
+            "y": 18,
+            "meta": f"{models_installed} model(s)",
+        },
+        {
+            "id": "memory",
+            "label": "Memory & RAG",
+            "status": memory_state,
+            "x": 58,
+            "y": 34,
+            "meta": f"{memory_modules} modules",
+        },
+        {
+            "id": "tools",
+            "label": "Tool Router",
+            "status": tool_state,
+            "x": 58,
+            "y": 50,
+            "meta": f"{tool_count} tools",
+        },
+        {
+            "id": "providers",
+            "label": "Data Registry",
+            "status": registry_state,
+            "x": 80,
+            "y": 26,
+            "meta": f"{providers_available}/{int(aria.get('providers_total') or 0)} providers",
+        },
+        {
+            "id": "agents",
+            "label": "Agent System",
+            "status": agent_state,
+            "x": 80,
+            "y": 50,
+            "meta": f"{agent_tools} agent tool(s)",
         },
         {
             "id": "engines",
             "label": "Atlas Engines",
             "status": modules_state,
-            "x": 52,
-            "y": 72,
+            "x": 80,
+            "y": 74,
             "meta": f"{modules_online}/{modules_total} online",
         },
         {
-            "id": "governance",
-            "label": "Governance",
-            "status": docs_state,
-            "x": 74,
-            "y": 28,
-            "meta": f"{docs_total} docs",
-        },
-        {
-            "id": "artifacts",
-            "label": "Run Artifacts",
-            "status": runs_state,
-            "x": 74,
-            "y": 72,
-            "meta": str(runs.get("latest_run_id") or "none"),
+            "id": "audit",
+            "label": "Audit Trail",
+            "status": audit_state,
+            "x": 58,
+            "y": 82,
+            "meta": f"{audit_entries} audit events",
         },
         {
             "id": "bridge",
-            "label": "System Bridge",
+            "label": "Run + WS Bridge",
             "status": bridge_state,
-            "x": 74,
-            "y": 50,
+            "x": 24,
+            "y": 76,
             "meta": f"{connectivity.get('connected', 0)}/{connectivity.get('total', 0)} links",
+        },
+        {
+            "id": "runs",
+            "label": "Run Artifacts",
+            "status": runs_state,
+            "x": 42,
+            "y": 82,
+            "meta": str(runs.get("latest_run_id") or "none"),
         },
     ]
 
     edges = [
         {"source": "desktop", "target": "server", "status": "online", "label": "UI REST"},
-        {"source": "server", "target": "aria", "status": aria_state, "label": "inference"},
-        {"source": "server", "target": "engines", "status": modules_state, "label": "module calls"},
-        {"source": "server", "target": "governance", "status": docs_state, "label": "docs context"},
-        {"source": "server", "target": "artifacts", "status": runs_state, "label": "run outputs"},
-        {"source": "server", "target": "bridge", "status": bridge_state, "label": "wiring"},
-        {"source": "bridge", "target": "aria", "status": bridge_state, "label": "prompt path"},
+        {"source": "server", "target": "aria", "status": aria_state, "label": "query bridge"},
+        {"source": "aria", "target": "llm", "status": llm_state, "label": "provider call"},
+        {"source": "aria", "target": "memory", "status": memory_state, "label": "context retrieval"},
+        {"source": "aria", "target": "tools", "status": tool_state, "label": "tool calling"},
+        {"source": "tools", "target": "providers", "status": registry_state, "label": "live data"},
+        {"source": "tools", "target": "agents", "status": agent_state, "label": "agent tasks"},
+        {"source": "tools", "target": "engines", "status": modules_state, "label": "atlas modules"},
+        {"source": "server", "target": "bridge", "status": bridge_state, "label": "ws + routes"},
+        {"source": "aria", "target": "audit", "status": audit_state, "label": "request log"},
+        {"source": "bridge", "target": "runs", "status": runs_state, "label": "artifacts"},
     ]
 
     return {"nodes": nodes, "edges": edges}
@@ -1066,6 +1198,60 @@ def command_center_snapshot():
 def thought_map_snapshot():
     """System-wide visibility graph + high-level ARIA reasoning trace."""
     return _build_thought_map_snapshot()
+
+
+def _build_vizlab_brain_graph() -> Dict[str, Any]:
+    aria = _build_aria_runtime_snapshot()
+    models_installed = len(_get_local_models())
+    active_model = _aria_active_model
+    tool_count = int(aria.get("registered_tools") or 0)
+    provider_channels = int(aria.get("provider_channels") or 0)
+    providers_available = int(aria.get("providers_available") or 0)
+    agent_tools = int(aria.get("agent_tools_count") or 0)
+    audit_entries = len(_aria_audit_log)
+    memory_dir = _ATLAS_ROOT / "python" / "src" / "atlas" / "assistants" / "aria" / "memory"
+    memory_modules = len([p for p in _safe_iterdir(memory_dir) if p.suffix == ".py"])
+    engines_online = sum(1 for is_ok in _SYSTEM_MODULE_FLAGS.values() if is_ok)
+    engines_total = len(_SYSTEM_MODULE_FLAGS)
+
+    nodes = [
+        {"id": "ui", "label": "Desktop + Chat UI", "type": "ui", "active": True},
+        {"id": "server", "label": "FastAPI Bridge", "type": "exec", "active": True},
+        {"id": "aria", "label": "ARIA Runtime", "type": "ai", "active": bool(active_model)},
+        {"id": "llm", "label": "LLM Providers", "type": "ai", "active": models_installed > 0 or active_model.startswith("cloud:")},
+        {"id": "memory", "label": "Memory / RAG", "type": "ai", "active": memory_modules > 0},
+        {"id": "tools", "label": "Tool Router", "type": "engine", "active": tool_count > 0},
+        {"id": "registry", "label": "Provider Registry", "type": "data", "active": provider_channels > 0 and providers_available > 0},
+        {"id": "agents", "label": "Agent Orchestrator", "type": "ai", "active": agent_tools > 0},
+        {"id": "engines", "label": "Atlas Engines", "type": "analytics", "active": engines_online > 0},
+        {"id": "audit", "label": "Audit Trace", "type": "app", "active": audit_entries > 0},
+    ]
+    edges = [
+        {"from": "ui", "to": "server"},
+        {"from": "server", "to": "aria"},
+        {"from": "aria", "to": "llm"},
+        {"from": "aria", "to": "memory"},
+        {"from": "aria", "to": "tools"},
+        {"from": "tools", "to": "registry"},
+        {"from": "tools", "to": "agents"},
+        {"from": "tools", "to": "engines"},
+        {"from": "aria", "to": "audit"},
+        {"from": "server", "to": "audit"},
+    ]
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "version": "Atlas v2026.03.25",
+        "meta": {
+            "active_model": active_model,
+            "registered_tools": tool_count,
+            "provider_channels": provider_channels,
+            "providers_available": providers_available,
+            "audit_entries": audit_entries,
+            "engines_online": engines_online,
+            "engines_total": engines_total,
+        },
+    }
 
 
 @app.post("/query", response_model=QueryResponse)
@@ -2013,59 +2199,7 @@ def vizlab_brain():
     Return ARIA module graph (nodes + edges) for the neural brain visualization.
     Includes live status booleans so the frontend can highlight active modules.
     """
-    nodes = [
-        {"id": "data",       "label": "Data Layer",    "type": "data",      "active": True},
-        {"id": "indicators", "label": "Indicators",    "type": "analytics", "active": True},
-        {"id": "market",     "label": "Market State",  "type": "analytics", "active": True},
-        {"id": "features",   "label": "Features",      "type": "analytics", "active": True},
-        {"id": "signal",     "label": "Signal Engine", "type": "engine",    "active": True},
-        {"id": "ml",         "label": "ML Engine",     "type": "engine",    "active": False},
-        {"id": "rl",         "label": "RL Lab",        "type": "engine",    "active": True},
-        {"id": "risk",       "label": "Risk Engine",   "type": "risk",      "active": True},
-        {"id": "mc",         "label": "Monte Carlo",   "type": "sim",       "active": True},
-        {"id": "thermo",     "label": "Thermo Dynamics","type":"analytics", "active": True},
-        {"id": "backtest",   "label": "Backtest",      "type": "eval",      "active": True},
-        {"id": "paper",      "label": "Paper Trading", "type": "eval",      "active": True},
-        {"id": "options",    "label": "Options",       "type": "eval",      "active": True},
-        {"id": "exec",       "label": "Execution",     "type": "exec",      "active": True},
-        {"id": "aria",       "label": "ARIA Core",     "type": "ai",        "active": True},
-        {"id": "ai_agents",  "label": "AI Agents",     "type": "ai",        "active": True},
-        {"id": "vizlab",     "label": "Viz Lab",       "type": "ui",        "active": True},
-        {"id": "playroom",   "label": "Playroom",      "type": "ui",        "active": False},
-        {"id": "mmo",        "label": "Quantum MMO",   "type": "app",       "active": True},
-        {"id": "thought",    "label": "Thought Map",   "type": "app",       "active": True},
-    ]
-    edges = [
-        # Data to analytics
-        {"from": "data",     "to": "indicators"}, {"from": "data",   "to": "market"},
-        {"from": "data",     "to": "features"},   {"from": "data",   "to": "thermo"},
-        
-        # Analytics to Signal
-        {"from": "indicators","to": "signal"},    {"from": "market", "to": "signal"},
-        {"from": "features", "to": "signal"},     {"from": "thermo", "to": "signal"},
-        
-        # Signal to advanced engines
-        {"from": "signal",   "to": "ml"},         {"from": "signal", "to": "rl"},
-        {"from": "signal",   "to": "risk"},       {"from": "signal", "to": "options"},
-        
-        # Sim to Signal/ARIA
-        {"from": "mc",       "to": "signal"},     {"from": "mc",     "to": "aria"},
-        
-        # All feed into ARIA Core
-        {"from": "signal",   "to": "aria"},       {"from": "ml",     "to": "aria"},
-        {"from": "rl",       "to": "aria"},       {"from": "risk",   "to": "aria"},
-        
-        # ARIA connects to AI Agents and Apps
-        {"from": "aria",     "to": "ai_agents"},  {"from": "aria",   "to": "thought"},
-        {"from": "aria",     "to": "mmo"},        {"from": "aria",   "to": "vizlab"},
-        {"from": "aria",     "to": "playroom"},
-        
-        # Evaluation & Execution
-        {"from": "signal",   "to": "backtest"},   {"from": "signal", "to": "paper"},
-        {"from": "backtest", "to": "exec"},       {"from": "paper",  "to": "exec"},
-        {"from": "exec",     "to": "aria"},
-    ]
-    return {"nodes": nodes, "edges": edges, "version": "Atlas v0.6.0-alpha"}
+    return _build_vizlab_brain_graph()
 
 
 @app.get("/api/vizlab/regime/{ticker}")
@@ -5424,15 +5558,13 @@ def _get_agent_orchestrator():
     global _agent_orchestrator
     if _agent_orchestrator is None:
         try:
-            import sys
-            from pathlib import Path
-            _root = Path(__file__).resolve().parents[2]
-            if str(_root / "python" / "src") not in sys.path:
-                sys.path.insert(0, str(_root / "python" / "src"))
+            _add_sys_path()
             from atlas.core.ai_assistant import build_system
             _agent_orchestrator = build_system()
+            logging.info("Agent orchestrator ready — %d agents loaded",
+                         len(_agent_orchestrator.registry.list_agents()))
         except Exception as e:
-            logging.warning(f"Agent system init failed: {e}")
+            logging.warning("Agent system init failed: %s — agents.js will show stub mode", e)
             _agent_orchestrator = None
     return _agent_orchestrator
 
@@ -5601,6 +5733,12 @@ try:
         sch = _st_init()
         await sch.start()
         logger.info("[SignalTerminal] background scheduler started")
+
+    @app.on_event("startup")
+    async def _start_agent_system():
+        import asyncio
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, _get_agent_orchestrator)
 
     logger.info("[SignalTerminal] router registered at /api/signals")
 
