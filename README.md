@@ -1,4 +1,4 @@
-﻿# Atlas
+# Atlas
 
 Atlas is a local-first quantitative research platform with ARIA as assistant layer.
 
@@ -33,3 +33,8 @@ python run_aria.py
 
 - Source of truth: `pyproject.toml`
 - `requirements.txt` is compatibility-only (`-e .`).
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Copyright (c) 2026 Mauricio Gerardo Trevino Saldana (mauriciotrevinosa@gmail.com)
