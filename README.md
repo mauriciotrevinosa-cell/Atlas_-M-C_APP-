@@ -36,5 +36,5 @@ python run_aria.py
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+**PROPRIETARY & CONFIDENTIAL** - This an internal project solely for demonstration purposes. Nobody may use, copy, modify, merge, publish, distribute, sublicense, or sell this software without explicit written permission. See the [LICENSE](LICENSE) file for details.
 Copyright (c) 2026 Mauricio Gerardo Trevino Saldana (mauriciotrevinosa@gmail.com)
