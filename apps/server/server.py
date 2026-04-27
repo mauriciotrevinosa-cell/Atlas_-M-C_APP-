@@ -1184,7 +1184,7 @@ async def system_verify(ticker: str = "AAPL"):
 
     # Summary
     stages_ok = sum(1 for s in report["stages"].values() if s.get("ok"))
-    report["summary"] = f"{stages_ok}/{len(report["stages"])} stages passing"
+    report["summary"] = f"{stages_ok}/{len(report['stages'])} stages passing"
     return report
 
 
