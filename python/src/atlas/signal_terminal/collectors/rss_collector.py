@@ -23,16 +23,24 @@ def _parse_date(raw: Optional[str]) -> Optional[datetime]:
     """Try multiple date formats used across RSS feeds."""
     if not raw:
         return None
+    raw = raw.strip()
     import email.utils
     try:
         t = email.utils.parsedate_to_datetime(raw)
         return t.astimezone(timezone.utc).replace(tzinfo=None)
     except Exception:
         pass
-    for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%d %H:%M:%S"):
+    try:
+        t = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if t.tzinfo is not None:
+            return t.astimezone(timezone.utc).replace(tzinfo=None)
+        return t
+    except ValueError:
+        pass
+    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"):
         try:
-            return datetime.strptime(raw[:19], fmt[:len(raw)])
-        except Exception:
+            return datetime.strptime(raw[:19], fmt)
+        except ValueError:
             pass
     return None
 
@@ -70,7 +78,7 @@ class RSSCollector(BaseCollector):
                 body=(getattr(entry, "summary", "") or "").strip(),
                 url=getattr(entry, "link", "") or "",
                 author=getattr(entry, "author", "") or "",
-                published_at=pub or datetime.utcnow(),
+                published_at=pub or datetime.now(timezone.utc),
             ))
         return items
 
@@ -108,7 +116,7 @@ class RSSCollector(BaseCollector):
                 body=_t("description"),
                 url=_t("link"),
                 author=_t("author") or _t("dc:creator"),
-                published_at=_parse_date(_t("pubDate")) or datetime.utcnow(),
+                published_at=_parse_date(_t("pubDate")) or datetime.now(timezone.utc),
             ))
 
         if not items:
@@ -128,7 +136,7 @@ class RSSCollector(BaseCollector):
                     body=_at("summary") or _at("content"),
                     url=url_val,
                     author=_at("name"),
-                    published_at=pub or datetime.utcnow(),
+                    published_at=pub or datetime.now(timezone.utc),
                 ))
 
         return items

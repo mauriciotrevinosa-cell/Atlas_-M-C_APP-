@@ -29,7 +29,9 @@ from __future__ import annotations
 import os
 import logging
 import threading
+import time
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 import requests
@@ -65,14 +67,19 @@ def _get(path: str, timeout: int = 10) -> dict:
 def cmd_help(_args: str) -> str:
     return (
         "🤖 *ARIA Command Station*\n\n"
-        "/status       — Atlas server health\n"
+        "*Market*\n"
         "/analyze TICK — Quantum state analysis\n"
         "/signal       — Latest signals feed\n"
         "/market       — SPY · QQQ · BTC · GLD snapshot\n"
         "/portfolio    — Portfolio summary\n"
         "/whale        — Recent whale alerts\n"
-        "/scan         — Quantum scanner movers\n"
-        "/ping         — Latency check\n\n"
+        "/scan         — Quantum scanner movers\n\n"
+        "*System*\n"
+        "/status       — Atlas server health\n"
+        "/ping         — Latency check\n"
+        "/sysinfo      — CPU · RAM · Disk · Uptime\n"
+        "/restart      — Restart Atlas server\n"
+        "/upgrade      — git pull + restart\n\n"
         "Or just talk to me — I'll answer as ARIA 💬"
     )
 
@@ -211,6 +218,93 @@ def cmd_portfolio(_args: str) -> str:
     )
 
 
+def cmd_sysinfo(_args: str) -> str:
+    """Return basic machine stats for the dedicated 24/7 machine."""
+    try:
+        import psutil
+        cpu     = psutil.cpu_percent(interval=1)
+        mem     = psutil.virtual_memory()
+        disk    = psutil.disk_usage(str(ROOT_PATH))
+        uptime  = time.time() - psutil.boot_time()
+        hours   = int(uptime // 3600)
+        minutes = int((uptime % 3600) // 60)
+        return (
+            f"💻 *Atlas Machine*\n\n"
+            f"CPU:    {cpu:.0f}%\n"
+            f"RAM:    {mem.used / 1e9:.1f} / {mem.total / 1e9:.1f} GB  ({mem.percent:.0f}%)\n"
+            f"Disk:   {disk.used / 1e9:.1f} / {disk.total / 1e9:.1f} GB  ({disk.percent:.0f}%)\n"
+            f"Uptime: {hours}h {minutes}m\n"
+            f"Time:   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+    except ImportError:
+        return (
+            f"💻 Atlas time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            "(install psutil for full stats: pip install psutil)"
+        )
+    except Exception as e:
+        return f"⚠️ sysinfo error: {e}"
+
+
+def cmd_restart(_args: str) -> str:
+    """
+    Kill the Atlas server subprocess — the daemon auto-restarts it.
+    Sends SIGTERM to the Atlas process (atlas_server.pid), NOT the daemon.
+    """
+    import os, signal as _sig
+    pid_file = ROOT_PATH / "atlas_server.pid"
+    if not pid_file.exists():
+        return (
+            "⚠️ atlas_server.pid not found.\n"
+            "Atlas may not be running under run_daemon.py.\n"
+            "Start it with: python run_daemon.py"
+        )
+    try:
+        pid = int(pid_file.read_text().strip())
+        os.kill(pid, _sig.SIGTERM)
+        return (
+            f"🔄 Atlas restart triggered (PID {pid} → SIGTERM).\n"
+            "Daemon will restart it in ~5 seconds.\n"
+            "Check with /ping"
+        )
+    except ProcessLookupError:
+        return "⚠️ Atlas process not found — it may have already stopped. Daemon will restart it."
+    except Exception as e:
+        return f"⚠️ Restart failed: {e}"
+
+
+def cmd_upgrade(_args: str) -> str:
+    """Trigger a git pull + restart via the daemon's --upgrade path."""
+    import subprocess, sys
+    from pathlib import Path
+    try:
+        # Run upgrade script non-blocking — daemon will handle restart
+        result = subprocess.run(
+            ["git", "pull", "--ff-only"],
+            cwd=str(ROOT_PATH),
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if result.returncode != 0:
+            return f"⚠️ git pull failed:\n{result.stderr.strip()[:300]}"
+
+        changed = result.stdout.strip()
+        if "Already up to date" in changed:
+            return "✅ Already up to date — no restart needed."
+
+        # Pull succeeded — now restart
+        restart_msg = cmd_restart("")
+        return f"✅ Code updated:\n{changed[:200]}\n\n{restart_msg}"
+    except subprocess.TimeoutExpired:
+        return "⚠️ git pull timed out (60s). Check network."
+    except Exception as e:
+        return f"⚠️ Upgrade error: {e}"
+
+
+# Resolve Atlas root for daemon ops (2 levels up from this file)
+ROOT_PATH = Path(__file__).resolve().parent.parent.parent.parent.parent.parent.parent
+
+
 # ── Command router ─────────────────────────────────────────────────────────────
 
 COMMANDS: dict[str, callable] = {
@@ -224,6 +318,10 @@ COMMANDS: dict[str, callable] = {
     "/whale":     lambda a: cmd_whale(a),
     "/scan":      lambda a: cmd_scan(a),
     "/portfolio": lambda a: cmd_portfolio(a),
+    # Remote machine management
+    "/sysinfo":   lambda a: cmd_sysinfo(a),
+    "/restart":   lambda a: cmd_restart(a),
+    "/upgrade":   lambda a: cmd_upgrade(a),
     # Placeholder stubs — noted for future work
     "/tasks":     lambda _: "📋 ClickUp integration coming soon. Tasks tracked in Atlas Signal Terminal.",
     "/note":      lambda a: f"📝 Notion integration coming soon. Noted locally: {a[:100] if a else '(empty)'}",

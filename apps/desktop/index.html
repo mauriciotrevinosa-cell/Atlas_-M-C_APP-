@@ -10,10 +10,161 @@
   <link rel="stylesheet" href="styles.css?v=ui-premium-1">
   <link rel="stylesheet" href="css/mmo_overrides.css?v=2026.03.09-quantum-v2">
   <link rel="stylesheet" href="css/signal_terminal.css?v=2026.03.15-v1">
+  <!-- Liquid Glass theme — loaded last to override. Warm, pleasant, Apple-style. -->
+  <link rel="stylesheet" href="css/liquid-glass.css?v=2026.04.20-v1">
+  <link rel="stylesheet" href="css/brain.css?v=2026.04.23-v1">
   <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Atlas intro splash — inline for instant first paint (no FOUC)
+       Liquid-glass edition · warm twilight aurora
+       Palette: deep plum base + peach/lavender/sage aurora orbs,
+                pearl-white wordmark with soft luminosity.
+       Timing: word fades in (0–1.1s) → rule draws (0.6–1.6s) →
+               subtitle (1.0–1.8s) → whole splash fades out (1.8–2.4s)
+       ═══════════════════════════════════════════════════════════════ -->
+  <style id="atlas-intro-style">
+    #atlas-intro {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: grid;
+      place-items: center;
+      /* Deep plum base — luxury depth, not cold black */
+      background:
+        radial-gradient(ellipse 60% 50% at 22% 30%, rgba(255, 180, 153, 0.55) 0%, transparent 60%),
+        radial-gradient(ellipse 65% 55% at 80% 25%, rgba(201, 184, 232, 0.55) 0%, transparent 60%),
+        radial-gradient(ellipse 55% 45% at 70% 85%, rgba(168, 213, 186, 0.50) 0%, transparent 60%),
+        radial-gradient(ellipse 45% 40% at 20% 80%, rgba(232, 180, 188, 0.45) 0%, transparent 60%),
+        linear-gradient(135deg, #241b37 0%, #1a1428 60%, #120c1e 100%);
+      animation: atlas-intro-hide 2.4s cubic-bezier(.4, 0, .2, 1) forwards;
+      pointer-events: none;
+      font-family: 'Inter', 'Helvetica Neue', system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+    #atlas-intro::before {
+      /* Soft glass sheen drifting across */
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(115deg,
+          transparent 35%,
+          rgba(255, 255, 255, 0.08) 50%,
+          transparent 65%);
+      animation: atlas-intro-sweep 2.1s ease-out 0.15s forwards;
+      transform: translateX(-100%);
+      pointer-events: none;
+    }
+    #atlas-intro .intro-core {
+      text-align: center;
+      position: relative;
+      /* Soft glass plate behind the wordmark — very subtle */
+      padding: 48px 64px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow:
+        0 20px 60px rgba(26, 20, 40, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      opacity: 0;
+      animation: atlas-plate-in 0.9s cubic-bezier(.22, 1, .36, 1) 0.05s forwards;
+    }
+    #atlas-intro .intro-word {
+      font-weight: 200;
+      font-size: clamp(48px, 8.5vw, 108px);
+      letter-spacing: 0.42em;
+      /* Pearl white with a warm hint — not harsh pure-white */
+      color: #f5f3ef;
+      text-indent: 0.42em;
+      opacity: 0;
+      animation: atlas-word-in 1.1s cubic-bezier(.22, 1, .36, 1) 0.25s forwards;
+      /* Warm luminous halo: peach + lavender */
+      text-shadow:
+        0 0 24px rgba(255, 180, 153, 0.35),
+        0 0 64px rgba(201, 184, 232, 0.22);
+    }
+    #atlas-intro .intro-rule {
+      height: 1px;
+      width: 0;
+      margin: 22px auto 16px;
+      background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 180, 153, 0.8) 30%,
+        rgba(201, 184, 232, 0.8) 70%,
+        transparent);
+      animation: atlas-rule-draw 1s cubic-bezier(.5, 0, .1, 1) 0.75s forwards;
+    }
+    #atlas-intro .intro-sub {
+      font-weight: 300;
+      font-size: 12px;
+      letter-spacing: 0.55em;
+      color: rgba(245, 243, 239, 0.72);
+      text-indent: 0.55em;
+      opacity: 0;
+      text-transform: uppercase;
+      animation: atlas-sub-in 0.8s ease 1.1s forwards;
+    }
+    @keyframes atlas-plate-in {
+      from { opacity: 0; transform: scale(0.96); filter: blur(8px); }
+      to   { opacity: 1; transform: scale(1);    filter: blur(0);   }
+    }
+    @keyframes atlas-word-in {
+      from { opacity: 0; letter-spacing: 1em; text-indent: 1em; filter: blur(6px); }
+      to   { opacity: 1; letter-spacing: 0.42em; text-indent: 0.42em; filter: blur(0); }
+    }
+    @keyframes atlas-rule-draw {
+      from { width: 0;   opacity: 0; }
+      to   { width: min(340px, 38vw); opacity: 1; }
+    }
+    @keyframes atlas-sub-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 0.9; transform: none; }
+    }
+    @keyframes atlas-intro-sweep {
+      from { transform: translateX(-100%); }
+      to   { transform: translateX(100%); }
+    }
+    @keyframes atlas-intro-hide {
+      0%, 75%  { opacity: 1; }
+      100%     { opacity: 0; visibility: hidden; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #atlas-intro { animation-duration: 0.4s; }
+      #atlas-intro::before,
+      #atlas-intro .intro-core,
+      #atlas-intro .intro-word,
+      #atlas-intro .intro-rule,
+      #atlas-intro .intro-sub {
+        animation-duration: 0.2s;
+        animation-delay: 0s;
+      }
+    }
+  </style>
 </head>
 
 <body>
+
+  <!-- Atlas intro splash — removed from DOM ~2.6s after load -->
+  <div id="atlas-intro" aria-hidden="true">
+    <div class="intro-core">
+      <div class="intro-word">ATLAS</div>
+      <div class="intro-rule"></div>
+      <div class="intro-sub">by M&amp;C</div>
+    </div>
+  </div>
+  <script>
+    // Remove splash from DOM after animation finishes so it never blocks clicks.
+    window.addEventListener('DOMContentLoaded', function () {
+      setTimeout(function () {
+        var el = document.getElementById('atlas-intro');
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+      }, 2650);
+    });
+  </script>
 
   <!-- Title Bar -->
   <div class="title-bar">
@@ -99,6 +250,49 @@
           <div class="cc-item"><span class="k">Core Folders</span><span class="v" id="cc-core-folders">-</span></div>
         </div>
         <div class="cc-footnote" id="cc-footnote">Latest run: none</div>
+      </div>
+
+      <!-- Live Market Ticker Strip -->
+      <div class="market-strip" id="market-strip">
+        <div class="ms-label">LIVE</div>
+        <div class="ms-tickers" id="ms-tickers">
+          <div class="ms-tick loading-pulse" data-sym="SPY">
+            <span class="ms-sym">SPY</span>
+            <span class="ms-price">—</span>
+            <span class="ms-chg ms-neutral">—</span>
+          </div>
+          <div class="ms-tick loading-pulse" data-sym="QQQ">
+            <span class="ms-sym">QQQ</span>
+            <span class="ms-price">—</span>
+            <span class="ms-chg ms-neutral">—</span>
+          </div>
+          <div class="ms-tick loading-pulse" data-sym="NVDA">
+            <span class="ms-sym">NVDA</span>
+            <span class="ms-price">—</span>
+            <span class="ms-chg ms-neutral">—</span>
+          </div>
+          <div class="ms-tick loading-pulse" data-sym="AAPL">
+            <span class="ms-sym">AAPL</span>
+            <span class="ms-price">—</span>
+            <span class="ms-chg ms-neutral">—</span>
+          </div>
+          <div class="ms-tick loading-pulse" data-sym="BTC-USD">
+            <span class="ms-sym">BTC</span>
+            <span class="ms-price">—</span>
+            <span class="ms-chg ms-neutral">—</span>
+          </div>
+          <div class="ms-tick loading-pulse" data-sym="GLD">
+            <span class="ms-sym">GLD</span>
+            <span class="ms-price">—</span>
+            <span class="ms-chg ms-neutral">—</span>
+          </div>
+          <div class="ms-tick loading-pulse" data-sym="IWM">
+            <span class="ms-sym">IWM</span>
+            <span class="ms-price">—</span>
+            <span class="ms-chg ms-neutral">—</span>
+          </div>
+        </div>
+        <div class="ms-updated" id="ms-updated">—</div>
       </div>
 
       <!-- Modules Header -->
@@ -814,6 +1008,12 @@
         <input type="text" id="analysis-ticker" placeholder="Ticker (e.g. SPY)" value="SPY"
           style="padding:10px; border-radius:8px; border:1px solid var(--bdr-soft); width:120px; font-weight:bold;">
         <button id="analysis-load-btn" class="btn primary">Load Data</button>
+        <div style="display:flex;gap:10px;align-items:center;margin-left:6px;font-size:11px;font-family:monospace;">
+          <span style="color:#00ff88;">■</span><span style="color:var(--txt-muted);">Candle</span>
+          <span style="color:#f39c12;">─</span><span style="color:var(--txt-muted);">MA20</span>
+          <span style="color:#9b59b6;">─</span><span style="color:var(--txt-muted);">MA50</span>
+          <span style="color:#334466;">▪</span><span style="color:var(--txt-muted);">Vol</span>
+        </div>
         <div style="flex:1;"></div>
         <div class="stat-box" style="padding:5px 15px;">
           <div class="label">Current Price</div>
@@ -865,9 +1065,9 @@
           <div id="aria-core-state" style="font-size:11px;font-family:monospace;color:#4488ff;margin-top:2px;">IDLE -
             All systems nominal</div>
           <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;" id="aria-core-metrics">
-            <span
-              style="background:var(--card-bg);border:1px solid var(--bdr-strong);padding:2px 8px;border-radius:10px;font-size:10px;font-family:monospace;color:var(--text-secondary);">Swarm:
-              Online</span>
+            <span id="swarm-pill" title="Click to open AI Agents panel" onclick="switchView('agents')"
+              style="background:var(--card-bg);border:1px solid var(--bdr-strong);padding:2px 8px;border-radius:10px;font-size:10px;font-family:monospace;color:var(--text-secondary);cursor:pointer;">Swarm:
+              <span id="swarm-pill-value">…</span></span>
             <span
               style="background:var(--card-bg);border:1px solid var(--bdr-strong);padding:2px 8px;border-radius:10px;font-size:10px;font-family:monospace;color:var(--text-secondary);">NLP:
               Ready</span>
@@ -1259,6 +1459,9 @@
     <!-- ===== VIEW: MMO — Mau's Market Ontology ===== -->
     <div id="view-mmo" class="view-section"></div>
 
+    <!-- ===== VIEW: MARKET BRAIN — Unified ARIA Orchestrator ===== -->
+    <div id="view-brain" class="view-section"></div>
+
     <!-- ===== VIEW: PLAYROOM ===== -->
     <div id="view-playroom" class="view-section">
       <div class="section-header-row">
@@ -1436,6 +1639,17 @@
         </svg>
       </div>
 
+      <!-- Market Brain — Unified ARIA Orchestrator (hexagon-brain icon) -->
+      <div class="nav-item" onclick="switchView('brain')" id="nav-brain" title="Market Brain — Unified Synthesis">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <polygon points="12 2 21 7 21 17 12 22 3 17 3 7" stroke-linejoin="round" />
+          <circle cx="9" cy="10" r="1.4" fill="currentColor" stroke="none" />
+          <circle cx="15" cy="10" r="1.4" fill="currentColor" stroke="none" />
+          <circle cx="12" cy="15" r="1.4" fill="currentColor" stroke="none" />
+          <path d="M9 10 L12 15 L15 10 M9 10 L15 10" stroke-linecap="round" />
+        </svg>
+      </div>
+
       <!-- Thought Map Icon -->
       <div class="nav-item" onclick="switchView('thought')" id="nav-thought">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -1487,9 +1701,9 @@
 
   </div>
 
-  <script src="app.js?v=2026.03.08-v2"></script>
-  <script src="scenario.js?v=2026.02.11-v2"></script>
-  <script src="analysis.js"></script>
+  <script src="app.js?v=2026.04.20-v1"></script>
+  <script src="scenario.js?v=2026.04.20-v1"></script>
+  <script src="analysis.js?v=2026.04.20-v1"></script>
   <script src="https://unpkg.com/three@0.159.0/build/three.min.js"></script>
   <script src="viz_uhq_core.js?v=2026.03.10-uhq-v1"></script> <!-- UHQ: ACES · sRGB · soft glow particles · bloom sim -->
   <script src="finance.js?v=2026.02.18-v10"></script> <!-- Portfolio + 3D -->
@@ -1498,12 +1712,13 @@
   <script src="viz_lab.js?v=2026.03.10-uhq-v1"></script> <!-- Viz Lab — 29 live renders + UHQ -->
   <script src="viz_mmo.js?v=2026.03.10-uhq-v2"></script> <!-- MMO Viz Lab — UHQ v2 -->
   <script src="strategy.js?v=2026.02.27-v1"></script> <!-- Multi-Strategy + Correlation UI -->
-  <script src="terminal.js"></script>
+  <script src="terminal.js?v=2026.04.20-v1"></script>
   <script src="info.js?v=2026.02.27-v1"></script> <!-- Info Module Documentation -->
   <script src="derivatives.js?v=2026.02.27-v1"></script> <!-- Derivatives + Black-Scholes + Signal Composer -->
   <script src="decision.js?v=2026.02.27-v1"></script> <!-- Decision Center + Approval Workflow -->
   <script src="trader.js?v=2026.03.01-v1"></script> <!-- ARIA Trader — Composite Score Engine -->
   <script src="mmo.js?v=2026.03.09-quantum-v2"></script> <!-- MMO — Mau's Market Ontology -->
+  <script src="brain.js?v=2026.04.23-v1"></script> <!-- Market Brain — Unified ARIA Orchestrator -->
   <script src="playroom.js?v=2026.03.08-v1"></script> <!-- Playroom -->
   <script src="playroom_gitcity.js?v=2026.03.08-v1"></script> <!-- Playroom Git City -->
   <script src="playroom_racing.js?v=2026.03.08-v1"></script> <!-- Playroom Racing -->
@@ -1513,6 +1728,7 @@
   <script src="rl_lab.js?v=2026.03.07-v1"></script> <!-- RL Lab -->
   <script src="thought_map.js?v=2026.03.08-v2"></script> <!-- Thought Map -->
   <script src="agents.js?v=2026.03.08-v3"></script> <!-- AI Agents -->
+  <script src="agent_swarm.js?v=2026.04.27-v1"></script> <!-- Atlas OS Swarm Bridge -->
   <script src="signal_terminal.js?v=2026.03.15-v1"></script> <!-- Signal Terminal -->
   <script>
     // View Switcher Logic
@@ -1531,17 +1747,19 @@
         'realestate': 'nav-finance',
         'practice': 'nav-practice',
         'chat': 'nav-chat',
-        'analysis': null,
+        'analysis': 'nav-home',
+        'scenario': null,
         'vizlab': 'nav-vizlab',
         'info': 'nav-info',
         'derivatives': 'nav-derivatives',
         'decision': 'nav-decision',
         'mmo': 'nav-mmo',
+        'brain': 'nav-brain',
         'playroom': 'nav-playroom',
         'trader': 'nav-trader',
-        'indicators': null,
-        'paper': null,
-        'rl': null,
+        'indicators': 'nav-derivatives',
+        'paper': 'nav-trader',
+        'rl': 'nav-agents',
         'thought': 'nav-thought',
         'agents': 'nav-agents',
         'signal-terminal': 'nav-signals',
@@ -1608,6 +1826,17 @@
         AriaCore.boot('aria-core-mount');
         _startAriaClock();
       }
+      if (viewName === 'analysis') {
+        setTimeout(() => {
+          if (typeof loadAnalysisData === 'function' && !window._analysisBooted) {
+            window._analysisBooted = true;
+            loadAnalysisData();
+          }
+        }, 80);
+      }
+      if (viewName === 'scenario' && typeof ScenarioTimeMachine !== 'undefined') {
+        if (typeof ScenarioTimeMachine.init === 'function') ScenarioTimeMachine.init();
+      }
       if (viewName === 'mmo' && typeof MMO !== 'undefined') {
         setTimeout(() => {
           if (!window._mmoInitDone && typeof MMO.analyze === 'function') {
@@ -1615,6 +1844,9 @@
             window._mmoInitDone = true;
           }
         }, 80);
+      }
+      if (viewName === 'brain' && typeof MarketBrain !== 'undefined') {
+        MarketBrain.init();
       }
       if (viewName === 'signal-terminal' && typeof SignalTerminal !== 'undefined') {
         SignalTerminal.init();

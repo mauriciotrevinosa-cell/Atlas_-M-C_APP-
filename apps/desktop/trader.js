@@ -15,8 +15,6 @@ const AriaTrader = (() => {
   let _currentResult   = null;
   let _screenResults   = [];
   let _scoreGaugeAnim  = null;
-  let _radarChart      = null;    // Chart.js radar
-  let _equityChart     = null;    // backtest line
 
   // Default watchlist
   const DEFAULT_WATCH = ['AAPL','MSFT','NVDA','GOOGL','TSLA','AMZN','META','JPM','V','AMD'];
@@ -60,7 +58,7 @@ const AriaTrader = (() => {
       <input id="trader-ticker-input" type="text" value="AAPL"
              placeholder="Ticker…" autocomplete="off"
              onkeydown="if(event.key==='Enter') AriaTrader.analyze(this.value.toUpperCase())"/>
-      <button class="trader-btn-primary" onclick="AriaTrader.analyze(document.getElementById('trader-ticker-input').value.toUpperCase())">
+      <button class="trader-btn-primary" id="trader-analyze-btn" onclick="AriaTrader.analyze(document.getElementById('trader-ticker-input').value.toUpperCase())">
         Analyze
       </button>
       <button class="trader-btn-secondary" onclick="AriaTrader.openScreener()">
@@ -670,11 +668,68 @@ const AriaTrader = (() => {
   }
 
   // ─── Screener ─────────────────────────────────────────────────────────────
+  // History/Hash routing: without this, pressing the native browser Back button
+  // while the screener is open unloads the whole Atlas SPA (because no other
+  // view has pushed a history entry either). We push a sentinel history state
+  // when opening, and a single popstate listener closes the card on Back.
+  let _screenerRouterBound = false;
+
+  function _bindScreenerRouter() {
+    if (_screenerRouterBound) return;
+    _screenerRouterBound = true;
+    window.addEventListener('popstate', (ev) => {
+      const c = document.getElementById('trader-screener-card');
+      if (!c) return;
+      const isOpen = c.style.display === 'block';
+      const stillScreener = !!(ev.state && ev.state.ariaTraderScreener === true);
+      // Popped off the screener state while the card is visible → close it.
+      if (isOpen && !stillScreener) {
+        c.style.display = 'none';
+      }
+    });
+    // Also tolerate manual hash edits (e.g. user pastes a URL without the
+    // screener fragment while card is open).
+    window.addEventListener('hashchange', () => {
+      const c = document.getElementById('trader-screener-card');
+      if (!c) return;
+      if (c.style.display === 'block' && !location.hash.includes('trader/screener')) {
+        c.style.display = 'none';
+      }
+    });
+  }
+
   function openScreener() {
     const card = document.getElementById('trader-screener-card');
     if (!card) return;
     card.style.display = 'block';
     card.scrollIntoView({ behavior: 'smooth' });
+
+    // Bind once, then push a dedicated history entry so Back = close screener.
+    _bindScreenerRouter();
+    const alreadyOnScreenerState =
+      history.state && history.state.ariaTraderScreener === true;
+    if (!alreadyOnScreenerState) {
+      try {
+        history.pushState(
+          { ariaTraderScreener: true },
+          '',
+          '#trader/screener'
+        );
+      } catch (_) {
+        /* History API unavailable — fall back to simple toggle. */
+      }
+    }
+  }
+
+  function closeScreener() {
+    const card = document.getElementById('trader-screener-card');
+    if (card) card.style.display = 'none';
+    // If we are currently on the screener history state, pop back to the
+    // prior entry (which the browser treats as a same-document nav, so no
+    // page reload). Guard so we don't unload the app if state is null.
+    if (history.state && history.state.ariaTraderScreener === true) {
+      try { history.back(); } catch (_) { /* no-op */ }
+    }
   }
 
   async function runScreener() {
@@ -1135,9 +1190,19 @@ const AriaTrader = (() => {
   function _setLoading(on) {
     const ld = document.getElementById('trader-loading');
     const sc = document.getElementById('trader-score-content');
-    if (!ld || !sc) return;
-    ld.style.display = on ? 'flex' : 'none';
-    if (on) sc.style.display = 'none';
+    if (ld && sc) {
+      if (on) {
+        ld.innerHTML = '<div class="trader-spinner"></div><span>Analyzing...</span>';
+        sc.style.display = 'none';
+      }
+      ld.style.display = on ? 'flex' : 'none';
+    }
+
+    const btn = document.getElementById('trader-analyze-btn');
+    if (btn) {
+      btn.disabled = on;
+      btn.textContent = on ? 'Analyzing...' : 'Analyze';
+    }
   }
 
   function _hideResult() {
@@ -1216,7 +1281,7 @@ const AriaTrader = (() => {
   }
 
   // ─── Public API ───────────────────────────────────────────────────────────
-  return { init, analyze, loadWatchlist, openScreener, runScreener, askARIA, loadDiscrepancy };
+  return { init, analyze, loadWatchlist, openScreener, closeScreener, runScreener, askARIA, loadDiscrepancy };
 })();
 
 // Auto-init when DOM ready, but only if view exists

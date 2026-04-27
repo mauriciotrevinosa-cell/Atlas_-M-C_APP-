@@ -27,7 +27,7 @@ const PlayRoom = (function () {
             title: 'Agent Swarm Simulator',
             description: 'Multi-agent system simulation demonstrating flocking behaviors and consensus algorithms.',
             icon: '🐝',
-            status: 'Offline',
+            status: 'Coming Soon',
             color: '#f1c40f'
         }
     ];
@@ -39,11 +39,15 @@ const PlayRoom = (function () {
         grid.innerHTML = '';
 
         sandboxExperiments.forEach(exp => {
+            const isOnline = exp.status === 'Online';
+            const isComingSoon = exp.id === 'swarm-sim';
             const card = document.createElement('div');
             card.className = 'scenario-card main';
-            card.style.cssText = `border-top: 2px solid ${exp.color}; display:flex; flex-direction:column; gap:10px; cursor:pointer; transition: transform 0.2s ease;`;
-            card.onmouseover = () => card.style.transform = 'translateY(-2px)';
-            card.onmouseout = () => card.style.transform = 'translateY(0)';
+            card.style.cssText = `border-top: 2px solid ${exp.color}; display:flex; flex-direction:column; gap:10px; cursor:${isOnline ? 'pointer' : 'default'}; transition: transform 0.2s ease;`;
+            if (isOnline) {
+                card.onmouseover = () => card.style.transform = 'translateY(-2px)';
+                card.onmouseout = () => card.style.transform = 'translateY(0)';
+            }
 
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -58,11 +62,19 @@ const PlayRoom = (function () {
                 <p style="font-size:13px; color:#888; margin:0; line-height:1.4; flex-grow:1;">
                     ${exp.description}
                 </p>
+                ${isComingSoon ? `
+                <div class="playroom-coming-soon">
+                    <div class="coming-soon-icon">${exp.icon}</div>
+                    <div>Swarm Intelligence Simulator</div>
+                    <div class="coming-soon-note">Scheduled for next sprint - agent mesh in progress</div>
+                </div>
+                ` : `
                 <div style="padding-top:12px; border-top:1px solid #333; margin-top:5px;">
                     <button class="btn ${exp.status === 'Online' ? 'primary' : 'secondary'}" onclick="PlayRoom.launch('${exp.id}')" style="width:100%; ${exp.status === 'Online' ? `background:${exp.color}15; border-color:${exp.color}40; color:${exp.color};` : ''}" ${exp.status !== 'Online' ? 'disabled' : ''}>
                         Initialize Engine
                     </button>
                 </div>
+                `}
             `;
             grid.appendChild(card);
         });
@@ -102,6 +114,14 @@ const PlayRoom = (function () {
             window.PlayRoomGitCity.launch('playroom-mount');
         } else if (expId === 'racing-rl' && window.PlayRoomRacing) {
             window.PlayRoomRacing.launch('playroom-mount');
+        } else if (expId === 'swarm-sim') {
+            document.getElementById('playroom-mount').innerHTML = `
+                <div class="playroom-coming-soon" style="height:100%;">
+                    <div class="coming-soon-icon">🐝</div>
+                    <div>Swarm Intelligence Simulator</div>
+                    <div class="coming-soon-note">Scheduled for next sprint - agent mesh in progress</div>
+                </div>
+            `;
         } else {
             document.getElementById('playroom-mount').innerHTML = `
                 <div style="color:#e74c3c; padding:20px; font-family:monospace;">

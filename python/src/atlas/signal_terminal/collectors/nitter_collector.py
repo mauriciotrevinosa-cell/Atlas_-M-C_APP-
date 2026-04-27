@@ -108,7 +108,7 @@ class NitterCollector(BaseCollector):
                 el = item.find(tag)
                 return (el.text or "").strip() if el is not None else ""
 
-            pub = _parse_date(_t("pubDate")) or datetime.utcnow()
+            pub = _parse_date(_t("pubDate")) or datetime.now(timezone.utc)
             title = _t("title")
             link  = _t("link")
             desc  = _t("description")

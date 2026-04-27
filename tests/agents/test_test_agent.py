@@ -80,3 +80,87 @@ class TestTestAgentEdgeCases:
 
     def test_agent_name(self):
         assert TestAgent().name == "test_agent"
+
+
+class TestTestAgentParsingAndErrors:
+
+    def test_markdown_json_fence_parsed(self, task):
+        design = {
+            "functional_risks": ["auth bypass"],
+            "nominal_cases": [{"name": "test_valid_permission"}],
+            "edge_cases": [{"name": "test_empty_role"}],
+            "error_cases": [{"name": "test_bad_permission"}],
+            "fixtures_needed": ["user_factory"],
+            "pytest_starter_code": "def test_valid_permission():\n    assert True\n",
+            "missing_coverage": [],
+            "summary": "Designed tests.",
+        }
+        agent = TestAgent(llm_client=lambda p: f"```json\n{json.dumps(design)}\n```")
+
+        result = agent.safe_run(task)
+
+        assert result.status == "success"
+        assert result.result["functional_risks"] == ["auth bypass"]
+
+    def test_embedded_json_parsed(self, task):
+        design = {
+            "functional_risks": [],
+            "nominal_cases": [{"name": "test_happy_path"}],
+            "edge_cases": [],
+            "error_cases": [],
+            "fixtures_needed": [],
+            "pytest_starter_code": "def test_happy_path():\n    assert True\n",
+            "missing_coverage": [],
+            "summary": "Designed.",
+        }
+        agent = TestAgent(llm_client=lambda p: f"LLM notes before {json.dumps(design)}")
+
+        result = agent.safe_run(task)
+
+        assert result.status == "success"
+        assert result.metadata["n_nominal"] == 1
+
+    def test_garbage_json_returns_error(self, task):
+        agent = TestAgent(llm_client=lambda p: "not json")
+
+        result = agent.safe_run(task)
+
+        assert result.status == "error"
+        assert result.errors
+        assert "raw_response" in result.result
+
+    def test_missing_keys_mark_result_partial(self, task):
+        agent = TestAgent(llm_client=lambda p: json.dumps({"summary": "too small"}))
+
+        result = agent.safe_run(task)
+
+        assert result.status == "partial"
+        assert any("Missing test keys" in err for err in result.errors)
+
+    def test_pytest_starter_without_tests_is_partial(self, task):
+        design = {
+            "functional_risks": [],
+            "nominal_cases": [],
+            "edge_cases": [],
+            "error_cases": [],
+            "fixtures_needed": [],
+            "pytest_starter_code": "print('no tests here')",
+            "missing_coverage": [],
+            "summary": "Designed.",
+        }
+        agent = TestAgent(llm_client=lambda p: json.dumps(design))
+
+        result = agent.safe_run(task)
+
+        assert result.status == "partial"
+        assert any("no test functions" in err for err in result.errors)
+
+    def test_generate_exception_degrades_to_stub(self, task):
+        class FailingRouter:
+            def generate(self, prompt, agent_name, risk_level, model_prefs):
+                raise RuntimeError("timeout")
+
+        result = TestAgent(llm_client=FailingRouter()).safe_run(task)
+
+        assert result.status == "success"
+        assert "pytest_starter_code" in result.result

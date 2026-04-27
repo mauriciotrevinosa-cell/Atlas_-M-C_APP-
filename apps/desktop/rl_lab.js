@@ -449,6 +449,7 @@ window.RLLab = (() => {
           <button class="rll-btn rll-stop"  id="rll-stop"  onclick="RLLab.stopTraining()" disabled>■ Stop</button>
           <button class="rll-btn rll-reset" onclick="RLLab.reset()">↺ Reset</button>
         </div>
+        <div id="rll-status-msg" style="display:none;margin-top:10px;font-size:12px;color:#ff8888;font-family:monospace;"></div>
       </div>
 
       <!-- Live Metrics -->
@@ -679,6 +680,11 @@ window.RLLab = (() => {
       for (let s = 0; s < EPISODE_LEN; s++) {
         const a               = _agent.act(state);
         const { nextSt, reward, done, totalRet } = _env.step_(a);
+        if (!Number.isFinite(reward)) {
+          stopTraining();
+          showError('Training diverged - try lower learning rate');
+          return;
+        }
         _agent.buf.push(state, a, reward, nextSt, done);
         _agent.learn();
         if (a !== 0) nTrades++;
@@ -758,6 +764,7 @@ window.RLLab = (() => {
     if (!_initialized) init();
     if (_running) return;
     _running = true;
+    clearStatusMessage();
 
     const s = document.getElementById('rll-start');
     const t = document.getElementById('rll-stop');
@@ -779,6 +786,7 @@ window.RLLab = (() => {
 
   function reset() {
     stopTraining();
+    clearStatusMessage();
     if (_agent) _agent.reset();
     _env      = new TradingEnv(_ticker);
     _returns  = [];
@@ -799,6 +807,20 @@ window.RLLab = (() => {
     _speed = v;
     const el = document.getElementById('rll-spd-val');
     if (el) el.textContent = `${v} ep/frame`;
+  }
+
+  function showError(message) {
+    const el = document.getElementById('rll-status-msg');
+    if (!el) return;
+    el.textContent = message;
+    el.style.display = 'block';
+  }
+
+  function clearStatusMessage() {
+    const el = document.getElementById('rll-status-msg');
+    if (!el) return;
+    el.textContent = '';
+    el.style.display = 'none';
   }
 
   return { init, startTraining, stopTraining, reset, _setTicker, _setMaxEp, _setSpeed };

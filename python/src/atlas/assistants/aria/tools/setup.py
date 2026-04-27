@@ -49,6 +49,26 @@ def register_all_tools(aria: "ARIA") -> int:
     _register(AnalyzeRiskTool, "AnalyzeRiskTool")
     _register(RunBacktestTool, "RunBacktestTool")
 
+    # Live data registry tools
+    from atlas.assistants.aria.tools.provider_registry_tools import (
+        AtlasFilingsTool,
+        AtlasMacroDataTool,
+        AtlasMarketDataTool,
+        AtlasNewsTool,
+        AtlasSentimentTool,
+    )
+
+    _register(AtlasMarketDataTool, "AtlasMarketDataTool")
+    _register(AtlasMacroDataTool, "AtlasMacroDataTool")
+    _register(AtlasNewsTool, "AtlasNewsTool")
+    _register(AtlasFilingsTool, "AtlasFilingsTool")
+    _register(AtlasSentimentTool, "AtlasSentimentTool")
+
+    # Agent orchestration
+    from atlas.assistants.aria.tools.agent_task import AtlasAgentTaskTool
+
+    _register(AtlasAgentTaskTool, "AtlasAgentTaskTool")
+
     logger.info("ARIA tool registration complete: %d tool(s) registered.", registered)
     return registered
 

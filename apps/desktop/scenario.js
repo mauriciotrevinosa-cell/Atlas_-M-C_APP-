@@ -48,30 +48,30 @@ function initScenChart() {
         width: scenChartContainer.clientWidth,
         height: scenChartContainer.clientHeight,
         layout: {
-            background: { type: 'solid', color: 'white' },
-            textColor: 'black',
+            background: { type: 'solid', color: '#0d0d1a' },
+            textColor: '#8892b0',
         },
         grid: {
-            vertLines: { color: '#f0f0f0' },
-            horzLines: { color: '#f0f0f0' },
+            vertLines: { color: 'rgba(255,255,255,0.04)' },
+            horzLines: { color: 'rgba(255,255,255,0.04)' },
         },
         crosshair: {
             mode: LightweightCharts.CrosshairMode.Normal,
         },
         rightPriceScale: {
-            borderColor: '#cccccc',
+            borderColor: 'rgba(255,255,255,0.1)',
         },
         timeScale: {
-            borderColor: '#cccccc',
+            borderColor: 'rgba(255,255,255,0.1)',
             timeVisible: true,
         },
     });
     scenCandleSeries = scenChart.addCandlestickSeries({
-        upColor:   '#4caf50',
-        downColor: '#ef5350',
+        upColor:   '#00ff88',
+        downColor: '#ff4466',
         borderVisible: false,
-        wickUpColor:   '#4caf50',
-        wickDownColor: '#ef5350',
+        wickUpColor:   '#00ff88',
+        wickDownColor: '#ff4466',
     });
     // Resizer
     new ResizeObserver(entries => {
@@ -627,23 +627,31 @@ function processStep(state) {
         tbody.innerHTML = '';
         Object.keys(state.positions).forEach(ticker => {
             const pos = state.positions[ticker];
+            const qty = Number(pos.qty) || 0;
+            const avgPrice = Number(pos.avg_price) || 0;
+            const lastPrice = Number(pos.last_price) || 0;
             // Only show active
-            if (pos.qty > 0) {
-                const val = pos.qty * pos.last_price;
-                const row = `
-                        <tr style="border-bottom:1px solid #222;">
-                            <td style="padding:5px;">${ticker}</td>
-                            <td style="padding:5px;">${pos.qty}</td>
-                            <td style="padding:5px;">$${pos.avg_price.toFixed(2)}</td>
-                            <td style="padding:5px;">$${pos.last_price.toFixed(2)}</td>
-                            <td style="padding:5px;">$${val.toFixed(2)}</td>
-                        </tr>
-                    `;
-                tbody.innerHTML += row;
+            if (qty > 0) {
+                const val = qty * lastPrice;
+                const row = document.createElement('tr');
+                row.style.borderBottom = '1px solid #222';
+                [
+                    ticker,
+                    qty,
+                    `$${avgPrice.toFixed(2)}`,
+                    `$${lastPrice.toFixed(2)}`,
+                    `$${val.toFixed(2)}`
+                ].forEach(value => {
+                    const cell = document.createElement('td');
+                    cell.style.padding = '5px';
+                    cell.textContent = value;
+                    row.appendChild(cell);
+                });
+                tbody.appendChild(row);
             }
         });
 
-        if (tbody.innerHTML === '') {
+        if (!tbody.children.length) {
             tbody.innerHTML = '<tr><td colspan="5" style="padding:10px; text-align:center; color:#555;">Cash Only</td></tr>';
         }
     }

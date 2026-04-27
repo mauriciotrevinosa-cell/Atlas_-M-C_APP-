@@ -5,7 +5,7 @@ All public methods are synchronous; call from a thread-pool if needed in async c
 from __future__ import annotations
 import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, List, Optional
@@ -25,6 +25,10 @@ def _dt(v: Optional[str]) -> Optional[datetime]:
 
 def _str(v: Optional[datetime]) -> Optional[str]:
     return v.isoformat() if v else None
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 class SignalRepository:
@@ -90,14 +94,14 @@ class SignalRepository:
                     UPDATE st_sources
                     SET last_fetched_at=?, last_error=?, error_count=error_count+1
                     WHERE id=?
-                """, (datetime.utcnow().isoformat(), error, source_id))
+                """, (_now_iso(), error, source_id))
             else:
                 conn.execute("""
                     UPDATE st_sources
                     SET last_fetched_at=?, last_error=NULL, error_count=0,
                         total_fetched=total_fetched+?
                     WHERE id=?
-                """, (datetime.utcnow().isoformat(), count, source_id))
+                """, (_now_iso(), count, source_id))
 
     @staticmethod
     def _row_to_source(row) -> Source:
@@ -114,6 +118,14 @@ class SignalRepository:
 
     def insert_signal(self, sig: Signal) -> None:
         with self._lock, self._conn() as conn:
+            conn.execute("""
+                INSERT OR IGNORE INTO st_sources
+                  (id, name, type, url, enabled, refresh_interval, config_json)
+                VALUES (?,?,?,?,?,?,?)
+            """, (
+                sig.source_id, sig.source_id or "unknown", "manual", "",
+                1, 300, "{}",
+            ))
             conn.execute("""
                 INSERT OR IGNORE INTO st_signals
                   (id, source_id, raw_id, url, title, body, author,
@@ -250,7 +262,7 @@ class SignalRepository:
 
     def record_alert_trigger(self, rule_id: str, signal_id: str, details: Dict[str, Any] = None):
         import uuid as _uuid
-        now = datetime.utcnow().isoformat()
+        now = _now_iso()
         with self._lock, self._conn() as conn:
             conn.execute("""
                 INSERT INTO st_alert_triggers (id, rule_id, signal_id, fired_at, details_json)

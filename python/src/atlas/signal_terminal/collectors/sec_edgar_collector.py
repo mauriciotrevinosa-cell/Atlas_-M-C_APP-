@@ -102,7 +102,7 @@ class SECEdgarCollector(BaseCollector):
             link_el = entry.find("a:link", ns)
             link    = link_el.get("href", "") if link_el is not None else ""
             summary = _t("summary")
-            updated = _parse_date(_t("updated")) or datetime.utcnow()
+            updated = _parse_date(_t("updated")) or datetime.now(timezone.utc)
 
             # Extract filer info from title: "form 4 - COMPANY NAME (CIK)"
             author = ""

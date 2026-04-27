@@ -27,6 +27,7 @@ window.VizLab = (() => {
   let _mouseX = 0;
   let _mouseY = 0;
   let _localCleanup = null;   // cleanup fn returned by local-renderer vizzes
+  let _launchSeq = 0;         // invalidates delayed launches after close/switch
 
   // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function lerp(a, b, t) { return a + (b - a) * t; }
@@ -49,11 +50,19 @@ window.VizLab = (() => {
   }
 
   function _stop() {
+    _launchSeq += 1;
     // Clean up any local-renderer viz (psaturn, pheart, nexus vizzes, etc.)
-    if (_localCleanup) { try { _localCleanup(); } catch (e) { } _localCleanup = null; }
+    if (_localCleanup) {
+      try { _localCleanup(); } catch (e) {
+        console.warn('[VizLab] local cleanup failed:', e.message);
+      }
+      _localCleanup = null;
+    }
     if (_animFrameId) { cancelAnimationFrame(_animFrameId); _animFrameId = null; }
     if (_threeRenderer) {
-      try { _threeRenderer.dispose(); } catch (e) { }
+      try { _threeRenderer.dispose(); } catch (e) {
+        console.warn('[VizLab] renderer dispose failed:', e.message);
+      }
       _threeRenderer = null; _threeScene = null; _threeCamera = null;
     }
     if (_ctx && _canvas) { _ctx.clearRect(0, 0, _canvas.width, _canvas.height); }
@@ -98,8 +107,10 @@ window.VizLab = (() => {
 
     _activeViz = vizName;
     _mouseX = 0; _mouseY = 0;
+    const launchSeq = ++_launchSeq;
     // Save cleanup fn so _stop() can tear down local renderers properly
     setTimeout(() => {
+      if (_launchSeq !== launchSeq || _activeViz !== vizName) return;
       if (VIZZES[vizName]) _localCleanup = VIZZES[vizName]() || null;
     }, 80);
   }
@@ -703,7 +714,9 @@ window.VizLab = (() => {
           l.sprite.material.map.dispose();
           l.sprite.material.dispose();
         });
-      } catch (e) { }
+      } catch (e) {
+        console.warn('[VizLab] force graph cleanup failed:', e.message);
+      }
     };
   }
 
@@ -3314,7 +3327,10 @@ window.VizLab = (() => {
         const r = await fetch(BASE + path, { signal: AbortSignal.timeout(4000) });
         if (!r.ok) throw new Error(r.status);
         return await r.json();
-      } catch { return null; }
+      } catch (err) {
+        console.warn('[VizLab] live data bridge request failed:', err.message);
+        return null;
+      }
     }
     return { get };
   })();
@@ -4464,19 +4480,27 @@ window.VizLab = (() => {
     }
 
     // Drag interaction
-    canvas.addEventListener('mousedown', e => {
+    const onMouseDown = e => {
       const r = canvas.getBoundingClientRect();
       const px = e.clientX - r.left, py = e.clientY - r.top;
       dragging = nodes.find(n => Math.hypot(n.x - px, n.y - py) < n.r + 6) || null;
-    });
-    canvas.addEventListener('mousemove', e => {
+    };
+    const onMouseMove = e => {
       const r = canvas.getBoundingClientRect();
       if (dragging) { dragging.x = e.clientX - r.left; dragging.y = e.clientY - r.top; dragging.vx = 0; dragging.vy = 0; }
-    });
-    canvas.addEventListener('mouseup', () => { dragging = null; });
+    };
+    const onMouseUp = () => { dragging = null; };
+    canvas.addEventListener('mousedown', onMouseDown);
+    canvas.addEventListener('mousemove', onMouseMove);
+    canvas.addEventListener('mouseup', onMouseUp);
 
     animId = requestAnimationFrame(draw);
-    return () => { cancelAnimationFrame(animId); canvas.removeEventListener('mousedown', () => { }); };
+    return () => {
+      cancelAnimationFrame(animId);
+      canvas.removeEventListener('mousedown', onMouseDown);
+      canvas.removeEventListener('mousemove', onMouseMove);
+      canvas.removeEventListener('mouseup', onMouseUp);
+    };
   }
 
   /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -4943,6 +4967,8 @@ window.VizLab = (() => {
 
     return () => {
       cancelAnimationFrame(animId);
+      const label = document.querySelector('#viz-overlay .dcf-label');
+      if (label) label.remove();
       renderer.dispose();
       if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
     };
@@ -5953,7 +5979,9 @@ window.VizLab = (() => {
         ).join('');
         _renderGrid();
         _log(`Signal: ${sym} â†’ ${action}${cf ? ' (' + cf + ')' : ''}`, '#1a2a3a');
-      } catch (_e) { /* silent */ }
+      } catch (err) {
+        console.warn('[VizLab] live monitor signal fetch failed:', err.message);
+      }
     }
 
     // â”€â”€ Boot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

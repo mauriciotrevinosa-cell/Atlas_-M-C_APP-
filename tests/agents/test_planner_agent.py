@@ -185,3 +185,49 @@ class TestPlannerAgentErrors:
         agent  = PlannerAgent()
         assert agent.name == "planner_agent"
         assert agent.version == "v1"
+
+    def test_markdown_json_fence_parsed(self, basic_task):
+        plan = {
+            "expected_result": "Feature shipped",
+            "assumptions": [],
+            "risks": [],
+            "steps": ["Inspect", "Implement", "Test"],
+            "files_to_touch": ["auth.py"],
+            "tests_required": ["test_auth"],
+            "validation_criteria": ["pytest passes"],
+            "not_now": [],
+            "summary": "Plan in fenced JSON.",
+        }
+        agent = PlannerAgent(llm_client=lambda prompt: f"```json\n{json.dumps(plan)}\n```")
+
+        result = agent.safe_run(basic_task)
+
+        assert result.status == "success"
+        assert result.result["steps"] == ["Inspect", "Implement", "Test"]
+
+    def test_embedded_json_parsed(self, basic_task):
+        plan = {
+            "expected_result": "Feature shipped",
+            "assumptions": [],
+            "risks": [],
+            "steps": ["Inspect"],
+            "files_to_touch": [],
+            "tests_required": [],
+            "validation_criteria": [],
+            "not_now": [],
+            "summary": "Plan embedded in text.",
+        }
+        agent = PlannerAgent(llm_client=lambda prompt: f"Sure, here is the plan: {json.dumps(plan)}")
+
+        result = agent.safe_run(basic_task)
+
+        assert result.status == "success"
+        assert result.summary == "Plan embedded in text."
+
+    def test_missing_keys_mark_result_partial(self, basic_task):
+        agent = PlannerAgent(llm_client=lambda prompt: json.dumps({"summary": "incomplete"}))
+
+        result = agent.safe_run(basic_task)
+
+        assert result.status == "partial"
+        assert any("Missing keys in plan" in err for err in result.errors)

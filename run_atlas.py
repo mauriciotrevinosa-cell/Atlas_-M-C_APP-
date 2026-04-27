@@ -7,6 +7,8 @@ Launcher script for the browser-based Atlas environment.
 from __future__ import annotations
 
 import argparse
+import logging
+import logging.handlers
 import os
 import re
 import socket
@@ -23,6 +25,26 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_ROOT / "python" / "src"))
 
+
+def _configure_file_logging(root: Path) -> None:
+    """Set up rotating file logging so the 24/7 machine doesn't fill its disk."""
+    logs_dir = root / "logs"
+    logs_dir.mkdir(exist_ok=True)
+    handler = logging.handlers.RotatingFileHandler(
+        logs_dir / "atlas.log",
+        maxBytes=10 * 1024 * 1024,  # 10 MB per file
+        backupCount=5,               # keep 5 rotations → max 50 MB
+        encoding="utf-8",
+    )
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s [%(name)s] %(levelname)s  %(message)s")
+    )
+    logging.root.addHandler(handler)
+    logging.root.setLevel(logging.INFO)
+
+
+_configure_file_logging(PROJECT_ROOT)
+
 from atlas.assistants.aria import ARIA
 from atlas.assistants.aria.tools import register_phase1_tools
 from atlas.assistants.aria.tools.setup import register_all_tools
@@ -30,6 +52,7 @@ from atlas.assistants.aria.tools.create_file import CreateFileTool
 from atlas.assistants.aria.tools.execute_code import ExecuteCodeTool
 from atlas.assistants.aria.tools.read_file import ReadFileTool
 from atlas.assistants.aria.tools.web_search import WebSearchTool
+from atlas.data_layer import get_provider_registry
 
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8088
@@ -254,6 +277,59 @@ def _configure_stdout_utf8() -> None:
                 pass
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# Premium terminal UI — Bloomberg / JetBrains aesthetic
+# Palette applied color psychology for tech/finance recruiter impression:
+#   • Deep navy  → trust, depth (Wall Street)
+#   • Electric blue / cyan → precision, modernity
+#   • Muted gold → excellence (used sparingly)
+#   • Silver/white → clarity, premium product
+#   • Mint green / soft amber → status signals that aren't loud
+# ═══════════════════════════════════════════════════════════════════════
+
+def _enable_ansi_on_windows() -> bool:
+    """Enable 24-bit truecolor ANSI on Windows console."""
+    if os.name != "nt":
+        return True
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        STD_OUTPUT_HANDLE = -11
+        ENABLE_VT = 0x0004
+        handle = kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
+        mode = ctypes.c_ulong()
+        if kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            kernel32.SetConsoleMode(handle, mode.value | ENABLE_VT)
+            return True
+    except Exception:
+        pass
+    return os.getenv("NO_COLOR") is None
+
+
+_ANSI_OK = _enable_ansi_on_windows() and os.getenv("NO_COLOR") is None
+
+
+class _C:
+    """24-bit ANSI palette. Falls back to plain text if unsupported."""
+    if _ANSI_OK:
+        RESET   = "\033[0m"
+        BOLD    = "\033[1m"
+        DIM     = "\033[2m"
+        ITALIC  = "\033[3m"
+        NAVY    = "\033[38;2;50;80;140m"
+        BLUE    = "\033[38;2;77;163;255m"
+        CYAN    = "\033[38;2;0;200;220m"
+        GOLD    = "\033[38;2;210;175;115m"
+        SILVER  = "\033[38;2;220;226;236m"
+        MUTED   = "\033[38;2;120;135;165m"
+        GREEN   = "\033[38;2;80;220;160m"
+        AMBER   = "\033[38;2;240;190;100m"
+        CORAL   = "\033[38;2;255;110;130m"
+    else:
+        RESET = BOLD = DIM = ITALIC = ""
+        NAVY = BLUE = CYAN = GOLD = SILVER = MUTED = GREEN = AMBER = CORAL = ""
+
+
 def _safe_print(message: str) -> None:
     """Print text without crashing if terminal encoding is limited."""
     try:
@@ -261,6 +337,71 @@ def _safe_print(message: str) -> None:
     except UnicodeEncodeError:
         fallback = message.encode("ascii", errors="replace").decode("ascii")
         print(fallback)
+
+
+def _print_banner() -> None:
+    """Premium ATLAS startup banner — ASCII wordmark + tagline."""
+    c = _C
+    rule = c.NAVY + "─" * 62 + c.RESET
+    _safe_print("")
+    _safe_print(rule)
+    _safe_print("")
+    wordmark = [
+        "   █████╗ ████████╗██╗      █████╗ ███████╗",
+        "  ██╔══██╗╚══██╔══╝██║     ██╔══██╗██╔════╝",
+        "  ███████║   ██║   ██║     ███████║███████╗",
+        "  ██╔══██║   ██║   ██║     ██╔══██║╚════██║",
+        "  ██║  ██║   ██║   ███████╗██║  ██║███████║",
+        "  ╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝",
+    ]
+    for line in wordmark:
+        _safe_print(c.SILVER + c.BOLD + line + c.RESET)
+    _safe_print("")
+    _safe_print(c.CYAN + "      Q U A N T I T A T I V E   I N T E L L I G E N C E" + c.RESET)
+    _safe_print(c.MUTED + c.ITALIC + "                 Platform  ·  v1.0  ·  by M&C" + c.RESET)
+    _safe_print("")
+    _safe_print(rule)
+
+
+def _print_section(label: str, index: int | None = None, total: int | None = None) -> None:
+    """Premium section divider:  ── 01 / 03 · LLM BACKEND ────────────"""
+    c = _C
+    if index is not None and total is not None:
+        tag = f"{c.GOLD}{index:02d}{c.MUTED} / {total:02d}{c.RESET}"
+        prefix = f"{c.NAVY}──{c.RESET} {tag} {c.MUTED}·{c.RESET} "
+        prefix_plain_len = 3 + 7 + 3  # '-- NN / NN . '
+    else:
+        prefix = f"{c.NAVY}──{c.RESET} "
+        prefix_plain_len = 3
+    label_styled = f"{c.SILVER}{c.BOLD}{label.upper()}{c.RESET}"
+    fill = max(4, 62 - prefix_plain_len - len(label) - 1)
+    _safe_print("")
+    _safe_print(prefix + label_styled + " " + c.NAVY + ("─" * fill) + c.RESET)
+
+
+def _ok(msg: str) -> None:
+    _safe_print(f"  {_C.GREEN}●{_C.RESET} {_C.SILVER}{msg}{_C.RESET}")
+
+
+def _info(msg: str) -> None:
+    _safe_print(f"  {_C.BLUE}›{_C.RESET} {_C.SILVER}{msg}{_C.RESET}")
+
+
+def _dim(msg: str) -> None:
+    _safe_print(f"  {_C.MUTED}{msg}{_C.RESET}")
+
+
+def _warn(msg: str) -> None:
+    _safe_print(f"  {_C.AMBER}!{_C.RESET} {_C.SILVER}{msg}{_C.RESET}")
+
+
+def _err(msg: str) -> None:
+    _safe_print(f"  {_C.CORAL}✕{_C.RESET} {_C.SILVER}{msg}{_C.RESET}")
+
+
+def _kv(key: str, value: str) -> None:
+    """Key-value row for the 'serving at' block."""
+    _safe_print(f"  {_C.MUTED}{key:<18}{_C.RESET} {_C.CYAN}{value}{_C.RESET}")
 
 
 def _find_governance_dir(root: Path) -> Path | None:
@@ -365,6 +506,65 @@ def _register_recovered_aria_tools(aria: ARIA) -> list[str]:
         return []
 
 
+def _build_runtime_observability_report(aria: ARIA) -> str:
+    """
+    Build a concise terminal report of runtime wiring for `python run_atlas.py`.
+    """
+    tool_map = getattr(aria, "tools", {}) or {}
+    tool_names = sorted(tool_map.keys())
+
+    live_registry_tools = [
+        name for name in (
+            "atlas_market_data",
+            "atlas_macro_data",
+            "atlas_news",
+            "atlas_filings",
+            "atlas_sentiment",
+        )
+        if name in tool_map
+    ]
+    agent_tools = [name for name in ("atlas_agent_task",) if name in tool_map]
+    browser_tools = [
+        name for name in ("web_search", "create_file", "execute_code", "read_file")
+        if name in tool_map
+    ]
+
+    registry = get_provider_registry()
+    provider_info = registry.get_provider_info()
+
+    lines = []
+    lines.append("")
+    lines.append("=" * 60)
+    lines.append("ATLAS RUNTIME REPORT")
+    lines.append("=" * 60)
+    lines.append(f"ARIA model: {getattr(aria, 'model', 'unknown')}")
+    lines.append(f"Total registered tools: {len(tool_names)}")
+    if browser_tools:
+        lines.append(f"Browser tools: {', '.join(browser_tools)}")
+    if live_registry_tools:
+        lines.append(f"Live registry tools: {', '.join(live_registry_tools)}")
+    if agent_tools:
+        lines.append(f"Agent tools: {', '.join(agent_tools)}")
+
+    lines.append("Provider channels:")
+    if not provider_info:
+        lines.append("  - none")
+    else:
+        for channel in sorted(provider_info.keys()):
+            providers = provider_info[channel]
+            if not providers:
+                lines.append(f"  - {channel}: none")
+                continue
+            formatted = []
+            for provider in providers:
+                suffix = "" if provider.get("available", True) else " (unavailable)"
+                formatted.append(f"{provider.get('name', 'unknown')}{suffix}")
+            lines.append(f"  - {channel}: {', '.join(formatted)}")
+
+    lines.append("=" * 60)
+    return "\n".join(lines)
+
+
 def _env_enabled(name: str, default: str = "0") -> bool:
     value = os.getenv(name, default).strip().lower()
     return value in {"1", "true", "yes", "on"}
@@ -433,7 +633,7 @@ def _resolve_server_port(host: str = DEFAULT_HOST) -> int:
 def _open_browser_delayed(port: int) -> None:
     """Open browser after the server starts."""
     time.sleep(3)
-    _safe_print("\n[3/3] Opening Atlas Interface...")
+    _safe_print(f"  {_C.BLUE}›{_C.RESET} {_C.SILVER}Opening Atlas interface in default browser …{_C.RESET}")
     webbrowser.open(f"http://localhost:{port}")
 
 
@@ -521,108 +721,134 @@ def main() -> None:
             _safe_print(f"ERROR: Demo failed: {exc}")
         return
 
-    _safe_print("=" * 60)
-    _safe_print("ATLAS SYSTEM LAUNCHER")
-    _safe_print("=" * 60)
-    _safe_print("Starting Atlas in Browser Mode (Custom Build)...")
+    _print_banner()
 
-    _safe_print("\n[1/3] Checking LLM Backend (Ollama)...")
-    try:
-        import requests
+    # ── 01 / 03 · LLM BACKEND -----------------------------------------
+    _aria_backend = os.getenv("ARIA_LLM_BACKEND", "auto").lower()
+    _cloud_keys_present = any(
+        os.getenv(k) for k in (
+            "GROQ_API_KEY", "OPENROUTER_API_KEY", "CEREBRAS_API_KEY",
+            "OPENAI_API_KEY", "ANTHROPIC_API_KEY",
+        )
+    )
+    _need_ollama = (
+        _aria_backend == "ollama"
+        or (_aria_backend == "auto" and not _cloud_keys_present)
+    )
 
-        response = requests.get("http://localhost:11434/", timeout=3)
-        if response.status_code == 200:
-            _safe_print("OK: Ollama is running.")
-        else:
-            _safe_print("WARN: Ollama responded with an unexpected status.")
-    except Exception:
-        _safe_print("WARN: Ollama does not appear to be running.")
-        _safe_print("   -> Attempting to start 'ollama serve' in background...")
+    _print_section("LLM Backend", index=1, total=3)
+    if not _need_ollama:
+        _ok(f"Backend: {_aria_backend}")
+        _dim("Cloud provider credentials detected — Ollama not required.")
+    else:
         try:
-            subprocess.Popen(
-                "ollama serve",
-                shell=True,
-                creationflags=subprocess.CREATE_NEW_CONSOLE,
-            )
-            _safe_print("   -> Launched Ollama. Waiting 5s...")
-            time.sleep(5)
-        except Exception as exc:
-            _safe_print(f"ERROR: Failed to auto-start Ollama: {exc}")
-            _safe_print("Please run 'ollama serve' in a separate terminal.")
+            import requests
+            response = requests.get("http://localhost:11434/", timeout=3)
+            if response.status_code == 200:
+                _ok("Ollama is running (localhost:11434)")
+            else:
+                _warn(f"Ollama responded with status {response.status_code}")
+        except Exception:
+            _warn("Ollama does not appear to be running")
+            if os.getenv("ATLAS_AUTO_START_OLLAMA", "1") == "1":
+                _dim("Attempting to start 'ollama serve' in background …")
+                try:
+                    subprocess.Popen(
+                        "ollama serve",
+                        shell=True,
+                        creationflags=subprocess.CREATE_NEW_CONSOLE,
+                    )
+                    _dim("Launched Ollama. Waiting 5s …")
+                    time.sleep(5)
+                except Exception as exc:
+                    _err(f"Failed to auto-start Ollama: {exc}")
+                    _dim("ARIA will fall back to cloud/mock providers automatically.")
+            else:
+                _dim("Auto-start disabled. ARIA will use its fallback chain (cloud → mock).")
 
-    _safe_print("\n[2/3] Starting ARIA Server...")
+    # ── 02 / 03 · ARIA NEURAL ENGINE ---------------------------------
+    _print_section("ARIA Neural Engine", index=2, total=3)
     try:
         server_port = _resolve_server_port(DEFAULT_HOST)
     except RuntimeError as exc:
-        _safe_print(f"ERROR: {exc}")
+        _err(str(exc))
         return
-
-    _safe_print(f"   -> Hosting Frontend at http://localhost:{server_port}")
-    _safe_print(f"   -> Hosting API at http://localhost:{server_port}/query")
-
-    threading.Thread(target=_open_browser_delayed, args=(server_port,), daemon=True).start()
 
     try:
         import uvicorn
         from apps.server import server
 
         aria_model = os.getenv("ARIA_MODEL", DEFAULT_ARIA_MODEL).strip() or DEFAULT_ARIA_MODEL
-        _safe_print(f"   -> Initializing ARIA Neural Engine ({aria_model})...")
+        _info(f"Initializing ARIA ({aria_model}) …")
         aria = ARIA(model=aria_model)
 
         if _env_enabled("ATLAS_FAST_PROMPT", "1"):
             aria.system_prompt = FAST_BROWSER_SYSTEM_PROMPT
-            _safe_print("   -> Fast browser prompt enabled (ATLAS_FAST_PROMPT=0 to disable).")
+            _dim("Fast browser prompt enabled (ATLAS_FAST_PROMPT=0 to disable).")
 
         if _env_enabled("ATLAS_ENABLE_ARIA_TOOLS", "0"):
             registered_tools = _register_browser_tools(aria, PROJECT_ROOT)
-            _safe_print(f"   -> Registered {registered_tools} tools for browser mode.")
+            _ok(f"Registered {registered_tools} browser tools")
         else:
             registered_tools = 0
-            _safe_print("   -> Tool calling disabled for fast browser chat (ATLAS_ENABLE_ARIA_TOOLS=1 to enable).")
+            _dim("Tool calling disabled for fast browser chat (ATLAS_ENABLE_ARIA_TOOLS=1 to enable).")
 
         if _env_enabled("ATLAS_ENABLE_PHASE1_TOOLS", "1"):
             phase1_tools = _register_phase1_workflow_tools(aria)
             if phase1_tools:
-                _safe_print(
-                    "   -> Phase 1 workflow tools active: "
-                    + ", ".join(phase1_tools)
-                )
+                _ok(f"Phase 1 workflow tools active ({len(phase1_tools)})")
+                _dim(", ".join(phase1_tools))
             else:
-                _safe_print("   -> Phase 1 workflow tools were requested but none were registered.")
+                _warn("Phase 1 workflow tools requested but none were registered")
         else:
-            _safe_print("   -> Phase 1 workflow tools disabled (ATLAS_ENABLE_PHASE1_TOOLS=0).")
+            _dim("Phase 1 workflow tools disabled (ATLAS_ENABLE_PHASE1_TOOLS=0).")
 
         if _env_enabled("ATLAS_ENABLE_RECOVERED_TOOLS", "1"):
             recovered_tools = _register_recovered_aria_tools(aria)
             if recovered_tools:
-                _safe_print(
-                    "   -> Recovered ARIA tools active: "
-                    + ", ".join(recovered_tools)
-                )
+                _ok(f"Recovered ARIA tools active ({len(recovered_tools)})")
+                _dim(", ".join(recovered_tools))
             else:
-                _safe_print("   -> Recovered ARIA tools requested but none were registered.")
+                _warn("Recovered ARIA tools requested but none were registered")
         else:
-            _safe_print("   -> Recovered ARIA tools disabled (ATLAS_ENABLE_RECOVERED_TOOLS=0).")
+            _dim("Recovered ARIA tools disabled (ATLAS_ENABLE_RECOVERED_TOOLS=0).")
 
         if _env_enabled("ATLAS_ENABLE_GOV_CONTEXT", "0"):
             governance_context = _build_governance_prompt_context(PROJECT_ROOT)
             if governance_context:
                 aria.system_prompt = f"{aria.system_prompt}\n\n{governance_context}"
-                _safe_print("   -> Project governance context loaded.")
+                _ok("Project governance context loaded")
             else:
-                _safe_print("   -> Project governance context not found (skipped).")
+                _dim("Project governance context not found (skipped).")
         else:
-            _safe_print("   -> Governance context disabled (ATLAS_ENABLE_GOV_CONTEXT=1 to enable).")
+            _dim("Governance context disabled (ATLAS_ENABLE_GOV_CONTEXT=1 to enable).")
+
+        if _env_enabled("ATLAS_SHOW_RUNTIME_REPORT", "1"):
+            _safe_print(_build_runtime_observability_report(aria))
+        else:
+            _dim("Runtime report disabled (ATLAS_SHOW_RUNTIME_REPORT=0).")
+
+        # ── 03 / 03 · SERVING ----------------------------------------
+        _print_section("Serving", index=3, total=3)
+        _kv("Frontend",   f"http://localhost:{server_port}")
+        _kv("API",        f"http://localhost:{server_port}/query")
+        _kv("Health",     f"http://localhost:{server_port}/api/health")
+        _kv("ARIA model", aria_model)
+        _safe_print("")
+        _safe_print(f"  {_C.MUTED}{_C.ITALIC}Press Ctrl+C to stop the server.{_C.RESET}")
+        _safe_print(f"  {_C.NAVY}{'─' * 62}{_C.RESET}")
+        _safe_print("")
+
+        threading.Thread(target=_open_browser_delayed, args=(server_port,), daemon=True).start()
 
         server.aria_instance = aria
         uvicorn.run(server.app, host=DEFAULT_HOST, port=server_port, log_level="info")
 
     except ImportError:
-        _safe_print("\nERROR: Missing dependencies.")
-        _safe_print("Please run: pip install -r requirements.txt")
+        _err("Missing dependencies")
+        _dim("Run: pip install -r requirements.txt")
     except Exception as exc:
-        _safe_print(f"\nERROR: Server error: {exc}")
+        _err(f"Server error: {exc}")
 
 
 if __name__ == "__main__":

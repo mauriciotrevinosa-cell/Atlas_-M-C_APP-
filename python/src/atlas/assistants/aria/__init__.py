@@ -15,9 +15,6 @@ from .core import (
     get_version
 )
 
-# Core Components
-from .core import ARIA, create_aria
-
 # Version
 __version__ = "3.0.0"
 __author__ = "M&C"

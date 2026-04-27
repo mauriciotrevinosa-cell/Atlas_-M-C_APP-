@@ -4,7 +4,7 @@ Normalizer — converts RawItem → Signal with all fields populated.
 from __future__ import annotations
 import hashlib
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 
 from ..collectors.base import RawItem
@@ -45,7 +45,7 @@ class Normalizer:
         body  = _clean_body(raw.body or "")
         url   = (raw.url or "").strip()
 
-        pub = raw.published_at or datetime.utcnow()
+        pub = raw.published_at or datetime.now(timezone.utc)
 
         # Cashtag extraction from title + body
         combined = f"{title} {body}"
@@ -59,7 +59,7 @@ class Normalizer:
             body=body or None,
             author=raw.author or None,
             published_at=pub,
-            collected_at=datetime.utcnow(),
+            collected_at=datetime.now(timezone.utc),
             tickers=tickers,
             content_hash=_hash(raw.source_id, url, title),
             # category / sentiment / scoring filled by later pipeline stages

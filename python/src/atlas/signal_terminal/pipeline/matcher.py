@@ -10,7 +10,7 @@ Returns List[Match] for each (signal, watchlist_item) pair.
 """
 from __future__ import annotations
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 
 from ..models import Match, MatchType, Signal, WatchlistItem
@@ -55,7 +55,7 @@ class Matcher:
                     ticker=ticker,
                     match_type=MatchType.EXACT,
                     match_score=1.0,
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
                 ))
                 seen_items.add(item.id)
                 continue
@@ -72,7 +72,7 @@ class Matcher:
                         ticker=ticker,
                         match_type=MatchType.FUZZY,
                         match_score=0.75,
-                        created_at=datetime.utcnow(),
+                        created_at=datetime.now(timezone.utc),
                     ))
                     seen_items.add(item.id)
                     break

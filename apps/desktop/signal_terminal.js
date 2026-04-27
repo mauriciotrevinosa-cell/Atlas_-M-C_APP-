@@ -333,7 +333,8 @@ window.SignalTerminal = (() => {
       _el('ss-watch',   s.watchlist_items);
       _el('ss-whales',  s.whale_events);
       _el('ss-alerts',  s.alert_triggers);
-    } catch {
+    } catch (err) {
+      console.warn('[SignalTerminal] loading stats failed:', err.message);
       _setServerBadge(false);
     }
   }
@@ -373,7 +374,9 @@ window.SignalTerminal = (() => {
       _renderFeed(list, _state.signals, false);
       const more = document.getElementById('st-load-more');
       if (more) more.style.display = extra.length >= _state.filters.limit ? '' : 'none';
-    } catch { /* silent */ }
+    } catch (err) {
+      console.warn('[SignalTerminal] loading more feed rows failed:', err.message);
+    }
   }
 
   function _buildFeedQuery(offset) {
@@ -448,7 +451,8 @@ window.SignalTerminal = (() => {
             <span>sent: ${s.sentiment_score.toFixed(3)}</span>
           </div>
         </div>`;
-    } catch {
+    } catch (err) {
+      console.warn('[SignalTerminal] loading signal detail failed:', err.message);
       detail.innerHTML = '<span style="color:#e74c3c;font-size:11px">Could not load detail.</span>';
     }
   }
@@ -514,7 +518,9 @@ window.SignalTerminal = (() => {
       await _api(`/watchlist/${ticker}`, { method: 'DELETE' });
       await _loadWatchlist();
       await _loadStats();
-    } catch { /* row already gone */ }
+    } catch (err) {
+      console.warn('[SignalTerminal] removing watchlist row failed:', err.message);
+    }
   }
 
   // ── Whale Events ──────────────────────────────────────────────────────────
@@ -777,9 +783,13 @@ window.SignalTerminal = (() => {
       });
       await fetch(`${API}/alerts/rules/${id}?enabled=${enabled}`, {
         method: 'PATCH',
-      }).catch(() => {});
+      }).catch((err) => {
+        console.warn('[SignalTerminal] patching alert toggle failed:', err.message);
+      });
       await _loadAlerts();
-    } catch { /* */ }
+    } catch (err) {
+      console.warn('[SignalTerminal] toggling alert rule failed:', err.message);
+    }
   }
 
   async function _deleteAlert(id) {

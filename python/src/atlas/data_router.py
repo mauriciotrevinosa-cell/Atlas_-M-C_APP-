@@ -1,24 +1,18 @@
 """
 Top-Level DataRouter
 ====================
-Single entry-point for all market data requests.
+Single entry point for market data requests.
 
-Flow:
-  allow_network=True  → check fresh cache → try YFinance → write cache
-                        → on failure: stale cache (offline fallback)
-  allow_network=False → cache-only (stale allowed, never calls network)
-
-This is the preferred way to fetch data throughout Atlas.
-`market_finance.data_layer.DataRouter` is a more advanced phase-1
-workflow router; this module is the lightweight, reusable core.
-
-Copyright (c) 2026 M&C. All rights reserved.
+The modern API returns normalized OHLCV DataFrames for single tickers and a
+``dict[ticker, DataFrame]`` for multi-ticker requests. A small compatibility
+wrapper keeps older tests/tools that used ``"AAPL" in router.get("AAPL")`` and
+``router.get("AAPL")["AAPL"]`` working without breaking DataFrame behavior.
 """
 from __future__ import annotations
 
 import logging
 from datetime import date, timedelta
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, Optional
 
 import pandas as pd
 
@@ -27,6 +21,41 @@ from atlas.providers.cache_provider import CacheProvider
 from atlas.providers.yfinance_provider import NetworkUnavailableError, YFinanceProvider
 
 logger = logging.getLogger("atlas.data_router")
+
+
+class RoutedFrame(pd.DataFrame):
+    """DataFrame with legacy mapping-style ticker access."""
+
+    _metadata = ["_atlas_ticker", "_atlas_present"]
+
+    @property
+    def _constructor(self):
+        return RoutedFrame
+
+    def __init__(self, *args, ticker: Optional[str] = None, present: bool = True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._atlas_ticker = ticker
+        self._atlas_present = present
+
+    def __contains__(self, key: object) -> bool:
+        if (
+            self._atlas_present
+            and isinstance(key, str)
+            and self._atlas_ticker
+            and key.upper() == self._atlas_ticker.upper()
+        ):
+            return True
+        return super().__contains__(key)
+
+    def __getitem__(self, key):
+        if (
+            self._atlas_present
+            and isinstance(key, str)
+            and self._atlas_ticker
+            and key.upper() == self._atlas_ticker.upper()
+        ):
+            return self
+        return super().__getitem__(key)
 
 
 def _default_end() -> str:
@@ -38,25 +67,7 @@ def _default_start(years: int = 1) -> str:
 
 
 class DataRouter:
-    """
-    Unified data access layer for Atlas.
-
-    Args:
-        allow_network: True  → live yfinance fetches with cache write-back.
-                       False → offline mode; cache only.
-        cache_dir:     Directory for Parquet cache files.
-        ttl_hours:     Cache TTL for fresh-cache check (default 24 h).
-
-    Example::
-
-        # Online (default)
-        router = DataRouter(allow_network=True)
-        df = router.get("AAPL", "2024-01-01", "2024-12-31")
-
-        # Offline — only reads from disk cache
-        router = DataRouter(allow_network=False)
-        df = router.get("AAPL", "2024-01-01", "2024-12-31")
-    """
+    """Unified data access layer for Atlas."""
 
     def __init__(
         self,
@@ -68,70 +79,51 @@ class DataRouter:
         self._yf = YFinanceProvider(allow_network=allow_network)
         self._cache = CacheProvider(cache_dir=cache_dir, ttl_hours=ttl_hours)
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
     def get(
         self,
-        ticker: str,
+        ticker: str | Iterable[str],
         start: Optional[str] = None,
         end: Optional[str] = None,
         interval: str = "1d",
-    ) -> pd.DataFrame:
-        """
-        Fetch OHLCV data for a single ticker.
+    ) -> pd.DataFrame | Dict[str, pd.DataFrame]:
+        """Fetch one ticker as a DataFrame, or many tickers as a dict."""
+        if not isinstance(ticker, str):
+            return self.get_many(ticker, start=start, end=end, interval=interval)
 
-        Resolution order:
-        1. Fresh cache hit (always checked first)
-        2. Live yfinance fetch + cache write (if allow_network=True)
-        3. Stale cache fallback (offline mode or network failure)
-
-        Args:
-            ticker:   Ticker symbol (e.g. "AAPL", "BTC-USD", "^GSPC")
-            start:    Start date "YYYY-MM-DD" (default: 1 year ago)
-            end:      End date "YYYY-MM-DD" (default: today)
-            interval: Candle interval — "1d", "1h", "1wk" (default: "1d")
-
-        Returns:
-            Normalized OHLCV DataFrame (lowercase columns, UTC-indexed).
-
-        Raises:
-            RuntimeError: if no data found anywhere (no cache, no network).
-        """
         start = start or _default_start()
         end = end or _default_end()
 
-        # 1. Fresh cache
         cached = self._cache.get(ticker, start, end, interval, allow_stale=False)
         if cached is not None:
             logger.debug("DataRouter: fresh cache hit for %s", ticker)
-            return _normalize(cached)
+            return _routed(_normalize(cached), ticker)
 
-        # 2. Live fetch (only when network is permitted)
         if self.allow_network:
             try:
                 df = self._yf.get_historical(ticker, start=start, end=end, interval=interval)
                 if df is not None and not df.empty:
                     self._cache.set(ticker, start, end, interval, df)
                     logger.info("DataRouter: fetched %s from yfinance (%d rows)", ticker, len(df))
-                    return _normalize(df)
+                    return _routed(_normalize(df), ticker)
                 logger.warning("DataRouter: yfinance returned empty frame for %s", ticker)
             except NetworkUnavailableError:
-                pass  # shouldn't happen since allow_network=True, but be safe
+                pass
             except Exception as exc:
-                logger.warning("DataRouter: yfinance failed for %s — %s", ticker, exc)
+                logger.warning("DataRouter: yfinance failed for %s: %s", ticker, exc)
 
-        # 3. Stale cache fallback
         stale = self._cache.get(ticker, start, end, interval, allow_stale=True)
         if stale is not None:
             logger.info("DataRouter: using stale cache for %s", ticker)
-            return _normalize(stale)
+            return _routed(_normalize(stale), ticker)
 
-        raise RuntimeError(
-            f"DataRouter: no data for {ticker} ({start} → {end}). "
-            "Network available: " + str(self.allow_network) + "."
+        logger.warning(
+            "DataRouter: no data for %s (%s -> %s). Network available: %s.",
+            ticker,
+            start,
+            end,
+            self.allow_network,
         )
+        return RoutedFrame(ticker=ticker, present=False)
 
     def get_many(
         self,
@@ -140,55 +132,48 @@ class DataRouter:
         end: Optional[str] = None,
         interval: str = "1d",
     ) -> Dict[str, pd.DataFrame]:
-        """
-        Fetch OHLCV data for multiple tickers.
-
-        Returns a dict mapping ticker → DataFrame.  Tickers that fail
-        are logged and omitted from the result (no exception raised).
-        """
+        """Fetch multiple tickers, omitting misses."""
         start = start or _default_start()
         end = end or _default_end()
 
         results: Dict[str, pd.DataFrame] = {}
         for ticker in tickers:
             try:
-                results[ticker] = self.get(ticker, start=start, end=end, interval=interval)
+                df = self.get(ticker, start=start, end=end, interval=interval)
+                if isinstance(df, pd.DataFrame) and not df.empty:
+                    results[ticker] = df
             except Exception as exc:
-                logger.error("DataRouter.get_many: skipping %s — %s", ticker, exc)
+                logger.error("DataRouter.get_many: skipping %s: %s", ticker, exc)
         return results
 
     def get_quote(self, ticker: str) -> Dict:
-        """
-        Get latest delayed quote (~15 min) for a ticker.
-
-        Falls back to ``{"symbol": ticker, "price": None, "error": "offline"}``
-        when allow_network=False.
-        """
+        """Get latest delayed quote, returning a structured fallback on failure."""
         if not self.allow_network:
-            logger.debug("DataRouter.get_quote: offline — no quote for %s", ticker)
+            logger.debug("DataRouter.get_quote: offline; no quote for %s", ticker)
             return {"symbol": ticker, "price": None, "error": "offline", "provider": "cache"}
         try:
             return self._yf.get_quote(ticker)
         except Exception as exc:
-            logger.warning("DataRouter.get_quote: failed for %s — %s", ticker, exc)
+            logger.warning("DataRouter.get_quote: failed for %s: %s", ticker, exc)
             return {"symbol": ticker, "price": None, "error": str(exc), "provider": "error"}
 
-    # ------------------------------------------------------------------
-    # Cache management helpers
-    # ------------------------------------------------------------------
+    @staticmethod
+    def _cache_key(provider: str, ticker: str, start: str, end: str, interval: str = "1d") -> str:
+        """Legacy cache key helper. Provider is accepted for compatibility."""
+        return CacheProvider.make_key(ticker, start, end, interval)
+
+    def is_cached(self, ticker: str, start: str, end: str, interval: str = "1d") -> bool:
+        """Return True when a cache entry exists, fresh or stale."""
+        return self._cache.has(ticker, start, end, interval, allow_stale=True)
 
     def cache_stats(self) -> Dict:
         """Return cache storage statistics."""
         return self._cache.stats()
 
     def clear_cache(self, ticker: Optional[str] = None) -> int:
-        """Clear cache for one ticker (or all if ticker is None)."""
+        """Clear cache for one ticker, or all entries."""
         return self._cache.clear(ticker=ticker)
 
-
-# ---------------------------------------------------------------------------
-# Module-level helpers
-# ---------------------------------------------------------------------------
 
 def _normalize(df: pd.DataFrame) -> pd.DataFrame:
     """Normalize and sort OHLCV DataFrame."""
@@ -205,17 +190,16 @@ def _normalize(df: pd.DataFrame) -> pd.DataFrame:
             normalized.index = pd.to_datetime(normalized.index, utc=True)
         except Exception:
             pass
-    else:
-        if normalized.index.tz is None:
-            normalized.index = normalized.index.tz_localize("UTC")
+    elif normalized.index.tz is None:
+        normalized.index = normalized.index.tz_localize("UTC")
 
     normalized.index.name = "timestamp_utc"
     return normalized.sort_index()
 
 
-# ---------------------------------------------------------------------------
-# Module-level singleton
-# ---------------------------------------------------------------------------
+def _routed(df: pd.DataFrame, ticker: str) -> RoutedFrame:
+    return RoutedFrame(df, ticker=ticker, present=not df.empty)
+
 
 _router: Optional[DataRouter] = None
 
@@ -225,12 +209,7 @@ def get_router(
     cache_dir: str = "data/cache/router",
     ttl_hours: int = 24,
 ) -> DataRouter:
-    """
-    Return (or create) the module-level shared DataRouter.
-
-    On the first call the router is instantiated with the given arguments.
-    Subsequent calls return the same instance regardless of arguments.
-    """
+    """Return or create the module-level shared DataRouter."""
     global _router
     if _router is None:
         _router = DataRouter(

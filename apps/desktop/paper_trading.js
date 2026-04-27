@@ -132,7 +132,9 @@ window.PaperTrading = (() => {
           badge.style.color = '#00e676';
         }
       }
-    } catch (_) { /* silent fallback — synthetic prices remain */ }
+    } catch (err) {
+      console.warn('[PaperTrading] seeding live prices failed:', err.message);
+    }
   }
 
   async function _fetchLivePrice(ticker) {
@@ -142,7 +144,9 @@ window.PaperTrading = (() => {
         const d = await res.json();
         if (d?.price) { _prices[ticker] = d.price; return d.price; }
       }
-    } catch (_) {}
+    } catch (err) {
+      console.warn('[PaperTrading] fetching live price failed:', err.message);
+    }
     return _prices[ticker] || BASE_PRICES[ticker] || 50;
   }
 

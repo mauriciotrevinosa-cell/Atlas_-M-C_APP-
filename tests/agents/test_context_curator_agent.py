@@ -110,3 +110,70 @@ class TestContextCuratorEdgeCases:
 
     def test_agent_name(self):
         assert ContextCuratorAgent().name == "context_curator_agent"
+
+
+class TestContextCuratorParsing:
+
+    def test_markdown_json_fence_parsed(self, task):
+        curation = {
+            "required_context": ["auth service"],
+            "optional_context": [],
+            "irrelevant_context": ["pricing docs"],
+            "compact_prompt_context": "Use the auth service and enforce backend permission checks.",
+            "context_risks": [],
+            "summary": "Curated auth context.",
+        }
+        agent = ContextCuratorAgent(llm_client=lambda p: f"```json\n{json.dumps(curation)}\n```")
+
+        result = agent.safe_run(task)
+
+        assert result.status == "success"
+        assert result.result["required_context"] == ["auth service"]
+
+    def test_embedded_json_parsed(self, task):
+        curation = {
+            "required_context": ["RBAC roles"],
+            "optional_context": [],
+            "irrelevant_context": [],
+            "compact_prompt_context": "Roles are Client, Worker, Owner.",
+            "context_risks": [],
+            "summary": "Curated.",
+        }
+        agent = ContextCuratorAgent(llm_client=lambda p: f"Here is JSON: {json.dumps(curation)}")
+
+        result = agent.safe_run(task)
+
+        assert result.status == "success"
+        assert "RBAC roles" in result.result["required_context"]
+
+    def test_garbage_json_degrades_to_unfiltered_context(self, task):
+        agent = ContextCuratorAgent(llm_client=lambda p: "not json")
+
+        result = agent.safe_run(task)
+
+        assert result.status == "partial"
+        assert result.errors
+        assert "compact_prompt_context" in result.result
+
+    def test_missing_keys_mark_result_partial(self, task):
+        agent = ContextCuratorAgent(llm_client=lambda p: json.dumps({"summary": "too small"}))
+
+        result = agent.safe_run(task)
+
+        assert result.status == "partial"
+        assert any("Missing curator keys" in err for err in result.errors)
+
+    def test_overlong_llm_compact_context_is_truncated(self, task):
+        curation = {
+            "required_context": ["everything"],
+            "optional_context": [],
+            "irrelevant_context": [],
+            "compact_prompt_context": "word " * 500,
+            "context_risks": [],
+            "summary": "Long context.",
+        }
+        agent = ContextCuratorAgent(llm_client=lambda p: json.dumps(curation))
+
+        result = agent.safe_run(task)
+
+        assert len(result.result["compact_prompt_context"].split()) <= ContextCuratorAgent.MAX_COMPACT_WORDS + 1

@@ -237,6 +237,24 @@
     margin-bottom: 8px;
 }
 
+.mmo-detail-title-action {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.mmo-detail-title-action:hover {
+    color: #ffffff;
+    text-decoration: underline;
+    text-decoration-color: rgba(155, 142, 232, 0.75);
+    text-underline-offset: 3px;
+}
+
 .mmo-detail-desc {
     font-size: 12px;
     line-height: 1.55;
@@ -278,6 +296,34 @@
     font-size: 10px;
     color: #6d7394;
     line-height: 1.45;
+}
+
+.mmo-detail-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.mmo-detail-action-btn {
+    border: 1px solid rgba(80, 250, 123, 0.4);
+    background: rgba(80, 250, 123, 0.1);
+    color: #50fa7b;
+    border-radius: 6px;
+    padding: 6px 9px;
+    font-family: inherit;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.mmo-detail-action-btn.secondary {
+    border-color: rgba(189, 147, 249, 0.4);
+    background: rgba(189, 147, 249, 0.1);
+    color: #bd93f9;
+}
+
+.mmo-detail-action-btn:hover {
+    filter: brightness(1.18);
 }
 
 .mmo-example-grid {
@@ -800,4 +846,100 @@
 @keyframes mmo-ep-flash {
     from { opacity: 1; box-shadow: 0 0 4px rgba(255, 71, 87, 0.5); }
     to   { opacity: 0.55; box-shadow: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LIQUID-GLASS COMPATIBILITY LAYER
+   The global liquid-glass theme (css/liquid-glass.css) renders a warm
+   aurora behind the whole app. MMO's own identity is dark-purple quantum
+   (not warm), so we keep the palette but add the glass refraction cues
+   (backdrop blur + saturate, inset top highlight + bottom shade, soft
+   outer shadow) so the aurora bleeds through subtly and the cards feel
+   like frosted crystal slabs rather than flat black rectangles.
+   ═══════════════════════════════════════════════════════════════ */
+.mmo-card {
+    /* Preserve whatever background each card already declared, but layer
+       a thin glass tint on top via background-image. */
+    position: relative;
+    background-color: rgba(12, 14, 28, 0.62) !important;
+    background-image:
+        linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.035) 0%,
+            rgba(255, 255, 255, 0.000) 38%,
+            rgba(0, 0, 0, 0.08) 100%
+        ) !important;
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    border: 1px solid rgba(155, 142, 232, 0.18) !important;
+    box-shadow:
+        0 6px 24px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.28);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.mmo-card:hover {
+    border-color: rgba(155, 142, 232, 0.35) !important;
+    box-shadow:
+        0 10px 32px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.09),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.30),
+        0 0 24px rgba(124, 63, 228, 0.10);
+}
+
+/* Mini ticker cards in the scanner grid get the same treatment, scaled. */
+.mmo-mini-card {
+    background-color: rgba(16, 18, 34, 0.55) !important;
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    border: 1px solid rgba(155, 142, 232, 0.14) !important;
+    box-shadow:
+        0 3px 14px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.mmo-mini-card:hover {
+    border-color: rgba(155, 142, 232, 0.40) !important;
+    transform: translateY(-1px);
+}
+
+/* Buttons pick up a subtle glass sheen so they match the card surfaces. */
+.mmo-example-btn,
+.mmo-btn-action {
+    backdrop-filter: blur(8px) saturate(140%);
+    -webkit-backdrop-filter: blur(8px) saturate(140%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.20),
+        0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* Dampen the neon saturation of the primary action buttons so they clear
+   WCAG AA against the frosted backdrop. */
+.mmo-btn-breakout {
+    background: linear-gradient(135deg, #1fe380 0%, #0db672 100%) !important;
+    color: #051a0e !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.20);
+}
+.mmo-btn-hedge {
+    background: linear-gradient(135deg, #ffa552 0%, #d97c2d 100%) !important;
+    color: #2b1607 !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* The error/warn banner injected by analyze() inherits these subtle
+   glass edges so it doesn't feel bolted on. */
+#mmo-banner {
+    box-shadow:
+        0 4px 14px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Respect reduced-motion / low-power hints. */
+@media (prefers-reduced-motion: reduce) {
+    .mmo-card,
+    .mmo-mini-card,
+    .mmo-example-btn,
+    .mmo-btn-action { transition: none; }
+    .mmo-mini-card:hover { transform: none; }
 }

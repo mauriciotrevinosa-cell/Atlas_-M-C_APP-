@@ -32,6 +32,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Dict, List, Optional
 
 
@@ -39,26 +40,39 @@ from typing import Dict, List, Optional
 # Data model
 # ─────────────────────────────────────────────────────────────────────────────
 
-@dataclass(frozen=True)
+class AssetClass(str, Enum):
+    EQUITY = "equity"
+    ETF = "etf"
+    BOND = "bond_etf"
+    COMMODITY = "commodity"
+    INDEX = "index"
+    CRYPTO = "crypto"
+    FOREX = "forex"
+    UNKNOWN = "unknown"
+
+
+@dataclass
 class AssetInfo:
     """Immutable descriptor for a single asset."""
 
     ticker: str
     name: str
-    asset_class: str        # see module docstring for valid values
+    asset_class: AssetClass | str        # see module docstring for valid values
     currency: str = "USD"
     exchange: str = ""
     region: str = "US"
     notes: str = ""
+    sector: str = ""
+    tradeable: bool = True
 
     def __post_init__(self) -> None:
-        valid = {
-            "equity", "etf", "bond_etf", "commodity",
-            "index", "crypto", "forex", "unknown",
-        }
-        if self.asset_class not in valid:
+        if isinstance(self.asset_class, str):
+            self.asset_class = AssetClass(self.asset_class)
+        if self.asset_class == AssetClass.INDEX:
+            self.tradeable = False
+        if self.asset_class not in set(AssetClass):
             raise ValueError(
-                f"Invalid asset_class '{self.asset_class}'. Must be one of {valid}"
+                f"Invalid asset_class '{self.asset_class}'. Must be one of {list(AssetClass)}"
             )
 
 
@@ -209,6 +223,7 @@ class AssetRegistry:
                     on top of the built-in universe.
         """
         self._registry: Dict[str, AssetInfo] = dict(self._KNOWN)
+        self._store = self._registry
         if extras:
             for ticker, info in extras.items():
                 self._registry[ticker.upper()] = info
@@ -221,7 +236,7 @@ class AssetRegistry:
         """Return AssetInfo for ticker, or None if not in registry."""
         return self._registry.get(ticker.upper())
 
-    def classify(self, ticker: str) -> str:
+    def classify(self, ticker: str) -> AssetClass:
         """
         Return the asset_class string for a ticker.
         Falls back to pattern inference for unknown tickers.
@@ -250,6 +265,10 @@ class AssetRegistry:
         """Add or overwrite a single asset entry."""
         self._registry[info.ticker.upper()] = info
 
+    def add(self, info: AssetInfo) -> None:
+        """Legacy alias for register()."""
+        self.register(info)
+
     def register_many(self, assets: List[AssetInfo]) -> None:
         """Bulk-register a list of assets."""
         for info in assets:
@@ -259,9 +278,18 @@ class AssetRegistry:
     # Cross-asset analysis helpers
     # ------------------------------------------------------------------
 
-    def filter_by_class(self, asset_class: str) -> List[AssetInfo]:
+    def filter_by_class(self, asset_class: str | AssetClass) -> List[AssetInfo]:
         """Return all registered assets of a given class."""
-        return [a for a in self._registry.values() if a.asset_class == asset_class]
+        cls = AssetClass(asset_class)
+        return [a for a in self._registry.values() if a.asset_class == cls]
+
+    def equities(self) -> List[str]:
+        """Legacy helper returning equity tickers."""
+        return sorted(a.ticker for a in self.filter_by_class(AssetClass.EQUITY))
+
+    def bonds(self) -> List[str]:
+        """Legacy helper returning bond ETF tickers."""
+        return sorted(a.ticker for a in self.filter_by_class(AssetClass.BOND))
 
     def group_by_class(self, tickers: List[str]) -> Dict[str, List[str]]:
         """
@@ -278,7 +306,7 @@ class AssetRegistry:
         """
         groups: Dict[str, List[str]] = {}
         for t in tickers:
-            cls = self.classify(t)
+            cls = self.classify(t).value
             groups.setdefault(cls, []).append(t)
         return groups
 
@@ -302,7 +330,7 @@ class AssetRegistry:
 
     def summary(self) -> Dict[str, int]:
         """Return count of registered assets per class."""
-        return dict(Counter(a.asset_class for a in self._registry.values()))
+        return dict(Counter(a.asset_class.value for a in self._registry.values()))
 
     def all_tickers(self) -> List[str]:
         """Return sorted list of all registered tickers."""
@@ -321,7 +349,7 @@ class AssetRegistry:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _infer_class(self, ticker: str) -> str:
+    def _infer_class(self, ticker: str) -> AssetClass:
         """
         Infer asset class from naming conventions when ticker is not in registry.
 
@@ -335,19 +363,19 @@ class AssetRegistry:
         t = ticker.upper()
 
         if t.startswith("^"):
-            return "index"
+            return AssetClass.INDEX
 
         if re.search(r"-(USD|BTC|ETH|USDT|USDC)$", t):
-            return "crypto"
+            return AssetClass.CRYPTO
 
         if t.endswith("=X"):
-            return "forex"
+            return AssetClass.FOREX
 
         # Plain ticker: 1-5 uppercase letters, optionally separated by - or .
         if re.fullmatch(r"[A-Z]{1,5}([.\-][A-Z]{1,2})?", t):
-            return "equity"
+            return AssetClass.EQUITY
 
-        return "unknown"
+        return AssetClass.UNKNOWN
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -363,3 +391,6 @@ def get_registry() -> AssetRegistry:
     if _REGISTRY is None:
         _REGISTRY = AssetRegistry()
     return _REGISTRY
+
+
+REGISTRY = get_registry()

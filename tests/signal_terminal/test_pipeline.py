@@ -3,13 +3,17 @@ Tests — Signal Terminal pipeline
 """
 from __future__ import annotations
 import pytest
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from atlas.signal_terminal.collectors.base import RawItem
 from atlas.signal_terminal.pipeline.normalizer import Normalizer, _hash
 from atlas.signal_terminal.pipeline.classifier import Classifier, _score_sentiment, _tokenize
 from atlas.signal_terminal.pipeline.scorer import Scorer
 from atlas.signal_terminal.models import Signal, SignalCategory, Sentiment, Urgency
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 # ── Normalizer ────────────────────────────────────────────────────────────
@@ -25,7 +29,7 @@ class TestNormalizer:
             title="$AAPL beats Q3 earnings expectations",
             body="Apple reported $1.26 EPS vs $1.18 expected.",
             url="https://example.com/aapl",
-            published_at=datetime.utcnow(),
+            published_at=utc_now(),
         )
         defaults.update(kwargs)
         return RawItem(**defaults)
@@ -67,7 +71,7 @@ class TestClassifier:
     def _sig(self, title: str, body: str = "") -> Signal:
         return Signal(
             source_id="test", title=title, body=body,
-            published_at=datetime.utcnow(),
+            published_at=utc_now(),
         )
 
     def test_earnings_category(self):
@@ -112,7 +116,7 @@ class TestScorer:
     def _sig(self, **kwargs) -> Signal:
         defaults = dict(
             source_id="test", title="Test signal",
-            published_at=datetime.utcnow(),
+            published_at=utc_now(),
             sentiment_score=0.5,
             category=SignalCategory.EARNINGS,
         )
@@ -135,9 +139,8 @@ class TestScorer:
         assert sig.relevance_score > 0.3
 
     def test_old_signal_lower_score(self):
-        from datetime import timedelta
-        fresh = self._sig(published_at=datetime.utcnow())
-        old   = self._sig(published_at=datetime.utcnow() - timedelta(hours=48))
+        fresh = self._sig(published_at=utc_now())
+        old   = self._sig(published_at=utc_now() - timedelta(hours=48))
         self.s.score(fresh, [])
         self.s.score(old, [])
         assert fresh.relevance_score > old.relevance_score
@@ -168,7 +171,7 @@ def test_full_pipeline_smoke(tmp_path):
         title="$AAPL Q3 earnings beat estimates — stock surges",
         body="Apple reported $1.26 EPS, beating the $1.18 consensus.",
         url="https://example.com/1",
-        published_at=datetime.utcnow(),
+        published_at=utc_now(),
     )
 
     inserted, dupes = svc.ingest([raw])

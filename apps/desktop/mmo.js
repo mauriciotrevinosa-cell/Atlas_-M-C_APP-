@@ -73,9 +73,33 @@
     'BTC-USD': { 'SPY': 0.28, 'QQQ': 0.35, 'AAPL': 0.25, 'MSFT': 0.22, 'NVDA': 0.40, 'TSLA': 0.48, 'GLD': 0.15 },
   };
 
-  /* ── Tiny API helper ──────────────────────────────────────────── */
+  /* ── Tiny API helper ──────────────────────────────────────────────
+     Three-state return so the caller can distinguish "server unreachable"
+     from "server responded but said no":
+       · success         → parsed JSON body
+       · HTTP non-200    → { error: "HTTP 4xx/5xx — detail" }  (server heard
+                            us but refused — _normalizeQuantumState surfaces
+                            this as a `_notice` on the card)
+       · network failure → null                               (server down,
+                            caller falls back to local simulation banner)
+     Previously this swallowed both cases as `null`, hiding HTTP errors and
+     making scanner tiles look identical to real measurements on rate-limit.
+     ───────────────────────────────────────────────────────────────── */
   const _api = {
-    get: (path) => fetch(path).then(r => r.ok ? r.json() : null).catch(() => null),
+    get: (path) => fetch(path)
+      .then(async r => {
+        if (r.ok) return r.json();
+        let detail = r.statusText || '';
+        try { const body = await r.text(); if (body) detail = body.slice(0, 120); } catch (_) { /* noop */ }
+        return { error: `HTTP ${r.status}${detail ? ' — ' + detail : ''}` };
+      })
+      .catch(err => {
+        const msg = (err && err.message) ? err.message : String(err);
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn('[MMO] API call failed (offline fallback):', path, msg);
+        }
+        return null;  // keep the offline-fallback branch in analyze() working
+      }),
   };
 
   function _clamp(value, min = 0, max = 1) {
@@ -94,273 +118,12 @@
       : '-';
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     LOCAL QUANTUM STATE ENGINE
-     Computes full quantum state offline — no API dependency.
-     Uses deterministic pseudo-random seeded by ticker + day.
-     ═══════════════════════════════════════════════════════════════ */
-  function _computeLocalQuantumState(ticker) {
-    const t = (ticker || 'SPY').toUpperCase();
-    const seed = t.split('').reduce((a, c) => a + c.charCodeAt(0), 0) + new Date().getDate();
-    const rng = (n) => {
-      const x = Math.sin(seed * n + n * 1.618033988) * 10000;
-      return x - Math.floor(x);
-    };
+  /* Dead duplicate blocks (first _computeLocalQuantumState and first
+     _buildView) removed — the authoritative definitions live further down
+     at the 'PUBLIC API / LOCAL ENGINE' and 'VIEW BUILDER' sections.
+     Hoisting made them unreachable but they were still being parsed and
+     shipped to every client. Deleted by MMO perfection pass. */
 
-    const char = MARKET_CHARS[t] || { trend: 0.55, vol: 0.25, basePrice: 100 };
-
-    // ── Amplitudes (Born rule: prob = |amplitude|²) ──────────────
-    const raw = {
-      BULL: char.trend * (0.30 + rng(1) * 0.40),
-      BEAR: (1 - char.trend) * (0.20 + rng(2) * 0.35),
-      SIDEWAYS: 0.15 + rng(3) * 0.20,
-      VOLATILE: char.vol * (0.20 + rng(4) * 0.30),
-      TRENDING: char.trend * (0.20 + rng(5) * 0.25),
-    };
-    const total = Object.values(raw).reduce((a, b) => a + b, 0);
-    const amps = {};
-    Object.keys(raw).forEach(k => { amps[k] = raw[k] / total; });
-
-    // ── Shannon entropy H = -Σpᵢlog(pᵢ)/log(5) ─────────────────
-    const entropy = -Object.values(amps).reduce(
-      (a, p) => a + (p > 0 ? p * Math.log(p) : 0), 0) / Math.log(5);
-
-    // ── Dominant state ───────────────────────────────────────────
-    let dom = 'BULL', domP = 0;
-    Object.entries(amps).forEach(([s, p]) => { if (p > domP) { domP = p; dom = s; } });
-
-    const collapse_prob = Math.min(0.99, 1 - entropy);
-    const tunneling_risk = Math.min(0.9, char.vol * (0.3 + rng(6) * 0.4));
-
-    // ── Quantum verdict ──────────────────────────────────────────
-    let quantum_verdict = 'SUPERPOSED — WAIT';
-    if (collapse_prob > 0.6 && dom === 'BULL') quantum_verdict = 'BUY';
-    else if (collapse_prob > 0.6 && dom === 'BEAR') quantum_verdict = 'SELL';
-    else if (dom === 'VOLATILE' || tunneling_risk > 0.25) quantum_verdict = 'HEDGE — VOLATILITY';
-    else if (dom === 'TRENDING' && amps.TRENDING > 0.35) quantum_verdict = 'TREND FOLLOW';
-
-    // ── Price data ───────────────────────────────────────────────
-    const last_close = (char.basePrice * (0.95 + rng(7) * 0.10)).toFixed(2);
-    const trend_pct = ((char.trend - 0.5) * 40 * (0.8 + rng(8) * 0.4)).toFixed(1);
-    const annual_vol_pct = (char.vol * 100 * (0.9 + rng(9) * 0.2)).toFixed(1);
-
-    // ── String theory ────────────────────────────────────────────
-    const string = {
-      amplitude: Math.min(1, 0.2 + char.vol * (0.5 + rng(10) * 0.5)),
-      frequency: Math.min(1, 0.3 + char.trend * (0.5 + rng(11) * 0.4)),
-      vertices_30d: Math.floor(3 + rng(12) * 10),
-      nodes: [],
-    };
-    const base = parseFloat(last_close);
-    if (rng(13) > 0.4) string.nodes.push({ level: (base * (1 - char.vol * 0.5)).toFixed(0), type: 'SUPPORT' });
-    if (rng(14) > 0.4) string.nodes.push({ level: (base * (1 + char.vol * 0.5)).toFixed(0), type: 'RESISTANCE' });
-
-    // ── Energy ───────────────────────────────────────────────────
-    const energy = {
-      score: Math.min(1, 0.3 + char.vol * 0.4 + char.trend * 0.2 + rng(15) * 0.15),
-      fatigue: Math.min(1, rng(16) * (0.2 + (1 - char.trend) * 0.5)),
-      bubble_risk: char.vol > 0.3 ? Math.min(1, 0.3 + rng(17) * 0.4) : Math.min(1, 0.05 + rng(17) * 0.2),
-      cooling_adequacy: Math.min(1, 0.4 + (1 - char.vol) * 0.4 + rng(18) * 0.15),
-    };
-
-    // ── Ontology ─────────────────────────────────────────────────
-    const beings = ['EXPANSION', 'CONTRACTION', 'TURBULENCE', 'STASIS', 'TRANSITION'];
-    const being = char.trend > 0.6
-      ? (rng(19) > 0.4 ? 'EXPANSION' : 'TRANSITION')
-      : char.trend < 0.45
-        ? (rng(19) > 0.4 ? 'CONTRACTION' : 'TURBULENCE')
-        : beings[Math.floor(rng(19) * beings.length)];
-
-    const ontology = {
-      being,
-      essence: dom.charAt(0) + dom.slice(1).toLowerCase() + ' Momentum Field',
-      entanglement: t === 'SPY' ? 'BROAD MARKET' : t === 'GLD' ? 'INVERSE SPY' : 'SECTOR CORR',
-      structural_stability: Math.min(1, 0.4 + (1 - char.vol) * 0.5 + rng(20) * 0.1),
-    };
-
-    // ── Layers ───────────────────────────────────────────────────
-    const layers = [
-      { id: 'structure', metric: `Stability ${(ontology.structural_stability * 100).toFixed(0)}%`, value: ontology.structural_stability, health: being },
-      { id: 'energy', metric: `E=${energy.score.toFixed(2)}`, value: energy.score, health: energy.fatigue > 0.5 ? 'FATIGUED' : 'ACTIVE' },
-      { id: 'thermal', metric: `Vol ${annual_vol_pct}%`, value: Math.min(1, char.vol * 2), health: dom },
-      { id: 'surface', metric: `ψ=${amps[dom].toFixed(2)}`, value: amps[dom], health: quantum_verdict },
-    ];
-
-    // ── Heisenberg Uncertainty Principle ─────────────────────────
-    // Δp = momentum uncertainty (proxy: volatility)
-    // Δx = position uncertainty (proxy: inverse trend clarity)
-    const delta_p = char.vol;
-    const delta_x = 1 / Math.max(0.1, char.trend);
-    const u_sys = delta_p * delta_x;
-    const heisenberg = {
-      delta_p,
-      delta_x,
-      product: u_sys,
-      hbar_half: 0.5,
-      compliant: u_sys >= 0.5,
-      position_certainty: char.trend,
-      momentum_certainty: Math.max(0, 1 - char.vol),
-      sizing_suggested: `Size = [Capital × α] / √(${(u_sys || 1).toFixed(2)})`
-    };
-
-    // ── Decoherence time τ ────────────────────────────────────────
-    // τ ∝ 1/(σ · H)  — high vol + high entropy → rapid collapse
-    const tau = 1 / Math.max(0.01, char.vol * (1 + entropy));
-    const decoherence = {
-      tau,
-      tau_normalized: Math.min(1, tau / 5),
-      regime: tau < 0.5 ? 'RAPID COLLAPSE' : tau < 1.5 ? 'MODERATE DECAY' : 'STABLE SUPERPOSITION',
-      noise_factor: Math.min(1, char.vol * (0.5 + entropy * 0.5)),
-    };
-
-    // ── Quantum Entanglement ──────────────────────────────────────
-    const entanglement = ENTANGLE_TABLE[t] || {};
-
-    return {
-      ticker: t,
-      amplitudes: amps,
-      entropy,
-      collapsed_state: collapse_prob > 0.75 ? dom : null,
-      collapse_prob,
-      tunneling_risk,
-      quantum_verdict,
-      last_close,
-      trend_pct,
-      annual_vol_pct,
-      string,
-      energy,
-      ontology,
-      layers,
-      heisenberg,
-      decoherence,
-      entanglement,
-      _local: true,
-    };
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     BUILD VIEW HTML
-     ═══════════════════════════════════════════════════════════════ */
-  function _buildView() {
-    const el = document.getElementById('view-mmo');
-    if (!el || el.innerHTML.trim()) return;
-
-    el.innerHTML = `
-<div class="mmo-shell">
-
-  <!-- HEADER -->
-  <div class="mmo-header">
-    <div class="mmo-brand">
-      <span class="mmo-psi">⟨ψ⟩</span>
-      <span class="mmo-title">MMO</span>
-      <span class="mmo-sub">Mau's Market Ontology</span>
-    </div>
-    <div class="mmo-controls">
-      <input id="mmo-ticker-input" class="mmo-input" value="SPY" maxlength="10"
-             onkeydown="if(event.key==='Enter')MMO.analyze(this.value)" />
-      <button class="mmo-btn-analyze"  onclick="MMO.analyze(document.getElementById('mmo-ticker-input').value)">⟩ Analyze</button>
-      <button class="mmo-btn-collapse" onclick="MMO.collapse()">↯ Collapse</button>
-      <button class="mmo-btn-reset"    onclick="MMO.reset()">⟳ Reset</button>
-      <button class="mmo-btn-theory"   onclick="MMO.showTheory()">📖 Theory</button>
-    </div>
-  </div>
-
-  <!-- LAYERED ECOSYSTEM PANEL -->
-  <div class="mmo-layers-panel">
-    <div class="mmo-layers-title">LAYERED ECOSYSTEM — Deep Structure → Observable Surface</div>
-    <div class="mmo-layer-stack" id="mmo-layer-stack">
-      ${LAYER_CFG.map(l => `
-      <div class="mmo-layer-row layer-${l.id}" data-layer="${l.id}">
-        <span class="mmo-layer-id">${l.label}</span>
-        <span class="mmo-layer-metric" id="mmo-lm-${l.id}">—</span>
-        <div class="mmo-layer-track">
-          <div class="mmo-layer-fill" id="mmo-lf-${l.id}" style="width:50%"></div>
-        </div>
-        <span class="mmo-layer-health" id="mmo-lh-${l.id}">${l.depth}</span>
-      </div>`).join('')}
-    </div>
-  </div>
-
-  <!-- MAIN BODY GRID: Quantum HUD Observatory -->
-  <div class="mmo-hud-container">
-    
-    <!-- LEFT PANEL: Quantum Observables -->
-    <div class="mmo-hud-left">
-      <div class="mmo-card mmo-energy-card">
-        <div class="mmo-card-title" style="color:#ff6b35">THERMODYNAMICS &nbsp;|&nbsp; Energy & Fatigue</div>
-        <div id="mmo-energy-display"><div style="font-size:9px;color:#667">—</div></div>
-      </div>
-      <div class="mmo-card mmo-ontology-card">
-        <div class="mmo-card-title" style="color:#7b68ee">MARKET ONTOLOGY</div>
-        <div id="mmo-ontology-display"><div style="font-size:9px;color:#667">—</div></div>
-      </div>
-      <div class="mmo-card mmo-entropy-card">
-        <div class="mmo-card-title" style="color:#00d4ff">SUPERPOSITION ENTROPY</div>
-        <div id="mmo-entropy-display"><div style="font-size:9px;color:#667">—</div></div>
-      </div>
-    </div>
-
-    <!-- CENTER PANEL: Vacuum Chamber (WebGL) & Waves -->
-    <div class="mmo-hud-center">
-      <div class="mmo-vacuum-title">⟨ψ⟩ SUPERPOSITION &nbsp;|&nbsp; QUANTUM TOPOLOGY</div>
-      <div style="flex:1; display:flex; flex-direction:column; position:relative; padding-top:40px;">
-        <!-- Top: 2D Wave Canvas -->
-        <div style="flex:1; position:relative; overflow:hidden; border-bottom:1px solid rgba(124, 63, 228, 0.2);">
-          <canvas id="mmo-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
-          <div style="position:absolute;top:10px;left:15px;font-size:10px;color:#9b8ee8;font-family:monospace;letter-spacing:1px;pointer-events:none;">
-             WAVE FUNCTION | ψ(<span id="mmo-wave-ticker" style="color:#fff">SPY</span>)
-          </div>
-        </div>
-        <!-- Bottom: 3D Vacuum Chamber -->
-        <div id="mmo-three-mount" style="flex:1; position:relative; overflow:hidden;"></div>
-      </div>
-    </div>
-
-    <!-- RIGHT PANEL: Collapse & Actionability -->
-    <div class="mmo-hud-right">
-      <div class="mmo-card mmo-heisenberg-card">
-        <div class="mmo-card-title" style="color:#bd93f9">HEISENBERG SIZING &nbsp;|&nbsp; Δp × Δx</div>
-        <div id="mmo-heisenberg-display"><div style="font-size:9px;color:#667">—</div></div>
-      </div>
-      <div class="mmo-card mmo-decoherence-card">
-        <div class="mmo-card-title" style="color:#ff79c6">DECOHERENCE τ &nbsp;|&nbsp; Wave Stability</div>
-        <div id="mmo-decoherence-display"><div style="font-size:9px;color:#667">—</div></div>
-      </div>
-      <div class="mmo-card mmo-action-card" style="flex:1;display:flex;flex-direction:column;">
-        <div class="mmo-card-title" style="color:#00ff88">EXECUTION PROTOCOLS</div>
-        <div id="mmo-action-display" style="padding:15px;flex:1;display:flex;flex-direction:column;justify-content:center;">
-          <button class="mmo-btn-action mmo-btn-breakout" onclick="MMO.launchViz('blackhole')">[ LIQUIDITY BLACK HOLE ]</button>
-          <button class="mmo-btn-action mmo-btn-hedge" onclick="MMO.launchViz('galaxy3d')">[ MARKET GALAXY 3D ]</button>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- /mmo-hud-container -->
-
-  <!-- BOTTOM BAR: String Theory & Scanner -->
-  <div class="mmo-bottom-bar">
-    <div class="mmo-card mmo-string-card">
-      <div class="mmo-card-title" style="color:#6a3a5a">STRING THEORY &nbsp;|&nbsp; Probabilistic Paths</div>
-      <div id="mmo-string-display"><div style="font-size:9px;color:#667">—</div></div>
-    </div>
-    <div class="mmo-scanner-card mmo-card">
-      <div class="mmo-card-title">QUANTUM SCANNER &nbsp;—&nbsp; Multi-Ticker Superposition</div>
-      <div class="mmo-scanner-grid" id="mmo-scanner-grid">
-        ${SCAN_TICKERS.map(t => `
-        <div class="mmo-mini-card" onclick="MMO.analyze('${t}')" id="mmo-mini-${t.replace('-', '_')}">
-          <div class="mmo-mini-ticker">${t}</div>
-          <div class="mmo-mini-loading">loading…</div>
-        </div>`).join('')}
-      </div>
-    </div>
-  </div>
-
-</div><!-- /mmo-shell -->
-`;
-    _startWaveCanvas();
-    _startVacuumChamber();
-    _loadScanner();
-  }
 
   /* ═══════════════════════════════════════════════════════════════
      WAVE CANVAS ANIMATION
@@ -578,151 +341,48 @@
      ═══════════════════════════════════════════════════════════════ */
   let _vacuumAnimId = null;
   let _vacuumResizeObserver = null;
+  // Hold a reference to the previous WebGL renderer + scene so we can
+  // dispose GPU resources (geometries, materials, textures) before building
+  // a fresh chamber. Without this, every re-analyze leaks VRAM.
+  let _vacuumPrev = { renderer: null, scene: null };
   let _vkRenderData = { tunnelingRisk: 0, amplitudes: null, vScene: null, focus: null, qState: null };
 
-  function _startVacuumChamber() {
-    if (_vacuumAnimId) cancelAnimationFrame(_vacuumAnimId);
-
-    const mount = document.getElementById('mmo-three-mount');
-    if (!mount || typeof THREE === 'undefined') return;
-    mount.innerHTML = '';
-
-    const W = mount.offsetWidth;
-    const H = mount.offsetHeight;
-
-    const scene = new THREE.Scene();
-    scene.background = null; // transparent to show HUD dark bg
-    const camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 1000);
-    camera.position.set(0, 15, 65);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(W, H);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    mount.appendChild(renderer.domElement);
-
-    _vkRenderData.vScene = scene;
-
-    // ── Topology Grid ──────────────────────────────────────────
-    const gridGeo = new THREE.PlaneGeometry(200, 200, 40, 40);
-    const gridMat = new THREE.MeshBasicMaterial({ color: 0x4a3a7a, wireframe: true, transparent: true, opacity: 0.15 });
-    const grid = new THREE.Mesh(gridGeo, gridMat);
-    grid.rotation.x = -Math.PI / 2;
-    grid.position.y = -15;
-    scene.add(grid);
-
-    // ── Entanglement Spheres (Other assets) ────────────────────
-    const nodes = [];
-    const colors = [0x00ff88, 0x00d4ff, 0xff79c6, 0xffb86c, 0xbd93f9];
-    for (let i = 0; i < 5; i++) {
-      const geo = new THREE.SphereGeometry(1.5, 16, 16);
-      const mat = new THREE.MeshBasicMaterial({ color: colors[i], transparent: true, opacity: 0.5 });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set((Math.random() - 0.5) * 40, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 40);
-      scene.add(mesh);
-
-      // Entanglement Threads
-      const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), mesh.position]);
-      const lineMat = new THREE.LineBasicMaterial({ color: colors[i], transparent: true, opacity: 0.2 });
-      const line = new THREE.Line(lineGeo, lineMat);
-      scene.add(line);
-
-      nodes.push({ mesh, line, basePos: mesh.position.clone(), speed: Math.random() * 0.02 + 0.01 });
-    }
-
-    // ── Primary Asset Core (The Ticker) ────────────────────────
-    const coreGeo = new THREE.SphereGeometry(3, 32, 32);
-    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.8 });
-    const core = new THREE.Mesh(coreGeo, coreMat);
-    scene.add(core);
-
-    const coreGlowGeo = new THREE.SphereGeometry(6, 32, 32);
-    const coreGlowMat = new THREE.MeshBasicMaterial({ color: 0xbd93f9, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false });
-    const coreGlow = new THREE.Mesh(coreGlowGeo, coreGlowMat);
-    scene.add(coreGlow);
-
-    // ── Tunneling Membrane (Resistance Plane) ──────────────────
-    const membraneGeo = new THREE.PlaneGeometry(60, 40, 20, 20);
-    const membraneMat = new THREE.MeshBasicMaterial({ color: 0xff9500, wireframe: true, transparent: true, opacity: 0.05, side: THREE.DoubleSide });
-    const membrane = new THREE.Mesh(membraneGeo, membraneMat);
-    membrane.position.z = -15;
-    scene.add(membrane);
-
-    // ── Floating Particles (Energy Flux) ───────────────────────
-    const partGeo = new THREE.BufferGeometry();
-    const partCount = 400;
-    const posInit = new Float32Array(partCount * 3);
-    for (let i = 0; i < partCount * 3; i++) posInit[i] = (Math.random() - 0.5) * 80;
-    partGeo.setAttribute('position', new THREE.BufferAttribute(posInit, 3));
-    const partMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.3, transparent: true, opacity: 0.4 });
-    const particles = new THREE.Points(partGeo, partMat);
-    scene.add(particles);
-
-    let t = 0;
-    function animate() {
-      _vacuumAnimId = requestAnimationFrame(animate);
-      t += 0.01;
-
-      const risk = _vkRenderData.tunnelingRisk || 0;
-
-      // Pulse Core
-      core.rotation.y += 0.01;
-      core.rotation.x += 0.005;
-      const pulse = 1 + Math.sin(t * 5) * 0.1;
-      core.scale.set(pulse, pulse, pulse);
-
-      // Update Nodes
-      nodes.forEach((n, idx) => {
-        n.mesh.position.y = n.basePos.y + Math.sin(t * 3 + idx) * 5;
-        const posCopy = n.mesh.position.clone();
-        n.line.geometry.setFromPoints([core.position, posCopy]);
-        n.line.material.opacity = 0.1 + Math.sin(t * 2 + idx) * 0.1;
+  function _disposeVacuumScene() {
+    // Cancel animation + detach resize observer (safe to re-call).
+    if (_vacuumAnimId) { cancelAnimationFrame(_vacuumAnimId); _vacuumAnimId = null; }
+    if (_vacuumResizeObserver) { _vacuumResizeObserver.disconnect(); _vacuumResizeObserver = null; }
+    // Walk the old scene, dispose geometries/materials/textures.
+    const prevScene = _vacuumPrev.scene;
+    if (prevScene && typeof prevScene.traverse === 'function') {
+      prevScene.traverse(obj => {
+        if (obj.geometry && typeof obj.geometry.dispose === 'function') {
+          obj.geometry.dispose();
+        }
+        if (obj.material) {
+          const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+          mats.forEach(m => {
+            if (m.map && typeof m.map.dispose === 'function') m.map.dispose();
+            if (typeof m.dispose === 'function') m.dispose();
+          });
+        }
       });
-
-      // Tunneling Membrane Activity
-      if (risk > 0.05) {
-        membrane.material.opacity = 0.1 + risk * 0.4;
-        membrane.material.color.setHex(0xff3300);
-        membrane.position.z = -15 + Math.sin(t * 10) * risk * 5;
-        const positions = partGeo.attributes.position.array;
-        for (let i = 0; i < partCount; i++) {
-          positions[i * 3 + 2] -= (0.5 + risk * 2); // Particles fly towards membrane
-          if (positions[i * 3 + 2] < -20) {
-            positions[i * 3] = (Math.random() - 0.5) * 80;
-            positions[i * 3 + 1] = (Math.random() - 0.5) * 40;
-            positions[i * 3 + 2] = 20;
-          }
-        }
-        partGeo.attributes.position.needsUpdate = true;
-      } else {
-        membrane.material.opacity = 0.05;
-        membrane.material.color.setHex(0x4a3a7a);
-        membrane.position.z = -25;
-        const positions = partGeo.attributes.position.array;
-        for (let i = 0; i < partCount; i++) {
-          positions[i * 3 + 2] -= 0.2;
-          if (positions[i * 3 + 2] < -40) positions[i * 3 + 2] = 40;
-        }
-        partGeo.attributes.position.needsUpdate = true;
-      }
-
-      // Camera Orbit
-      camera.position.x = Math.sin(t * 0.2) * 30;
-      camera.position.z = 60 + Math.cos(t * 0.2) * 10;
-      camera.lookAt(core.position);
-
-      renderer.render(scene, camera);
     }
-    animate();
-
-    // Resize observer
-    const ro = new ResizeObserver(() => {
-      if (!mount || !renderer) return;
-      renderer.setSize(mount.offsetWidth, mount.offsetHeight);
-      camera.aspect = mount.offsetWidth / mount.offsetHeight;
-      camera.updateProjectionMatrix();
-    });
-    ro.observe(mount);
+    const prevRenderer = _vacuumPrev.renderer;
+    if (prevRenderer) {
+      try {
+        if (typeof prevRenderer.dispose === 'function') prevRenderer.dispose();
+        if (prevRenderer.forceContextLoss) prevRenderer.forceContextLoss();
+        if (prevRenderer.domElement && prevRenderer.domElement.parentNode) {
+          prevRenderer.domElement.parentNode.removeChild(prevRenderer.domElement);
+        }
+      } catch (_) { /* renderer already torn down */ }
+    }
+    _vacuumPrev.renderer = null;
+    _vacuumPrev.scene = null;
   }
+  /* Dead duplicate _startVacuumChamber removed — authoritative copy is
+     further down (with renderer disposal wired in). */
+
 
   function _getDominantState() {
     if (!_qState) return 'BULL';
@@ -1413,8 +1073,15 @@ ${overlapHtml}
       return `<div title="${s} ${(p*100).toFixed(0)}%" style="flex:1;height:${h}px;background:${col};border-radius:1px 1px 0 0;opacity:0.85;align-self:flex-end;"></div>`;
     }).join('');
 
+    // Tag tiles whose values came from local simulation (API fallback) so
+    // the scanner doesn't visually lie about real vs synthetic data.
+    const isFallback = !!(qs && (qs._notice || qs._isLocalFallback));
+    const fallbackMark = isFallback
+      ? `<span class="mmo-mini-fallback" title="${qs._notice ? qs._notice.replace(/"/g, '&quot;') : 'Local simulation (API unreachable)'}">◌ SIM</span>`
+      : '';
+
     el.innerHTML = `
-<div class="mmo-mini-ticker">${ticker}</div>
+<div class="mmo-mini-ticker">${ticker}${fallbackMark}</div>
 <div class="mmo-mini-state" style="color:${STATES[dominant] ? STATES[dominant].color : '#cc99ff'}">${dominant}</div>
 <div class="mmo-mini-verdict" style="color:${vCol}">${verdict.replace('SUPERPOSED — ', '')}</div>
 <div style="display:flex;align-items:flex-end;gap:1px;height:30px;margin:4px 0 2px;border-bottom:1px solid rgba(255,255,255,0.06);">
@@ -1515,15 +1182,29 @@ ${overlapHtml}
      ═══════════════════════════════════════════════════════════════ */
   function _renderPathIntegral(pi) {
     if (!pi || !pi.distribution || !pi.distribution.length) return '';
-    const nBins  = pi.distribution.length;
+    // The backend now returns BOTH a probability-normalized `distribution`
+    // (Σ = 1, true density) and a display-scaled `display_scaled` (peak = 1,
+    // visually comfortable). Fall back to distribution for legacy responses.
+    const dens = pi.distribution;          // for title tooltips (true probs)
+    const display = pi.display_scaled && pi.display_scaled.length
+      ? pi.display_scaled
+      : (() => {
+          const m = Math.max(...dens);
+          return m > 0 ? dens.map(d => d / m) : dens;
+        })();
+    const nBins  = display.length;
     const center = nBins / 2;
-    const bars = pi.distribution.map((h, i) => {
+    const bars = display.map((h, i) => {
       const dist = Math.abs(i - center) / center;
       const col  = dist < 0.25 ? '#00ff88' : dist < 0.50 ? '#00d4ff' : dist < 0.75 ? '#bd93f9' : '#ff4757';
       const ht   = Math.max(1, Math.round(h * 28));
-      return `<div class="mmo-pi-bar" title="${Math.round(h*100)}%" style="height:${ht}px;background:${col};opacity:${(0.45 + h * 0.55).toFixed(2)};"></div>`;
+      const p    = (dens[i] * 100).toFixed(1);
+      return `<div class="mmo-pi-bar" title="P=${p}%" style="height:${ht}px;background:${col};opacity:${(0.45 + h * 0.55).toFixed(2)};"></div>`;
     }).join('');
     const rangePct = (pi.range * 100).toFixed(1);
+    const entropyTxt = typeof pi.entropy === 'number'
+      ? ` · H=${pi.entropy.toFixed(2)}`
+      : '';
     return `
       <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">
         <div style="font-size:9px;color:#778;margin-bottom:4px;font-family:monospace;text-transform:uppercase;">
@@ -1534,7 +1215,7 @@ ${overlapHtml}
           <span>−${rangePct}%</span><span>Return</span><span>+${rangePct}%</span>
         </div>
         <div style="font-size:9px;color:#667;margin-top:4px;font-style:italic;">
-          K(R) = Σ exp(−S/ℏ_eff), S=Σ(ΔP)²/2σ² · ℏ=${pi.hbar_eff}
+          K(R) = Σ exp(−S/ℏ_eff), S=Σ(ΔP)²/2σ² · ℏ=${pi.hbar_eff}${entropyTxt}
         </div>
       </div>
     `;
@@ -1699,22 +1380,111 @@ ${overlapHtml}
      ═══════════════════════════════════════════════════════════════ */
 
   /**
-   * Analyze a ticker — try API, fall back to local quantum engine.
+   * Analyze a ticker. Hits the server (real physics on real yfinance data),
+   * falls back to the deterministic local engine only if the API is
+   * unreachable. If the server returns `degraded: true` we surface a banner
+   * instead of silently rendering neutral placeholder values.
    */
   function analyze(ticker) {
-    _ticker = (ticker || 'SPY').toUpperCase().trim();
+    const raw = (ticker || 'SPY').toUpperCase().trim();
+    // Ticker sanity: 1–10 chars, A-Z / 0-9 / - / . (covers BRK.B, BTC-USD).
+    if (!/^[A-Z0-9.\-]{1,10}$/.test(raw)) {
+      _showBanner(`"${raw}" is not a valid ticker symbol.`, 'error');
+      return;
+    }
+    _ticker = raw;
     _collapsed = false;
     _collapseT = 0;
+    _clearBanner();
 
-    // Show loading state
+    // Single coherent loading state — no per-panel noise, no artificial delay.
     const stateEl = document.getElementById('mmo-state-display');
-    if (stateEl) stateEl.innerHTML = `<div class="mmo-superposed-label" style="color:#667">Loading ψ(${_ticker})…</div>`;
+    if (stateEl) stateEl.innerHTML = `<div class="mmo-superposed-label" style="color:#00d4ff; font-weight:bold; letter-spacing:1px; opacity:0.85">⟨ψ | ${_ticker} | ψ⟩ — computing…</div>`;
 
-    _api.get('/api/mmo/quantum_state/' + _ticker).then(qs => {
+    const loadingMask = `<div style="padding:20px;text-align:center;color:#00d4ff;opacity:0.45;font-family:monospace;">computing…</div>`;
+    ['mmo-energy-display', 'mmo-ontology-display', 'mmo-entropy-display',
+     'mmo-heisenberg-display', 'mmo-decoherence-display', 'mmo-berry-display',
+     'mmo-nh-display', 'mmo-entanglement-display'].forEach(id => {
+       const el = document.getElementById(id);
+       if (el) el.innerHTML = loadingMask;
+    });
+
+    _api.get(`/api/mmo/quantum_state/${_ticker}`).then(qs => {
+      if (!qs) {
+        // Network / CORS / 5xx. Fall back to local deterministic engine but
+        // warn the user — these numbers are simulated, not live.
+        const state = _normalizeQuantumState({}, _ticker);
+        state._isLocalFallback = true;
+        _qState = state;
+        _renderAll(state);
+        _showBanner(
+          `Server unreachable — showing offline simulation for ${_ticker}.`,
+          'warn'
+        );
+        return;
+      }
+      if (qs.degraded === true || qs.error) {
+        // Server responded but couldn't compute real physics (bad ticker,
+        // yfinance rate-limit, etc.). Show neutral scaffold + explicit banner.
+        const state = _normalizeQuantumState(qs, _ticker);
+        _qState = state;
+        _renderAll(state);
+        _showBanner(
+          qs.error ? qs.error : `No market data available for ${_ticker}.`,
+          'error'
+        );
+        return;
+      }
       const state = _normalizeQuantumState(qs, _ticker);
       _qState = state;
       _renderAll(state);
+    }).catch(err => {
+      console.warn('MMO API load failed, using local fallback:', err);
+      const state = _normalizeQuantumState({}, _ticker);
+      state._isLocalFallback = true;
+      _qState = state;
+      _renderAll(state);
+      _showBanner(
+        `Network error loading ${_ticker} — offline simulation shown.`,
+        'warn'
+      );
     });
+  }
+
+  // ── Banner helpers for degraded / error / warn states ────────────
+  function _showBanner(msg, level) {
+    const palette = {
+      warn:  { bg: 'rgba(255,152,  0,0.12)', bd: 'rgba(255,152,  0,0.40)', fg: '#ffb347', icon: '⚠' },
+      error: { bg: 'rgba(255, 71, 87,0.12)', bd: 'rgba(255, 71, 87,0.40)', fg: '#ff7b8a', icon: '✕' },
+      info:  { bg: 'rgba(  0,212,255,0.10)', bd: 'rgba(  0,212,255,0.35)', fg: '#66d4ff', icon: 'ℹ' },
+    };
+    const c = palette[level] || palette.info;
+    let bar = document.getElementById('mmo-banner');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'mmo-banner';
+      bar.style.cssText = [
+        'margin:8px 12px', 'padding:10px 14px', 'border-radius:10px',
+        'font-family:monospace', 'font-size:12px', 'letter-spacing:0.4px',
+        'display:flex', 'align-items:center', 'gap:10px',
+        'backdrop-filter:blur(12px) saturate(180%)',
+        '-webkit-backdrop-filter:blur(12px) saturate(180%)',
+      ].join(';');
+      const host =
+        document.querySelector('#view-mmo .mmo-header') ||
+        document.getElementById('view-mmo');
+      if (host) host.insertBefore(bar, host.firstChild);
+    }
+    bar.style.background = palette[level || 'info'].bg;
+    bar.style.border     = `1px solid ${c.bd}`;
+    bar.style.color      = c.fg;
+    bar.innerHTML = `<span style="font-size:14px">${c.icon}</span><span>${msg}</span>`;
+    bar.style.display = 'flex';
+  }
+
+  function _clearBanner() {
+    const bar = document.getElementById('mmo-banner');
+    if (bar) bar.style.display = 'none';
   }
 
   /**
@@ -1756,7 +1526,8 @@ ${overlapHtml}
      ═══════════════════════════════════════════════════════════════ */
   function _computeLocalQuantumState(ticker) {
     const t = (ticker || 'SPY').toUpperCase();
-    const seed = t.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) + new Date().getDate();
+    // Add jitter so the numbers shift slightly on each "Refresh" or "Analyze"
+    const seed = t.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) + new Date().getDate() + (Math.random() * 50);
     const rng = (n) => {
       const x = Math.sin(seed * n + n * 1.618033988) * 10000;
       return x - Math.floor(x);
@@ -2175,11 +1946,13 @@ ${overlapHtml}
   function _renderFocusDetail(qs) {
     const catalog = _buildFocusCatalog(qs);
     const focus = catalog[_focusKey] || catalog.surface;
+    const launchKey = focus.vizMode === 'nodes' ? 'blackhole' : 'galaxy3d';
+    const launchLabel = launchKey === 'blackhole' ? 'Open Liquidity Black Hole' : 'Open Market Galaxy 3D';
     const detailEl = document.getElementById('mmo-layer-detail');
     if (detailEl) {
       detailEl.innerHTML = `
         <div class="mmo-detail-kicker" style="color:${focus.accent}">${focus.kicker}</div>
-        <div class="mmo-detail-title">${focus.title}</div>
+        <button class="mmo-detail-title mmo-detail-title-action" type="button" onclick="MMO.launchViz('${launchKey}')">${focus.title}</button>
         <div class="mmo-detail-desc">${focus.description}</div>
         <div class="mmo-detail-facts">
           ${focus.facts.map(item => `
@@ -2190,6 +1963,10 @@ ${overlapHtml}
           `).join('')}
         </div>
         <div class="mmo-detail-note">${focus.note}</div>
+        <div class="mmo-detail-actions">
+          <button class="mmo-detail-action-btn" type="button" onclick="MMO.launchViz('${launchKey}')">${launchLabel}</button>
+          <button class="mmo-detail-action-btn secondary" type="button" onclick="MMO.launchViz('${launchKey === 'blackhole' ? 'galaxy3d' : 'blackhole'}')">${launchKey === 'blackhole' ? 'Open Market Galaxy 3D' : 'Open Liquidity Black Hole'}</button>
+        </div>
       `;
     }
     const titleEl = document.getElementById('mmo-universe-title');
@@ -2361,11 +2138,11 @@ ${overlapHtml}
   }
 
   function _startVacuumChamber() {
-    if (_vacuumAnimId) cancelAnimationFrame(_vacuumAnimId);
-    if (_vacuumResizeObserver) {
-      _vacuumResizeObserver.disconnect();
-      _vacuumResizeObserver = null;
-    }
+    // Dispose the prior renderer, scene graph, and animation loop before
+    // starting a new one — without this, each re-analyze leaked a WebGL
+    // context plus all its geometries/materials (GPU memory climbs until
+    // the browser throws CONTEXT_LOST).
+    _disposeVacuumScene();
 
     const mount = document.getElementById('mmo-three-mount');
     if (!mount || typeof THREE === 'undefined') return;
@@ -2385,6 +2162,10 @@ ${overlapHtml}
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.style.inset = '0';
     mount.prepend(renderer.domElement);
+
+    // Register for next-round disposal.
+    _vacuumPrev.renderer = renderer;
+    _vacuumPrev.scene = scene;
 
     _vkRenderData.vScene = scene;
 

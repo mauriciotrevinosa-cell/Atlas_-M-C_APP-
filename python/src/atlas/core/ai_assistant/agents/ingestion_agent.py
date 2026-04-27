@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List
 
 from .base import BaseAgent
@@ -123,7 +123,7 @@ class IngestionAgent(BaseAgent):
         pack = d.get("knowledge_pack", {})
         pack.setdefault("domain", "atlas_general")
         pack.setdefault("version", "v1")
-        pack.setdefault("ingested_at", datetime.utcnow().isoformat())
+        pack.setdefault("ingested_at", datetime.now(timezone.utc).isoformat())
         pack.setdefault("task_id", task.task_id)
         pack.setdefault("facts", [])
         d["knowledge_pack"] = pack

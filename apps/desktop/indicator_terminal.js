@@ -696,6 +696,7 @@ window.IndicatorTerminal = (() => {
     <!-- Ticker + controls -->
     <div class="ind-controls">
       <input id="ind-ticker-input" class="ind-input" type="text" value="AAPL" maxlength="6" placeholder="Ticker…" />
+      <span id="ind-fallback-chip" class="ind-fallback-chip" style="display:none;font-size:9px;color:#ff9500;margin-left:6px;">&#9888; synthetic data</span>
       <button class="ind-btn" onclick="IndicatorTerminal.loadTicker()">Load ▶</button>
       <button class="ind-btn secondary" onclick="IndicatorTerminal.clearAll()">Clear All ✕</button>
       <span id="ind-data-badge" style="font-size:10px;font-family:monospace;padding:3px 8px;border:1px solid #2ecc71;border-radius:10px;color:#2ecc71;margin-left:4px">LIVE</span>
@@ -883,6 +884,7 @@ window.IndicatorTerminal = (() => {
             volume: bar.volume,
           }));
           _updateDataBadge('LIVE', '#2ecc71');
+          _setSyntheticFallbackChip(false);
         } else {
           throw new Error('empty ohlc');
         }
@@ -893,6 +895,7 @@ window.IndicatorTerminal = (() => {
       console.warn('[IndicatorTerminal] market_data fallback to synthetic:', e.message);
       _data = _generateData(_ticker);
       _updateDataBadge('SYNTHETIC', '#f39c12');
+      _setSyntheticFallbackChip(true);
     }
 
     if (!_candleSeries) return;
@@ -919,6 +922,12 @@ window.IndicatorTerminal = (() => {
       badge.style.color = color;
       badge.style.borderColor = color;
     }
+  }
+
+  function _setSyntheticFallbackChip(isSynthetic) {
+    const chip = document.getElementById('ind-fallback-chip');
+    if (!chip) return;
+    chip.style.display = isSynthetic ? 'inline-block' : 'none';
   }
 
   function _renderSignalDiagnostics(sd) {
@@ -1016,7 +1025,9 @@ window.IndicatorTerminal = (() => {
     const state = _active[id];
     if (!state || !state.series || !_chart) return;
     Object.values(state.series).forEach(s => {
-      try { _chart.removeSeries(s); } catch (e) {}
+      try { _chart.removeSeries(s); } catch (e) {
+        console.warn('[IndicatorTerminal] remove series failed:', e.message);
+      }
     });
     state.series = null;
   }
@@ -1049,7 +1060,9 @@ window.IndicatorTerminal = (() => {
         } else if (Array.isArray(computed) && computed.length >= 1) {
           sig = def.signal(computed[computed.length - 1], null, _data);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[IndicatorTerminal] signal update failed:', e.message);
+      }
 
       const colour = _signalColour(sig);
       badges.push(`<span class="ind-signal-badge" style="background:${colour}22;color:${colour};border:1px solid ${colour}44;">${def.label}: ${sig}</span>`);
@@ -1097,7 +1110,10 @@ window.IndicatorTerminal = (() => {
         } else if (Array.isArray(computed) && computed.length >= 1) {
           sig = def.signal(computed[computed.length - 1], null, _data) || 'NEUTRAL';
         }
-      } catch (e) { sig = 'NEUTRAL'; }
+      } catch (e) {
+        console.warn('[IndicatorTerminal] scorecard signal calculation failed:', e.message);
+        sig = 'NEUTRAL';
+      }
 
       const score = _sigScore(sig);
       if (cats[cat]) cats[cat].push({ id, label: def.label, sig, score });
@@ -1231,7 +1247,9 @@ ${catHtml}
           sig = def.signal(computed[computed.length - 1], computed[computed.length - 2]);
         else if (Array.isArray(computed) && computed.length >= 1)
           sig = def.signal(computed[computed.length - 1]);
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[IndicatorTerminal] simulation signal calculation failed:', e.message);
+      }
       return { id, label: def.label, signal: sig };
     });
 

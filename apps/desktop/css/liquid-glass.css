@@ -1,0 +1,350 @@
+/* ═══════════════════════════════════════════════════════════════════
+   ATLAS — Liquid Glass Theme (Pleasant Edition)
+   ═══════════════════════════════════════════════════════════════════
+   Design brief: warm, inviting, premium. Apple iOS 26 / visionOS vibe.
+   Loaded AFTER styles.css so it can override the dark terminal theme.
+
+   Color psychology applied:
+     · Soft peach / apricot    → optimism, welcoming warmth
+     · Lavender haze           → creativity, calm sophistication
+     · Sage mint               → balance, growth (finance green w/o alarm)
+     · Dusty rose              → premium hospitality
+     · Deep plum (not black)   → luxury depth
+     · Pearl whites            → warmth over harsh pure-white
+
+   Liquid glass works because of the animated aurora behind it —
+   blurred color orbs drift, and each surface refracts what's behind.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Warm-twilight base palette ──────────────────────────────── */
+  --lg-plum-deep:   #1a1428;    /* true background (deep plum, not black) */
+  --lg-plum-soft:   #241b37;
+  --lg-pearl:       #f5f3ef;    /* warm off-white text */
+  --lg-pearl-muted: rgba(245, 243, 239, 0.68);
+  --lg-pearl-dim:   rgba(245, 243, 239, 0.42);
+
+  /* ── Aurora accent colors (for background orbs) ──────────────── */
+  --lg-peach:     #ffb499;     /* soft peach */
+  --lg-apricot:   #f9c6a7;
+  --lg-lavender:  #c9b8e8;     /* lavender haze */
+  --lg-sage:      #a8d5ba;     /* sage mint */
+  --lg-rose:      #e8b4bc;     /* dusty rose */
+  --lg-cream:     #f2e5d5;
+
+  /* ── Glass tokens ─────────────────────────────────────────────
+     Multi-stop gradients give the "wet glass" liquid look —
+     the top highlight (white) and bottom shade create refraction
+     cues the eye reads as translucent material.                   */
+  --lg-glass-bg:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.04) 40%,
+      rgba(255, 255, 255, 0.02) 100%
+    );
+  --lg-glass-bg-strong:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0.06) 50%,
+      rgba(255, 255, 255, 0.03) 100%
+    );
+
+  --lg-glass-border: 1px solid rgba(255, 255, 255, 0.16);
+  --lg-glass-border-inner: inset 0 1px 0 rgba(255, 255, 255, 0.22);   /* top highlight */
+  --lg-glass-border-outer: inset 0 -1px 0 rgba(0, 0, 0, 0.15);         /* bottom shade */
+  --lg-glass-shadow:
+    0 4px 24px rgba(26, 20, 40, 0.25),
+    0 1px 2px rgba(26, 20, 40, 0.15);
+  --lg-glass-shadow-hover:
+    0 8px 32px rgba(26, 20, 40, 0.32),
+    0 2px 4px rgba(26, 20, 40, 0.18);
+
+  --lg-radius: 18px;
+  --lg-radius-sm: 14px;
+  --lg-radius-lg: 24px;
+
+  --lg-ease: cubic-bezier(0.22, 1, 0.36, 1);  /* apple-style ease-out */
+}
+
+/* ═══ Base body — deep plum + animated aurora ════════════════════ */
+body {
+  background: var(--lg-plum-deep) !important;
+  color: var(--lg-pearl) !important;
+  position: relative;
+}
+
+/* The aurora: four blurred color orbs that drift slowly.
+   These are what the glass surfaces refract.                      */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -20%;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse 40% 35% at 20% 25%, var(--lg-peach)  0%, transparent 55%),
+    radial-gradient(ellipse 45% 40% at 80% 30%, var(--lg-lavender) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 70% 85%, var(--lg-sage)   0%, transparent 55%),
+    radial-gradient(ellipse 35% 30% at 15% 80%, var(--lg-rose)   0%, transparent 55%);
+  opacity: 0.45;
+  filter: blur(60px) saturate(120%);
+  animation: lg-aurora-drift 28s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* A very subtle film-grain / noise layer on top of the aurora
+   keeps the glass from looking plastic — real glass has texture. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0%, rgba(26, 20, 40, 0.35) 80%);
+  pointer-events: none;
+}
+
+@keyframes lg-aurora-drift {
+  0%   { transform: translate(0, 0)   scale(1);    }
+  33%  { transform: translate(-3%, 2%) scale(1.05); }
+  66%  { transform: translate(2%, -2%) scale(0.98); }
+  100% { transform: translate(-1%, 3%) scale(1.03); }
+}
+
+/* ═══ Title bar — glass strip ═══════════════════════════════════ */
+.title-bar {
+  background: var(--lg-glass-bg) !important;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: var(--lg-glass-border) !important;
+  box-shadow: var(--lg-glass-border-inner);
+}
+.title-bar .brand {
+  color: var(--lg-pearl) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.04em;
+}
+.admin-pill {
+  background: var(--lg-glass-bg-strong) !important;
+  backdrop-filter: blur(12px);
+  border: var(--lg-glass-border) !important;
+  border-radius: 999px !important;
+  box-shadow: var(--lg-glass-border-inner);
+}
+
+/* ═══ Section headers ═══════════════════════════════════════════ */
+.section-header,
+.section-header-with-line span {
+  color: var(--lg-pearl-muted) !important;
+  font-weight: 500 !important;
+}
+
+/* ═══ Overview grid + stat cards — the hero glass row ═══════════ */
+.overview-grid {
+  background: var(--lg-glass-bg) !important;
+  backdrop-filter: blur(28px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+  border: var(--lg-glass-border) !important;
+  border-radius: var(--lg-radius) !important;
+  box-shadow:
+    var(--lg-glass-shadow),
+    var(--lg-glass-border-inner),
+    var(--lg-glass-border-outer) !important;
+  overflow: hidden;
+  transition: box-shadow 0.4s var(--lg-ease);
+}
+.overview-grid:hover {
+  box-shadow:
+    var(--lg-glass-shadow-hover),
+    var(--lg-glass-border-inner),
+    var(--lg-glass-border-outer) !important;
+}
+.stat-card {
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  transition: background 0.3s var(--lg-ease);
+}
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.stat-label {
+  color: var(--lg-pearl-muted) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.12em !important;
+}
+.stat-value {
+  color: var(--lg-pearl) !important;
+  font-weight: 400 !important;
+}
+.stat-value.orange   { color: var(--lg-peach)    !important; }
+.stat-value.green    { color: var(--lg-sage)     !important; }
+
+/* ═══ Status card (Live System Status) — sage-tinted glass ═════ */
+.status-card {
+  background:
+    linear-gradient(135deg,
+      rgba(168, 213, 186, 0.18) 0%,
+      rgba(168, 213, 186, 0.06) 60%,
+      rgba(255, 255, 255, 0.02) 100%) !important;
+  backdrop-filter: blur(28px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+  border: 1px solid rgba(168, 213, 186, 0.28) !important;
+  border-radius: var(--lg-radius) !important;
+  box-shadow:
+    var(--lg-glass-shadow),
+    var(--lg-glass-border-inner) !important;
+  transition: transform 0.35s var(--lg-ease), box-shadow 0.35s var(--lg-ease);
+}
+.status-card:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    var(--lg-glass-shadow-hover),
+    var(--lg-glass-border-inner) !important;
+}
+.status-label {
+  color: var(--lg-sage) !important;
+  font-weight: 600 !important;
+}
+.status-text {
+  color: var(--lg-pearl) !important;
+}
+.play-btn {
+  background: var(--lg-glass-bg-strong) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: var(--lg-glass-border-inner);
+}
+.play-btn svg path {
+  stroke: var(--lg-pearl) !important;
+}
+.wave-bar {
+  background: var(--lg-sage) !important;
+}
+
+/* ═══ Module cards (big dashboard tiles) ════════════════════════ */
+.module-card {
+  background: var(--lg-glass-bg) !important;
+  backdrop-filter: blur(28px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+  border: var(--lg-glass-border) !important;
+  border-radius: var(--lg-radius) !important;
+  box-shadow:
+    var(--lg-glass-shadow),
+    var(--lg-glass-border-inner),
+    var(--lg-glass-border-outer) !important;
+  transition:
+    transform 0.4s var(--lg-ease),
+    box-shadow 0.4s var(--lg-ease),
+    background 0.4s var(--lg-ease);
+}
+.module-card:hover {
+  transform: translateY(-4px);
+  background: var(--lg-glass-bg-strong) !important;
+  box-shadow:
+    var(--lg-glass-shadow-hover),
+    var(--lg-glass-border-inner),
+    var(--lg-glass-border-outer) !important;
+}
+.module-card:active {
+  transform: translateY(-1px) scale(0.995);
+}
+
+/* ═══ Quick-action buttons — small glass pills ══════════════════ */
+.quick-actions {
+  gap: 12px !important;
+}
+.quick-action-btn {
+  background: var(--lg-glass-bg) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: var(--lg-glass-border) !important;
+  border-radius: var(--lg-radius-sm) !important;
+  color: var(--lg-pearl) !important;
+  font-weight: 500 !important;
+  box-shadow:
+    0 2px 12px rgba(26, 20, 40, 0.18),
+    var(--lg-glass-border-inner);
+  transition:
+    transform 0.3s var(--lg-ease),
+    background 0.3s var(--lg-ease),
+    box-shadow 0.3s var(--lg-ease);
+}
+.quick-action-btn:hover {
+  background: var(--lg-glass-bg-strong) !important;
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 20px rgba(26, 20, 40, 0.28),
+    var(--lg-glass-border-inner);
+}
+.quick-action-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ═══ Generic panels (card-like surfaces across views) ══════════ */
+.card,
+.panel,
+.status-bar-panel,
+.widget-card,
+.info-card {
+  background: var(--lg-glass-bg) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: var(--lg-glass-border) !important;
+  border-radius: var(--lg-radius) !important;
+  box-shadow:
+    var(--lg-glass-shadow),
+    var(--lg-glass-border-inner) !important;
+}
+
+/* ═══ Inputs — frosted text fields ══════════════════════════════ */
+input[type="text"],
+input[type="search"],
+input[type="number"],
+textarea,
+select {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 12px !important;
+  color: var(--lg-pearl) !important;
+  transition: border-color 0.2s var(--lg-ease), background 0.2s var(--lg-ease);
+}
+input[type="text"]:focus,
+input[type="search"]:focus,
+input[type="number"]:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  border-color: rgba(201, 184, 232, 0.5) !important;  /* lavender on focus */
+  background: rgba(255, 255, 255, 0.09) !important;
+  box-shadow: 0 0 0 4px rgba(201, 184, 232, 0.12);
+}
+::placeholder {
+  color: var(--lg-pearl-dim) !important;
+}
+
+/* ═══ Scrollbars — thin, frosted ═══════════════════════════════ */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ═══ Reduced motion — stop the aurora drift ═══════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+  .overview-grid, .status-card, .module-card, .quick-action-btn {
+    transition: none !important;
+  }
+}

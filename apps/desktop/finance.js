@@ -32,7 +32,8 @@ function getLocalPortfolio() {
             return { total_equity: 0, positions: [] };
         }
         return parsed;
-    } catch {
+    } catch (err) {
+        console.warn('[Finance] loading local portfolio failed:', err.message);
         return { total_equity: 0, positions: [] };
     }
 }
@@ -912,8 +913,6 @@ function setupPortfolioForm() {
                 errMsg.textContent = `Could not fetch price for ${ticker}. Enter an avg price manually or check the ticker.`;
                 errMsg.style.display = 'block';
                 setTimeout(() => { errMsg.style.display = 'none'; }, 5000);
-            } else {
-                alert(`Could not fetch price for ${ticker}. Check ticker symbol and internet connection.`);
             }
             return;
         }

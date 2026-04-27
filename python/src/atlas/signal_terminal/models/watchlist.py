@@ -2,10 +2,10 @@
 WatchlistItem — a ticker/asset to monitor.
 """
 from __future__ import annotations
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 import uuid
 
 
@@ -25,6 +25,8 @@ class WatchPriority(str, Enum):
 
 
 class WatchlistItem(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
     id:            str           = Field(default_factory=lambda: str(uuid.uuid4()))
     ticker:        str
     name:          Optional[str] = None
@@ -33,10 +35,7 @@ class WatchlistItem(BaseModel):
     tags:          List[str]     = Field(default_factory=list)
     notes:         Optional[str] = None
     alert_enabled: bool          = True
-    added_at:      datetime      = Field(default_factory=datetime.utcnow)
+    added_at:      datetime      = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Aliases used for fuzzy matching (e.g. "Apple", "AAPL", "Apple Inc")
     aliases: List[str] = Field(default_factory=list)
-
-    class Config:
-        use_enum_values = True

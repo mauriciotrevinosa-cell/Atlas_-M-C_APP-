@@ -9,6 +9,8 @@ window.AtlasThoughtMap = (() => {
   const POLL_MS = 30_000;
   let _initialized = false;
   let _pollHandle = null;
+  let _retryHandle = null;
+  let _autoRetryUsed = false;
 
   function init() {
     const root = document.getElementById('view-thought');
@@ -120,6 +122,8 @@ window.AtlasThoughtMap = (() => {
   }
 
   function _render(payload) {
+    _clearRetryHandle();
+    _autoRetryUsed = false;
     const cc = payload.command_center || {};
     const runtime = cc.runtime || {};
     const project = cc.project || {};
@@ -151,7 +155,10 @@ window.AtlasThoughtMap = (() => {
 
   function _renderError(err) {
     _applyStatusChip('critical');
-    _setText('thought-generated', `Telemetry offline (${err.message || 'error'})`);
+    _setHtml(
+      'thought-generated',
+      `Telemetry offline <button class="btn secondary" type="button" onclick="AtlasThoughtMap.refresh()" style="margin-left:8px;padding:2px 8px;font-size:10px;">Retry</button>`
+    );
     _setText('thought-connect-ratio', '0/0');
     _setText('thought-api-count', '-');
     _setText('thought-view-count', '-');
@@ -160,7 +167,7 @@ window.AtlasThoughtMap = (() => {
     _setText('thought-run-latest', 'unavailable');
     _setHtml(
       'thought-connectivity-list',
-      '<div class="thought-check thought-bad">Unable to load /api/system/thought_map</div>'
+      `<div class="thought-check thought-bad">Unable to load /api/system/thought_map${err.message ? `: ${_esc(err.message)}` : ''}</div>`
     );
     _setHtml(
       'thought-trace-list',
@@ -172,6 +179,13 @@ window.AtlasThoughtMap = (() => {
       '<div class="thought-module-row thought-bad">Module registry unavailable</div>'
     );
     _setHtml('thought-graph-svg', '');
+    if (!_autoRetryUsed) {
+      _autoRetryUsed = true;
+      _retryHandle = setTimeout(() => {
+        _retryHandle = null;
+        refresh();
+      }, 10_000);
+    }
   }
 
   function _renderChecks(checks) {
@@ -337,7 +351,8 @@ window.AtlasThoughtMap = (() => {
     if (!value) return 'n/a';
     try {
       return new Date(value).toLocaleString();
-    } catch (_) {
+    } catch (err) {
+      console.warn('[ThoughtMap] formatting date failed:', err.message);
       return String(value);
     }
   }
@@ -346,8 +361,16 @@ window.AtlasThoughtMap = (() => {
     if (!value) return 'n/a';
     try {
       return new Date(value).toLocaleTimeString();
-    } catch (_) {
+    } catch (err) {
+      console.warn('[ThoughtMap] formatting time failed:', err.message);
       return String(value);
+    }
+  }
+
+  function _clearRetryHandle() {
+    if (_retryHandle) {
+      clearTimeout(_retryHandle);
+      _retryHandle = null;
     }
   }
 

@@ -30,11 +30,12 @@ _CAT_BOOST = {
 
 
 def _hours_old(sig: Signal) -> float:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     pub = sig.published_at
-    # ensure no tzinfo
-    if pub.tzinfo is not None:
-        pub = pub.replace(tzinfo=None)
+    if pub.tzinfo is None:
+        pub = pub.replace(tzinfo=timezone.utc)
+    else:
+        pub = pub.astimezone(timezone.utc)
     delta = (now - pub).total_seconds() / 3600
     return max(0.0, delta)
 

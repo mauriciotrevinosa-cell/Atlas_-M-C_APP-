@@ -254,6 +254,10 @@ window.DecisionModule = (() => {
         font-size: 0.8rem;
         font-family: monospace;
       }
+      .dec-btn:disabled {
+        cursor: progress;
+        opacity: 0.65;
+      }
     `;
     document.head.appendChild(s);
   }
@@ -349,7 +353,8 @@ window.DecisionModule = (() => {
             });
           }
         }
-      } catch (_) {
+      } catch (err) {
+        console.warn('[Decision] loading live signals failed:', err.message);
         rows.push({ ticker: tkr, action: "HOLD", confidence: 0, size_pct: 0 });
       }
     }
@@ -616,10 +621,23 @@ window.DecisionModule = (() => {
   }
 
   async function refresh() {
-    // Clear pending (keep approved/rejected)
-    _pendingOrders = _pendingOrders.filter(o => o.status !== "pending");
-    await _loadLiveSignals();
-    _renderGuardrails();
+    _setRefreshBusy(true);
+    try {
+      // Clear pending (keep approved/rejected)
+      _pendingOrders = _pendingOrders.filter(o => o.status !== "pending");
+      await _loadLiveSignals();
+      _renderGuardrails();
+    } finally {
+      _setRefreshBusy(false);
+    }
+  }
+
+  function _setRefreshBusy(on) {
+    const btn = document.querySelector('button[onclick="DecisionModule.refresh()"]');
+    if (!btn) return;
+    if (!btn.dataset.idleLabel) btn.dataset.idleLabel = btn.textContent;
+    btn.disabled = on;
+    btn.textContent = on ? "Refreshing..." : btn.dataset.idleLabel;
   }
 
   function calc() { _calcPosition(); }

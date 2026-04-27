@@ -274,7 +274,8 @@ window.DerivativesModule = (() => {
     if (raw) {
       try {
         data = JSON.parse(raw);
-      } catch (_) {
+      } catch (err) {
+        console.warn('[Derivatives] parsing response payload failed:', err.message);
         data = null;
       }
     }
@@ -596,7 +597,7 @@ window.DerivativesModule = (() => {
       <div class="deriv-grid">
 
         <!-- Greeks Calculator -->
-        <div class="deriv-card">
+        <div class="deriv-card" id="deriv-greeks-card">
           <h3>📐 Greeks Calculator</h3>
           <div class="input-row">
             <div class="input-group">
@@ -732,7 +733,10 @@ window.DerivativesModule = (() => {
   async function setTicker() {
     const el = document.getElementById("deriv-ticker");
     if (el) _ticker = el.value.toUpperCase().trim() || "SPY";
-    await Promise.all([_loadChain(), _loadSurface(), _loadComposer()]);
+    // _loadChain updates g-spot/g-strike programmatically (no onchange fires),
+    // so queue a Greeks refresh once the chain fills those inputs.
+    await _loadChain();
+    await Promise.all([_loadSurface(), _loadComposer(), _loadGreeks()]);
   }
 
   async function calcGreeks() {

@@ -61,7 +61,8 @@
                     current_price: Number(item.current_price) || Number(item.avg_price) || 0
                 }))
                 .filter(item => item.symbol && item.qty > 0 && item.current_price > 0);
-        } catch {
+        } catch (err) {
+            console.warn('[SimDashboard] loading local portfolio positions failed:', err.message);
             return [];
         }
     }

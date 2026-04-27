@@ -59,6 +59,32 @@
     });
   }
 
+  function _disposeScene(scene) {
+    if (!scene || !scene.traverse) return;
+    scene.traverse(obj => {
+      if (obj.geometry && obj.geometry.dispose) obj.geometry.dispose();
+      const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+      materials.filter(Boolean).forEach(mat => {
+        Object.keys(mat).forEach(key => {
+          const value = mat[key];
+          if (value && value.isTexture && value.dispose) value.dispose();
+        });
+        if (mat.dispose) mat.dispose();
+      });
+    });
+  }
+
+  function _cleanupRenderer(animId, renderer, scene, mount, label) {
+    if (animId) cancelAnimationFrame(animId);
+    _disposeScene(scene);
+    if (renderer && renderer.dispose) renderer.dispose();
+    if (renderer && renderer.domElement && renderer.domElement.parentNode) {
+      renderer.domElement.parentNode.removeChild(renderer.domElement);
+    }
+    if (label && label.parentNode) label.parentNode.removeChild(label);
+    if (mount) mount.innerHTML = '';
+  }
+
   /* ══════════════════════════════════════════════════════════════════════
      BLACK HOLE v2  —  Liquidity Singularity
   ══════════════════════════════════════════════════════════════════════ */
@@ -92,7 +118,10 @@
     _setupRenderer(renderer);
 
     const mount = document.getElementById('viz-three-mount');
-    if (!mount) return null;
+    if (!mount) {
+      renderer.dispose();
+      return null;
+    }
     mount.innerHTML = '';
     mount.appendChild(renderer.domElement);
 
@@ -366,7 +395,7 @@
     }
 
     animate();
-    return () => { cancelAnimationFrame(animId); renderer.dispose(); };
+    return () => _cleanupRenderer(animId, renderer, scene, mount, label);
   }
 
   /* ══════════════════════════════════════════════════════════════════════
@@ -400,7 +429,10 @@
     _setupRenderer(renderer);
 
     const mount = document.getElementById('viz-three-mount');
-    if (!mount) return null;
+    if (!mount) {
+      renderer.dispose();
+      return null;
+    }
     mount.innerHTML = '';
     mount.appendChild(renderer.domElement);
 
@@ -542,7 +574,7 @@
     }
 
     animate();
-    return () => { cancelAnimationFrame(animId); renderer.dispose(); };
+    return () => _cleanupRenderer(animId, renderer, scene, mount, label);
   }
 
   // ── Registration ────────────────────────────────────────────────────────

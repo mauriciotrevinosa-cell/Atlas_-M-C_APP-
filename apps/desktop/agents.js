@@ -20,6 +20,12 @@
   let _agentsList  = [];
   let _running     = false;
   let _history     = [];   // local run history (last 20)
+  let _statusRetryCount = 0;
+  let _statusRetryTimer = null;
+
+  const STATUS_RETRY_MS = 3000;
+  const STATUS_RETRY_LIMIT = 3;
+  const AGENT_BOOT_COMMAND = 'python run_atlas.py';
 
   // Agent display names + icons
   const AGENT_META = {
@@ -88,7 +94,7 @@
     <div>
       <h2 style="margin:0;font-size:22px;color:#fff;letter-spacing:0.5px;">🤖 AI Agent System</h2>
       <p style="margin:4px 0 0;font-size:12px;color:#666;">
-        n8n-style agent orchestration · stub mode (no LLM required)
+        n8n-style agent orchestration · local-first runtime with live status checks
       </p>
     </div>
     <div id="agents-status-badge" style="margin-left:auto;padding:4px 12px;border-radius:20px;
@@ -447,23 +453,79 @@
   // ── Status check ──────────────────────────────────────────────────────────
   async function _loadStatus() {
     const badge = document.getElementById('agents-status-badge');
+    if (!badge) return;
     try {
       const res  = await fetch('/api/agents/status');
       if (!res.ok) throw new Error(`agents/status ${res.status}`);
       const data = await res.json();
       if (data.available) {
+        _resetStatusRetryState();
         badge.textContent   = `✓ ${data.agents_count} agents ready`;
         badge.style.color   = '#00e676';
         badge.style.borderColor = '#00e67633';
+        badge.style.cursor = 'default';
+        badge.title = 'Agent system online';
+        badge.onclick = null;
         _agentsList = data.agents || [];
       } else {
-        badge.textContent = '⚠ stub mode';
-        badge.style.color = '#f39c12';
+        _scheduleStatusRetry(data.reason || 'agent runtime unavailable');
       }
-    } catch {
-      badge.textContent = '● offline';
-      badge.style.color = '#ef5350';
+    } catch (err) {
+      console.warn('[Agents] status check failed:', err.message);
+      _scheduleStatusRetry(err.message || 'status check failed');
     }
+  }
+
+  function _resetStatusRetryState() {
+    _statusRetryCount = 0;
+    if (_statusRetryTimer) {
+      clearTimeout(_statusRetryTimer);
+      _statusRetryTimer = null;
+    }
+  }
+
+  function _scheduleStatusRetry(reason) {
+    const badge = document.getElementById('agents-status-badge');
+    if (!badge) return;
+
+    if (_statusRetryTimer) {
+      clearTimeout(_statusRetryTimer);
+      _statusRetryTimer = null;
+    }
+
+    if (_statusRetryCount < STATUS_RETRY_LIMIT) {
+      _statusRetryCount += 1;
+      badge.textContent = `Agent system initializing... retrying in 3s (${_statusRetryCount}/${STATUS_RETRY_LIMIT})`;
+      badge.style.color = '#f39c12';
+      badge.style.borderColor = '#f39c1233';
+      badge.style.cursor = 'default';
+      badge.title = reason ? `Retrying: ${reason}` : 'Retrying agent status check';
+      badge.onclick = null;
+      _statusRetryTimer = setTimeout(() => {
+        _statusRetryTimer = null;
+        _loadStatus();
+      }, STATUS_RETRY_MS);
+      return;
+    }
+
+    badge.textContent = 'Agent system offline - click to copy run command';
+    badge.style.color = '#ef5350';
+    badge.style.borderColor = '#ef535033';
+    badge.style.cursor = 'copy';
+    badge.title = `${reason || 'Agent runtime offline'} | Click to copy: ${AGENT_BOOT_COMMAND}`;
+    badge.onclick = async () => {
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(AGENT_BOOT_COMMAND);
+          badge.textContent = 'Copied: python run_atlas.py';
+          setTimeout(() => {
+            badge.textContent = 'Agent system offline - click to copy run command';
+          }, 1800);
+        }
+      } catch (err) {
+        console.warn('[Agents] copy boot command failed:', err.message);
+      }
+    };
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

@@ -1060,8 +1060,8 @@ select option {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
-  overflow-y: auto;
-  max-height: calc(100vh - 195px);
+  overflow: visible;
+  max-height: none;
   padding-bottom: 10px;
 }
 
@@ -2162,6 +2162,12 @@ tbody td {
 .trader-btn-primary:hover {
   opacity: 0.9;
   transform: translateY(-1px);
+}
+
+.trader-btn-primary:disabled {
+  cursor: progress;
+  opacity: 0.65;
+  transform: none;
 }
 
 .trader-btn-secondary {
@@ -3770,6 +3776,23 @@ tbody td {
   margin-bottom: 4px;
 }
 
+/* "◌ SIM" chip marks mini-cards that fell back to local simulation when the
+   live API was unreachable — keeps the scanner honest about real vs synthetic. */
+.mmo-mini-fallback {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ffb347;
+  background: rgba(255, 152, 0, 0.12);
+  border: 1px solid rgba(255, 152, 0, 0.35);
+  vertical-align: middle;
+  cursor: help;
+}
+
 .mmo-mini-state {
   font-size: 9px;
   color: #5a4a7a;
@@ -4348,4 +4371,116 @@ tbody td {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 10px;
+}
+.playroom-coming-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 140px;
+  padding: 18px;
+  border: 1px dashed rgba(241, 196, 15, 0.35);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(241, 196, 15, 0.08), rgba(13, 18, 29, 0.9));
+  color: #d7dce7;
+  text-align: center;
+}
+
+.coming-soon-icon {
+  font-size: 28px;
+}
+
+.coming-soon-note {
+  font-size: 11px;
+  color: #8d95a8;
+  font-style: italic;
+}
+
+
+/* ── Live Market Ticker Strip ────────────────────────────────────────────── */
+.market-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card-bg, #1a1a2e);
+  border: 1px solid var(--border-color, #2a2a4a);
+  border-radius: 10px;
+  padding: 8px 14px;
+  margin: 8px 0 14px;
+  overflow: hidden;
+}
+
+.ms-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--accent-green, #00ff88);
+  text-transform: uppercase;
+  flex-shrink: 0;
+  border: 1px solid var(--accent-green, #00ff88);
+  border-radius: 3px;
+  padding: 1px 4px;
+  opacity: 0.8;
+}
+
+.ms-tickers {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ms-tickers::-webkit-scrollbar { display: none; }
+
+.ms-tick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+.ms-tick:hover { opacity: 0.75; }
+
+.ms-sym {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--txt-muted, #8892b0);
+  text-transform: uppercase;
+}
+
+.ms-price {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary, #e0e0ff);
+}
+
+.ms-chg {
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.ms-up   { color: #00ff88; }
+.ms-down { color: #ff4466; }
+.ms-neutral { color: var(--txt-muted, #8892b0); }
+
+.ms-updated {
+  font-size: 9px;
+  color: var(--txt-muted, #8892b0);
+  flex-shrink: 0;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+@keyframes ms-pulse-load {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.8; }
+}
+.ms-tick.loading-pulse .ms-price,
+.ms-tick.loading-pulse .ms-chg {
+  animation: ms-pulse-load 1.2s ease-in-out infinite;
 }

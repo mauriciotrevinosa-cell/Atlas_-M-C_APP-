@@ -92,7 +92,6 @@ class CacheStore:
             if cached_at > 0 and (time.time() - cached_at > self.ttl_seconds):
                 if not allow_stale:
                     logger.debug("Cache EXPIRED for %s", key)
-                    self._remove(key)
                     return None
                 stale = True
         else:
@@ -100,7 +99,6 @@ class CacheStore:
             file_age = time.time() - data_path.stat().st_mtime
             if file_age > self.ttl_seconds:
                 if not allow_stale:
-                    self._remove(key)
                     return None
                 stale = True
 

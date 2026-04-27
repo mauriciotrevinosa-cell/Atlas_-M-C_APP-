@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 import uuid
 
 
@@ -19,6 +19,8 @@ class SourceType(str, Enum):
 
 
 class Source(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
     id:               str       = Field(default_factory=lambda: str(uuid.uuid4()))
     name:             str
     type:             SourceType
@@ -31,6 +33,3 @@ class Source(BaseModel):
     last_error:      Optional[str]      = None
     error_count:     int                = 0
     total_fetched:   int                = 0
-
-    class Config:
-        use_enum_values = True

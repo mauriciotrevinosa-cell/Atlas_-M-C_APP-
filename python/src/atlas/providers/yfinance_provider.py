@@ -19,6 +19,8 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
+from atlas.data_layer.normalize import normalize_ohlcv
+
 logger = logging.getLogger("atlas.providers.yfinance")
 
 
@@ -102,6 +104,25 @@ class YFinanceProvider:
             end_date=end,
             interval=interval,
         )
+
+    def fetch(
+        self,
+        ticker: str,
+        start: str,
+        end: str,
+        interval: str = "1d",
+    ) -> pd.DataFrame:
+        """Legacy fetch alias returning normalized lowercase OHLCV data."""
+        self._guard()
+        import yfinance as yf
+
+        df = yf.Ticker(ticker).history(start=start, end=end, interval=interval)
+        if df is None:
+            return pd.DataFrame()
+        try:
+            return normalize_ohlcv(df)
+        except Exception:
+            return df
 
     def get_quote(self, ticker: str) -> Dict[str, Any]:
         """

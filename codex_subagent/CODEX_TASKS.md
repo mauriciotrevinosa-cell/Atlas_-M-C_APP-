@@ -13,7 +13,7 @@
 **Lines:** ~460
 **Problem:** When `/api/agents/status` fails, badge shows "⚠ stub mode" forever with no retry.
 **Fix:** After failure, set a 3-second retry. After 3 retries, show "Agent system offline — run `python run_atlas.py`" with a copy-able command.
-**Status:** [ ] OPEN
+**Status:** [DONE - Codex 2026-04-13]
 
 ---
 
@@ -30,7 +30,7 @@
 </div>
 ```
 Add `.playroom-coming-soon` CSS: centered, muted border, italic note text.
-**Status:** [ ] OPEN
+**Status:** [DONE - Codex 2026-04-13]
 
 ---
 
@@ -39,7 +39,7 @@ Add `.playroom-coming-soon` CSS: centered, muted border, italic note text.
 **Lines:** Find the `step()` or reward update loop
 **Problem:** If reward returns NaN (happens with bad hyperparams), training continues silently producing garbage charts.
 **Fix:** After each step, check `if (!isFinite(reward)) { stopTraining(); showError('Training diverged — try lower learning rate'); return; }`
-**Status:** [ ] OPEN
+**Status:** [DONE - Codex 2026-04-13]
 
 ---
 
@@ -57,7 +57,7 @@ errMsg.style.display = 'block';
 setTimeout(() => { errMsg.style.display = 'none'; }, 5000);
 return;
 ```
-**Status:** [ ] OPEN
+**Status:** [DONE - Codex 2026-04-13]
 
 ---
 
@@ -73,7 +73,7 @@ Use the filename as module name. Do not add full stack traces — just `.message
 grep -rn "catch\s*{" apps/desktop/*.js
 grep -rn "catch\s*(e)\s*{}" apps/desktop/*.js
 ```
-**Status:** [ ] OPEN
+**Status:** [DONE - Codex 2026-04-13]
 
 ---
 
@@ -86,7 +86,7 @@ grep -rn "catch\s*(e)\s*{}" apps/desktop/*.js
 <span class="ind-fallback-chip" style="font-size:9px;color:#ff9500;margin-left:6px;">⚠ synthetic data</span>
 ```
 Remove chip when real data loads successfully.
-**Status:** [ ] OPEN
+**Status:** [DONE - Codex 2026-04-13]
 
 ---
 
@@ -95,7 +95,7 @@ Remove chip when real data loads successfully.
 **Line:** ~154
 **Problem:** Sets text to "Telemetry offline (err.message)" which is raw and unhelpful.
 **Fix:** Show a retry button next to the message. After 10s auto-retry once.
-**Status:** [ ] OPEN
+**Status:** [DONE - Codex 2026-04-13]
 
 ---
 
@@ -114,7 +114,7 @@ raise NotImplementedError(
     "Current MMO dynamics are handled server-side in apps/server/server.py:mmo_quantum_state()"
 )
 ```
-**Status:** [ ] OPEN
+**Status:** [DONE - Codex 2026-04-13]
 
 ---
 
@@ -127,7 +127,31 @@ raise NotImplementedError(
 return "📋 ClickUp integration coming soon. For now, tasks are tracked in Atlas Signal Terminal."
 ```
 This is better than a silent TODO — user gets a real response.
-**Status:** [ ] OPEN
+**Status:** [DONE - Codex 2026-04-13]
+
+---
+
+### TASK-010 — UI State: "Silent" buttons need feedback
+**Files:** `apps/desktop/trader.js` (Analyze button) & `apps/desktop/decision.js` (Refresh Signals)
+**Problem:** Clicking "Analyze" or "Refresh Signals" returns no visual state. The user thinks the app is dead.
+**Fix:** Add CSS skeleton loaders, `opacity: 0.5`, or `.innerHTML = 'Calculating...'` upon click. Reveal original text on success.
+**Status:** [DONE - Codex 2026-04-27]
+
+---
+
+### TASK-011 — Viz Lab: Nested scroll trap
+**File:** `apps/desktop/viz_lab.js` / `styles.css`
+**Problem:** Scroll wrapper traps the mouse wheel, making it hard to see the Decorative Sims at the bottom.
+**Fix:** Implement `overscroll-behavior: contain;` on the inner scroll list, or adjust viewport heights so it flows naturally.
+**Status:** [DONE - Codex 2026-04-27]
+
+---
+
+### TASK-012 — MMO UX: Layer Explorer Clickability
+**File:** `apps/desktop/mmo.js` / HTML wrapper
+**Problem:** The Interactive Layer Explorer looks clickable but isn't. You have to use the bottom launchers.
+**Fix:** Make the left-hand layer explorer panel text dynamically clickable, triggering the same events as the bottom layer launchers.
+**Status:** [DONE - Codex 2026-04-27]
 
 ---
 
@@ -135,7 +159,18 @@ This is better than a silent TODO — user gets a real response.
 
 | Task | Done By | Date |
 |------|---------|------|
-| *(none yet)* | | |
+| TASK-001 | Codex | 2026-04-13 |
+| TASK-002 | Codex | 2026-04-13 |
+| TASK-003 | Codex | 2026-04-13 |
+| TASK-004 | Codex | 2026-04-13 |
+| TASK-005 | Codex | 2026-04-13 |
+| TASK-006 | Codex | 2026-04-13 |
+| TASK-007 | Codex | 2026-04-13 |
+| TASK-008 | Codex | 2026-04-13 |
+| TASK-009 | Codex | 2026-04-13 |
+| TASK-010 | Codex | 2026-04-27 |
+| TASK-011 | Codex | 2026-04-27 |
+| TASK-012 | Codex | 2026-04-27 |
 
 ---
 

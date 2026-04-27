@@ -52,6 +52,11 @@ class CacheProvider:
         safe = ticker.replace("/", "_").replace("^", "idx_").replace("=", "_eq_")
         return f"router_{safe}_{start}_{end}_{interval}"
 
+    @property
+    def store_backend(self) -> CacheStore:
+        """Expose the underlying store for diagnostics and legacy adapters."""
+        return self._store
+
     # ------------------------------------------------------------------
     # Read
     # ------------------------------------------------------------------
@@ -156,6 +161,10 @@ class CacheProvider:
 
         self._store.set(key, df, metadata=meta)
         logger.debug("CacheProvider SET: %s (%d rows)", key, len(df))
+
+    def store(self, key: str, df: pd.DataFrame, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Legacy direct-key write alias used by older tests/tools."""
+        self._store.set(key, df, metadata=metadata)
 
     # ------------------------------------------------------------------
     # Management

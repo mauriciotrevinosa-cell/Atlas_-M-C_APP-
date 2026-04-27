@@ -93,8 +93,8 @@ class RedditCollector(BaseCollector):
 
             created_utc = d.get("created_utc")
             pub = (
-                datetime.fromtimestamp(created_utc, tz=timezone.utc).replace(tzinfo=None)
-                if created_utc else datetime.utcnow()
+                datetime.fromtimestamp(created_utc, tz=timezone.utc)
+                if created_utc else datetime.now(timezone.utc)
             )
 
             items.append(RawItem(

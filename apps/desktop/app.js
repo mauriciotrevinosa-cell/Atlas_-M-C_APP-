@@ -62,6 +62,10 @@ async function init() {
   _refreshCommandCenter();
   setInterval(_refreshCommandCenter, 45_000);    // refresh every 45 s
 
+  // Live market ticker strip
+  _refreshMarketStrip();
+  setInterval(_refreshMarketStrip, 30_000);      // refresh every 30 s
+
   // Slash hint listener on input
   const inp = document.getElementById('input');
   if (inp) {
@@ -77,6 +81,70 @@ async function init() {
     }, 3000);
   }
 }
+
+// ==================== LIVE MARKET TICKER STRIP ====================
+
+const _MS_TICKERS = ['SPY', 'QQQ', 'NVDA', 'AAPL', 'BTC-USD', 'GLD', 'IWM'];
+
+async function _refreshMarketStrip() {
+  const container = document.getElementById('ms-tickers');
+  const updEl     = document.getElementById('ms-updated');
+  if (!container) return;
+
+  try {
+    // Single parallel batch call — much faster than 7 individual requests
+    const tickerParam = _MS_TICKERS.join(',');
+    const res = await fetch(`/api/monitor/tick?tickers=${encodeURIComponent(tickerParam)}`);
+    if (!res.ok) throw new Error(`monitor/tick ${res.status}`);
+    const data = await res.json();
+
+    // data.tickers is an array of {symbol, price, change_pct}
+    const ticks = Array.isArray(data.tickers) ? data.tickers : [];
+
+    ticks.forEach(tick => {
+      const sym = tick.symbol || tick.ticker;
+      const el  = container.querySelector(`[data-sym="${sym}"]`);
+      if (!el) return;
+
+      const price  = tick.price;
+      const chgPct = tick.change_pct;
+
+      const priceEl = el.querySelector('.ms-price');
+      const chgEl   = el.querySelector('.ms-chg');
+
+      if (priceEl && price !== null && price !== undefined) {
+        priceEl.textContent = price >= 1000
+          ? `$${(price / 1000).toFixed(1)}k`
+          : `$${Number(price).toFixed(2)}`;
+      }
+
+      if (chgEl && chgPct !== null && chgPct !== undefined) {
+        const sign = chgPct >= 0 ? '+' : '';
+        chgEl.textContent = `${sign}${Number(chgPct).toFixed(2)}%`;
+        chgEl.className = `ms-chg ${chgPct > 0 ? 'ms-up' : chgPct < 0 ? 'ms-down' : 'ms-neutral'}`;
+      }
+
+      el.classList.remove('loading-pulse');
+
+      // Click → open analysis view for this ticker
+      el.onclick = () => {
+        const input = document.getElementById('analysis-ticker');
+        if (input) input.value = sym.replace('-USD', '');
+        window._analysisBooted = false;  // allow re-load for new ticker
+        switchView('analysis');
+      };
+    });
+
+  } catch (err) {
+    // silently keep existing state — don't blank the strip on network error
+    console.warn('[MarketStrip] refresh failed:', err.message);
+  }
+
+  if (updEl) {
+    updEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+}
+
 
 // ==================== DASHBOARD LIVE STATS ====================
 
@@ -109,14 +177,17 @@ async function _refreshDashboardStats() {
           const sig = d.signal || (d.consensus && d.consensus.action) || 'HOLD';
           if (sig !== 'HOLD') signalCount++;
         }
-      } catch (_) { /* offline graceful */ }
+      } catch (err) {
+        console.warn('[App] loading strategy signal failed:', err.message);
+      }
     }));
 
     if (v1) { v1.textContent = signalCount; if (l1) l1.textContent = 'Signals'; }
     if (v2) { v2.textContent = `${online}/${total}`; if (l2) l2.textContent = 'Online'; }
     if (v3) v3.textContent = '5';
 
-  } catch (_) {
+  } catch (err) {
+    console.warn('[App] loading status snapshot failed:', err.message);
     // Fallback: show placeholder values
     if (v1) v1.textContent = '—';
     if (v2) v2.textContent = '—';
@@ -132,7 +203,8 @@ function _formatIsoLocal(value) {
   if (!value) return 'n/a';
   try {
     return new Date(value).toLocaleString();
-  } catch (_) {
+  } catch (err) {
+    console.warn('[App] formatting local timestamp failed:', err.message);
     return String(value);
   }
 }
@@ -284,7 +356,8 @@ async function _loadProviders() {
     _ariaActiveProvider = _ariaActiveModel;
     _renderProviderPills();
     _setAriaStatusDot(true);
-  } catch (_) {
+  } catch (err) {
+    console.warn('[App] loading ARIA providers failed:', err.message);
     _setAriaStatusDot(false);
     // Show placeholder pills even if Ollama offline
     _renderProviderPills();
@@ -491,10 +564,107 @@ function addMessage(role, content, timestamp = null, metadata = null) {
 
   messageDiv.appendChild(contentDiv);
   messageDiv.appendChild(timeDiv);
+  messageDiv._contentDiv = contentDiv;
+  messageDiv._timeDiv = timeDiv;
 
   chat.appendChild(messageDiv);
   chat.scrollTop = chat.scrollHeight;
   return messageDiv;
+}
+
+function _setAssistantMessageContent(messageDiv, content) {
+  if (!messageDiv || !messageDiv._contentDiv) return;
+  messageDiv._contentDiv.innerHTML = _renderMarkdown(content || '');
+  if (chat) chat.scrollTop = chat.scrollHeight;
+}
+
+function _parseSseFrame(frame) {
+  const eventLine = frame.split('\n').find(line => line.startsWith('event:'));
+  const dataLines = frame.split('\n').filter(line => line.startsWith('data:'));
+  if (!eventLine || !dataLines.length) return null;
+  const event = eventLine.slice(6).trim();
+  const rawData = dataLines.map(line => line.slice(5).trimStart()).join('\n');
+  try {
+    return { event, data: JSON.parse(rawData) };
+  } catch (err) {
+    console.warn('[app] failed to parse stream frame:', err.message);
+    return null;
+  }
+}
+
+async function _sendMessageStream(text, loadingDiv) {
+  let assistantDiv = null;
+  let fullText = '';
+
+  try {
+    const response = await fetch(`${CONFIG.serverUrl}/query/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        device_id: CONFIG.deviceId,
+        session_id: CONFIG.sessionId,
+      }),
+    });
+
+    if (!response.ok || !response.body) return false;
+
+    if (chat && chat.contains(loadingDiv)) chat.removeChild(loadingDiv);
+    assistantDiv = addMessage('assistant', '');
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalMeta = null;
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const frames = buffer.split('\n\n');
+      buffer = frames.pop() || '';
+
+      for (const frame of frames) {
+        const parsed = _parseSseFrame(frame);
+        if (!parsed) continue;
+
+        if (parsed.event === 'start' && parsed.data.session_id) {
+          CONFIG.sessionId = parsed.data.session_id;
+          localStorage.setItem('aria_session_id', CONFIG.sessionId);
+        } else if (parsed.event === 'chunk') {
+          fullText += parsed.data.content || '';
+          _setAssistantMessageContent(assistantDiv, fullText);
+        } else if (parsed.event === 'done') {
+          finalMeta = parsed.data;
+          CONFIG.sessionId = finalMeta.session_id || CONFIG.sessionId;
+          localStorage.setItem('aria_session_id', CONFIG.sessionId);
+          if (!fullText && finalMeta.response) {
+            fullText = finalMeta.response;
+            _setAssistantMessageContent(assistantDiv, fullText);
+          }
+        } else if (parsed.event === 'error') {
+          _setAssistantMessageContent(
+            assistantDiv,
+            `Error: ${parsed.data.error || 'Streaming request failed.'}`
+          );
+          return true;
+        }
+      }
+    }
+
+    if (finalMeta && finalMeta.provider && finalMeta.provider !== 'system') {
+      _updateLatencyBadge((finalMeta.provider || 'local').split(':')[0], finalMeta.latency_ms);
+    }
+
+    return true;
+  } catch (error) {
+    if (assistantDiv) {
+      _setAssistantMessageContent(assistantDiv, `Error: ${error.message}`);
+      return true;
+    }
+    console.warn('[app] streaming query unavailable:', error.message);
+    return false;
+  }
 }
 
 async function sendMessage(text) {
@@ -524,6 +694,9 @@ async function sendMessage(text) {
   chat.scrollTop = chat.scrollHeight;
 
   try {
+    const streamed = await _sendMessageStream(text, loadingDiv);
+    if (streamed) return;
+
     const response = await fetch(`${CONFIG.serverUrl}/query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

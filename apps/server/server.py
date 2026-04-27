@@ -12,9 +12,9 @@ Features:
 - Authentication (bÃ¡sico)
 """
 
-from fastapi import FastAPI, WebSocket, HTTPException, Depends, UploadFile, File, Query
+from fastapi import FastAPI, WebSocket, HTTPException, Depends, UploadFile, File, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 from typing import List, Dict, Optional, Any
 import json
@@ -98,6 +98,18 @@ class QueryResponse(BaseModel):
     timestamp: str
     provider: Optional[str] = None
     latency_ms: Optional[int] = None
+
+
+def _sse_event(event: str, data: Dict[str, Any]) -> str:
+    """Encode one Server-Sent Events frame with JSON payload data."""
+    return f"event: {event}\ndata: {json.dumps(_json_safe(data), default=str)}\n\n"
+
+
+def _stream_text_chunks(text: str, chunk_size: int = 80) -> List[str]:
+    """Split response text into small chunks for progressive UI rendering."""
+    if not text:
+        return [""]
+    return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
 
 
 class PortfolioRiskRequest(BaseModel):
@@ -212,12 +224,6 @@ aria_instance = None
 # WebSocket connections
 active_connections: Dict[str, List[WebSocket]] = {}
 QUERY_TIMEOUT_SECONDS = int(os.getenv("ATLAS_QUERY_TIMEOUT_SECONDS", "45"))
-
-# ARIA instance (initialize in main)
-aria_instance = None
-
-# WebSocket connections
-active_connections: Dict[str, List[WebSocket]] = {}
 logger = logging.getLogger(__name__)
 
 # ── ARIA Local Model State ────────────────────────────────────────────────────
@@ -276,7 +282,8 @@ _ARIA_BROWSER_TOOLS = {"web_search", "create_file", "execute_code", "read_file"}
 def _safe_read_text(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8", errors="replace")
-    except Exception:
+    except Exception as exc:
+        logger.debug("Could not read text file %s: %s", path, exc)
         return ""
 
 
@@ -285,7 +292,8 @@ def _safe_iterdir(path: Path) -> List[Path]:
         return []
     try:
         return list(path.iterdir())
-    except Exception:
+    except Exception as exc:
+        logger.debug("Could not list directory %s: %s", path, exc)
         return []
 
 
@@ -294,7 +302,8 @@ def _count_markdown(path: Path) -> int:
         return 0
     try:
         return sum(1 for _ in path.glob("*.md"))
-    except Exception:
+    except Exception as exc:
+        logger.debug("Could not count markdown files in %s: %s", path, exc)
         return 0
 
 
@@ -360,7 +369,8 @@ def _build_aria_runtime_snapshot() -> Dict[str, Any]:
 
     try:
         provider_info = get_provider_registry().get_provider_info()
-    except Exception:
+    except Exception as exc:
+        logger.warning("Provider registry snapshot unavailable: %s", exc)
         provider_info = {}
 
     providers_total = sum(len(items) for items in provider_info.values())
@@ -959,6 +969,50 @@ def _get_local_models() -> List[Dict]:
         }]
 
 
+def _aria_backend_info(model: Optional[str] = None) -> Dict[str, Any]:
+    """Return backend metadata for the active ARIA model."""
+    selected = model or _aria_active_model
+    if selected.startswith("cloud:"):
+        return {
+            "backend": "cloud",
+            "local_only": False,
+            "provider": selected[6:],
+        }
+    return {
+        "backend": "ollama",
+        "local_only": True,
+        "provider": "ollama",
+    }
+
+
+def _valid_aria_model(model: str) -> bool:
+    """Validate a slash/API-selected ARIA model against known local/cloud options."""
+    if model.startswith("cloud:"):
+        return model[6:] in _CLOUD_PROVIDERS
+    local_ids = {m.get("id") for m in _get_local_models()}
+    return model in local_ids or model in _KNOWN_MODELS
+
+
+def _cloud_model_rows(available_only: bool = False) -> List[Dict[str, Any]]:
+    rows = []
+    for pid, cfg in _CLOUD_PROVIDERS.items():
+        has_key = bool(os.getenv(cfg["env_key"]))
+        if available_only and not has_key:
+            continue
+        rows.append({
+            "id":       f"cloud:{pid}",
+            "label":    cfg["label"],
+            "active":   _aria_active_model == f"cloud:{pid}",
+            "size_gb":  0,
+            "backend":  "cloud",
+            "provider": pid,
+            "free":     cfg["free"],
+            "available": has_key,
+            "env_key":  cfg["env_key"],
+        })
+    return rows
+
+
 async def _ask_local(user_message: str) -> tuple:
     """
     Ask ARIA via local Ollama. 100% offline — no external calls.
@@ -1010,11 +1064,7 @@ async def _ask_with_provider(user_message: str, preferred: str = "auto") -> tupl
     """
     if preferred.startswith("cloud:"):
         pid = preferred[6:]   # strip "cloud:" prefix
-        try:
-            return await _ask_cloud(user_message, pid)
-        except Exception as e:
-            logger.warning("Cloud provider %s failed: %s — falling back to Ollama", pid, e)
-            # Fall through to local
+        return await _ask_cloud(user_message, pid)
     return await _ask_local(user_message)
 
 # Keep _PROVIDER_FALLBACK_ORDER for code that references it
@@ -1024,13 +1074,19 @@ _PROVIDER_FALLBACK_ORDER = ["ollama"]
 def _slash_models() -> str:
     """Format /models slash command response."""
     models = _get_local_models()
+    cloud_models = _cloud_model_rows(available_only=False)
     lines = ["**ARIA — Local Models (Ollama)**\n"]
     for m in models:
         icon  = "●" if m["active"] else "○"
         size  = f" · {m['size_gb']} GB" if m["size_gb"] else ""
         lines.append(f"{icon} **{m['id']}** — {m['label']}{size}")
+    lines.append("\n**Cloud Providers**")
+    for m in cloud_models:
+        icon = "â—" if m["active"] else "â—‹"
+        status = "configured" if m["available"] else f"missing `{m['env_key']}`"
+        lines.append(f"{icon} **{m['id']}** â€” {m['label']} ({status})")
     lines.append(f"\n**Active:** `{_aria_active_model}`")
-    lines.append("\nSwitch with `/model <name>` — all models run 100% locally via Ollama.")
+    lines.append("\nSwitch with `/model <name>` or `/model cloud:<provider>`.")
     return "\n".join(lines)
 
 
@@ -1062,11 +1118,26 @@ def favicon():
 
 @app.get("/api/health")
 def root():
-    """Health check"""
+    """Health check — returns server status + quick module flags."""
+    modules_ok = sum(1 for v in _SYSTEM_MODULE_FLAGS.values() if v)
+    modules_total = len(_SYSTEM_MODULE_FLAGS)
+    # Check if signal terminal is initialized
+    try:
+        from atlas.signal_terminal.scheduler import get_scheduler as _gs
+        st_ok = _gs() is not None
+    except Exception as exc:
+        logger.debug("Signal terminal scheduler unavailable: %s", exc)
+        st_ok = False
+
     return {
-        "status": "online",
-        "service": "ARIA Multi-Device Server",
-        "version": "1.0"
+        "status":          "online",
+        "service":         "ARIA Multi-Device Server",
+        "version":         "1.0",
+        "modules_online":  modules_ok,
+        "modules_total":   modules_total,
+        "agent_ready":     _agent_orchestrator is not None,
+        "signal_terminal": st_ok,
+        "ts":              datetime.now().isoformat(),
     }
 
 
@@ -1321,19 +1392,45 @@ async def query_aria(request: QueryRequest):
         elif cmd == "/model":
             global _aria_active_model
             if arg:
+                if not _valid_aria_model(arg):
+                    response = (
+                        f"Unknown ARIA model `{arg}`.\n"
+                        "Use `/models` for installed local models and configured cloud providers."
+                    )
+                    timestamp = datetime.now().isoformat()
+                    db.add_message(session_id, request.device_id, "assistant", response)
+                    await broadcast_message(session_id, {
+                        "type": "new_message", "role": "assistant",
+                        "content": response, "timestamp": timestamp,
+                    })
+                    return QueryResponse(
+                        response=response, session_id=session_id,
+                        timestamp=timestamp, provider="system", latency_ms=0,
+                    )
                 _aria_active_model = arg
                 # Also switch the live ARIA instance model
-                if aria_instance:
+                is_cloud = arg.startswith("cloud:")
+                if aria_instance and not is_cloud:
                     aria_instance.model = arg
                 response = (
                     f"✅ Switched to **{arg}** — running locally on Ollama.\n"
                     f"Use `/models` to see all installed models."
+                )
+                backend_info = _aria_backend_info(arg)
+                response = (
+                    f"Switched to **{arg}** using **{backend_info['backend']}**.\n"
+                    "Use `/models` to see installed local models and cloud providers."
                 )
             else:
                 response = (
                     f"Current model: `{_aria_active_model}`\n"
                     f"Usage: `/model <name>` — e.g. `/model llama3.1:8b`\n"
                     f"List models: `/models`"
+                )
+                response = (
+                    f"Current model: `{_aria_active_model}`\n"
+                    "Usage: `/model <name>` or `/model cloud:<provider>`\n"
+                    "List models: `/models`"
                 )
 
         elif cmd == "/debug":
@@ -1382,6 +1479,20 @@ async def query_aria(request: QueryRequest):
                 "*All models run 100% locally via Ollama — no internet required.*"
             )
 
+            response = (
+                "**ARIA Slash Commands**\n\n"
+                "| Command | Description |\n"
+                "|---------|-------------|\n"
+                "| `/models` | List local Ollama models and configured cloud providers |\n"
+                "| `/model <name>` | Switch to a local model or `cloud:<provider>` |\n"
+                "| `/audit [n]` | Show last n request logs |\n"
+                "| `/project` | Show Atlas command-center snapshot |\n"
+                "| `/debug <topic>` | Structured debug protocol |\n"
+                "| `/review <ticker>` | Strategy review checklist |\n"
+                "| `/help` | This help message |\n\n"
+                "*Local models use Ollama. Cloud models use configured provider API keys.*"
+            )
+
         else:
             # Unknown slash command → pass to LLM
             response = None
@@ -1423,6 +1534,8 @@ async def query_aria(request: QueryRequest):
         )
         provider_used = "timeout"
         latency_ms = QUERY_TIMEOUT_SECONDS * 1000
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1441,6 +1554,79 @@ async def query_aria(request: QueryRequest):
         timestamp=timestamp,
         provider=provider_used,
         latency_ms=latency_ms,
+    )
+
+
+@app.post("/query/stream")
+async def query_aria_stream(request: QueryRequest):
+    """
+    Stream an ARIA response as Server-Sent Events.
+
+    Event contract:
+      - start: session/provider placeholder metadata
+      - chunk: incremental response text
+      - done: final QueryResponse-compatible metadata
+      - error: user-facing error payload
+
+    The current ARIA provider stack is mostly request/response, so this endpoint
+    safely chunks the completed answer while preserving one canonical query path.
+    Providers with native streaming can later plug in behind this same contract.
+    """
+
+    async def _events():
+        session_id = request.session_id or f"session-{datetime.now().timestamp()}"
+        stream_request = (
+            request.model_copy(update={"session_id": session_id})
+            if hasattr(request, "model_copy")
+            else request.copy(update={"session_id": session_id})
+        )
+        yield _sse_event("start", {
+            "session_id": session_id,
+            "timestamp": datetime.now().isoformat(),
+            "provider": "pending",
+        })
+
+        try:
+            result = await query_aria(stream_request)
+            if isinstance(result, QueryResponse):
+                payload = result
+            else:
+                payload = QueryResponse(**result)
+
+            for chunk in _stream_text_chunks(payload.response):
+                yield _sse_event("chunk", {
+                    "session_id": payload.session_id,
+                    "content": chunk,
+                    "timestamp": datetime.now().isoformat(),
+                })
+                await asyncio.sleep(0)
+
+            done_payload = payload.model_dump() if hasattr(payload, "model_dump") else payload.dict()
+            yield _sse_event("done", done_payload)
+
+        except HTTPException as exc:
+            yield _sse_event("error", {
+                "session_id": session_id,
+                "status_code": exc.status_code,
+                "error": exc.detail,
+                "timestamp": datetime.now().isoformat(),
+            })
+        except Exception as exc:
+            logger.warning("Streaming query failed for session %s: %s", session_id, exc)
+            yield _sse_event("error", {
+                "session_id": session_id,
+                "status_code": 500,
+                "error": str(exc),
+                "timestamp": datetime.now().isoformat(),
+            })
+
+    return StreamingResponse(
+        _events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 
@@ -1473,7 +1659,7 @@ def start_scenario(request: ScenarioStartRequest):
     """Start a new interactive scenario session."""
     try:
         symbol = request.ticker.strip().upper()
-        print(f"Fetching data for {symbol}...")
+        logger.info("Starting scenario for %s", symbol)
 
         data, is_synthetic = _fetch_ohlcv_local(symbol, period="5y")
         if data is None or data.empty:
@@ -1503,7 +1689,7 @@ def start_scenario(request: ScenarioStartRequest):
         }
 
     except Exception as e:
-        print(f"Scenario error: {e}")
+        logger.error("Scenario error [%s]: %s", request.ticker, e)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/scenario/{session_id}/next")
@@ -1588,6 +1774,28 @@ def get_portfolio():
         "positions": positions_data
     }
 
+@app.get("/api/portfolio/summary")
+def get_portfolio_summary():
+    """
+    Condensed portfolio summary for WhatsApp bot and dashboard widgets.
+    Compatible with: /portfolio command in whatsapp_bot.py.
+    """
+    base = get_portfolio()  # reuse existing logic
+    positions = base.get("positions", [])
+    total_value = float(base.get("total_equity", 0) or 0)
+    # Start capital vs current equity gives total P&L
+    start_capital = float(base.get("capital", 100_000) or 100_000)
+    total_pnl = total_value - start_capital
+    return {
+        "total_value": round(total_value, 2),
+        "total_pnl":   round(total_pnl, 2),
+        "positions":   len(positions),
+        "has_session": base.get("has_active_session", False),
+        "source":      base.get("source", "none"),
+        "details":     positions[:5],  # top 5 positions
+    }
+
+
 @app.get("/api/portfolio/uploaded")
 def get_uploaded_portfolio():
     """Return last uploaded portfolio package if it exists."""
@@ -1595,7 +1803,8 @@ def get_uploaded_portfolio():
         return {"source": "uploaded", "has_uploaded_portfolio": False, "positions": []}
     try:
         data = json.loads(PORTFOLIO_UPLOAD_PATH.read_text(encoding="utf-8"))
-    except Exception:
+    except Exception as exc:
+        logger.warning("Could not load uploaded portfolio %s: %s", PORTFOLIO_UPLOAD_PATH, exc)
         return {"source": "uploaded", "has_uploaded_portfolio": False, "positions": []}
 
     positions = data.get("positions") if isinstance(data, dict) else None
@@ -1616,7 +1825,8 @@ async def upload_portfolio(file: UploadFile = File(...)):
     try:
         raw = await file.read()
         payload = json.loads(raw.decode("utf-8"))
-    except Exception:
+    except Exception as exc:
+        logger.warning("Invalid portfolio upload payload: %s", exc)
         raise HTTPException(status_code=400, detail="Invalid JSON payload.")
 
     if not isinstance(payload, dict) or not isinstance(payload.get("positions"), list):
@@ -1686,7 +1896,8 @@ def _positions_from_uploaded_portfolio() -> List[Dict[str, float | str]]:
         return []
     try:
         payload = json.loads(PORTFOLIO_UPLOAD_PATH.read_text(encoding="utf-8"))
-    except Exception:
+    except Exception as exc:
+        logger.warning("Could not parse uploaded portfolio positions from %s: %s", PORTFOLIO_UPLOAD_PATH, exc)
         return []
     return _coerce_dashboard_positions(payload.get("positions"))
 
@@ -1709,8 +1920,8 @@ def _resolve_seed_price(ticker: str, fallback: float = 100.0) -> float:
         hist = yf.Ticker(symbol).history(period="5d", interval="1d")
         if hist is not None and not hist.empty:
             return float(hist["Close"].dropna().iloc[-1])
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Seed price fallback for %s: %s", symbol, exc)
     return fallback
 
 
@@ -1747,7 +1958,8 @@ def _load_stock_candles(symbol: str, period: str = "1y", interval: str = "1d") -
                 low_price = float(row["low"])
                 close_price = float(row["close"])
                 volume = float(row["volume"]) if "volume" in data.columns else 0.0
-            except Exception:
+            except Exception as exc:
+                logger.debug("Skipping malformed candle row for %s: %s", symbol, exc)
                 continue
 
             if open_price <= 0 or high_price <= 0 or low_price <= 0 or close_price <= 0:
@@ -1765,7 +1977,8 @@ def _load_stock_candles(symbol: str, period: str = "1y", interval: str = "1d") -
             )
 
         return candles[-365:]
-    except Exception:
+    except Exception as exc:
+        logger.warning("Could not load stock candles for %s: %s", symbol, exc)
         return []
 
 
@@ -1899,7 +2112,8 @@ class DesktopSimulationRuntime:
         if "stock_candles" in safe_inputs:
             try:
                 safe_inputs["stock_candles_count"] = len(safe_inputs["stock_candles"])
-            except Exception:
+            except Exception as exc:
+                logger.debug("Could not count stock candles in dashboard state: %s", exc)
                 safe_inputs["stock_candles_count"] = 0
             del safe_inputs["stock_candles"]
 
@@ -2186,7 +2400,7 @@ def generate_3d_viz(viz_type: str):
         return {"status": "ok", "path": path, "url": url}
         
     except Exception as e:
-        print(f"3D Render Error: {e}")
+        logger.error("3D render error [%s]: %s", render_type, e)
         raise HTTPException(status_code=500, detail=str(e))
 
 # ─────────────────────────────────────────────────────────
@@ -2262,8 +2476,8 @@ def vizlab_market_graph():
                 hist = yf.Ticker(t).history(period="3mo", auto_adjust=True)
                 if not hist.empty:
                     data[t.replace("-USD","")] = hist["Close"].pct_change().dropna()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Market graph data unavailable for %s: %s", t, exc)
 
         if not data:
             raise ValueError("No data")
@@ -2293,6 +2507,7 @@ def vizlab_market_graph():
 
         return {"nodes": nodes, "edges": edges, "n_days": len(df)}
     except Exception as e:
+        logger.warning("Market graph fallback response: %s", e)
         return {"nodes": [], "edges": [], "error": str(e)}
 
 
@@ -2435,8 +2650,8 @@ def _fetch_ohlcv_local(ticker: str, period: str = "1y"):
         hist = yf.Ticker(ticker.upper()).history(period=period, auto_adjust=True)
         if not hist.empty:
             return hist[["Open", "High", "Low", "Close", "Volume"]].dropna(), False
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("OHLCV fetch fallback for %s period=%s: %s", ticker, period, exc)
 
     # Local fallback — deterministic synthetic data seeded by ticker name
     return _generate_synthetic_ohlcv(ticker, n=n_bars, seed=abs(hash(ticker)) % (2**31)), True
@@ -2556,14 +2771,12 @@ def api_market_state(ticker: str, period: str = "1y", adx_threshold: float = 25.
             if value is None:
                 return None
             try:
-                if np.isnan(value):
-                    return None
-            except Exception:
-                pass
-            try:
-                return float(value)
-            except Exception:
+                numeric = float(value)
+            except (TypeError, ValueError):
                 return None
+            if np.isnan(numeric):
+                return None
+            return numeric
 
         regime = RegimeDetector(adx_threshold=adx_threshold, lookback=min(20, len(ohlcv))).detect(ohlcv)
         vol_detector = VolatilityRegime(lookback=max(20, min(252, len(ohlcv))))
@@ -3103,7 +3316,8 @@ def strategy_analyze(ticker: str, period: str = "6mo"):
             loss   = (-delta.clip(upper=0)).rolling(14).mean()
             rs     = gain / (loss + 1e-10)
             rsi_14 = round(float(100 - 100 / (1 + rs.iloc[-1])), 1)
-        except Exception:
+        except Exception as exc:
+            logger.debug("RSI diagnostic unavailable for %s: %s", symbol, exc)
             rsi_14 = None
 
         try:
@@ -3114,7 +3328,8 @@ def strategy_analyze(ticker: str, period: str = "6mo"):
             signal_l  = macd_line.ewm(span=9, adjust=False).mean()
             macd_hist_val = round(float(macd_line.iloc[-1] - signal_l.iloc[-1]), 4)
             macd_val      = round(float(macd_line.iloc[-1]), 4)
-        except Exception:
+        except Exception as exc:
+            logger.debug("MACD diagnostic unavailable for %s: %s", symbol, exc)
             macd_hist_val = None
             macd_val      = None
 
@@ -3123,7 +3338,8 @@ def strategy_analyze(ticker: str, period: str = "6mo"):
             sma20 = closes.rolling(20).mean()
             sma50 = closes.rolling(50).mean()
             sma_spread_pct = round(float((sma20.iloc[-1] - sma50.iloc[-1]) / (sma50.iloc[-1] + 1e-10) * 100), 2)
-        except Exception:
+        except Exception as exc:
+            logger.debug("SMA spread diagnostic unavailable for %s: %s", symbol, exc)
             sma_spread_pct = None
 
         try:
@@ -3132,7 +3348,8 @@ def strategy_analyze(ticker: str, period: str = "6mo"):
             tr  = (hi - lo).combine(abs(hi - cl.shift()), max).combine(abs(lo - cl.shift()), max)
             atr = tr.rolling(14).mean()
             atr_pct = round(float(atr.iloc[-1] / (last_close + 1e-10) * 100), 2)
-        except Exception:
+        except Exception as exc:
+            logger.debug("ATR diagnostic unavailable for %s: %s", symbol, exc)
             atr_pct = None
 
         diagnostics = {
@@ -3696,7 +3913,8 @@ def get_quote(ticker: str):
             hist = t.history(period="5d", interval="1d", auto_adjust=True)
             if hist is not None and not hist.empty:
                 hist = hist[["Open", "High", "Low", "Close", "Volume"]].dropna()
-        except Exception:
+        except Exception as exc:
+            logger.debug("Quote yfinance fetch failed for %s: %s", symbol, exc)
             hist = None
 
         if hist is None or hist.empty:
@@ -3727,7 +3945,7 @@ def get_quote(ticker: str):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Quote Error: {e}")
+        logger.error("Quote error [%s]: %s", ticker, e)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/market_data/{ticker}")
@@ -3758,7 +3976,8 @@ def get_market_data(ticker: str):
             hist = t.history(period="1y", auto_adjust=True)
             if hist is not None and not hist.empty:
                 hist = hist[["Open", "High", "Low", "Close", "Volume"]].dropna()
-        except Exception:
+        except Exception as exc:
+            logger.debug("Market data yfinance history failed for %s: %s", symbol, exc)
             hist = None
 
         if hist is None or hist.empty:
@@ -3795,7 +4014,8 @@ def get_market_data(ticker: str):
                             "link": n.get('link'),
                             "timestamp": n.get('providerPublishTime')
                         })
-            except Exception:
+            except Exception as exc:
+                logger.debug("Market data news unavailable for %s: %s", symbol, exc)
                 formatted_news = []
                 
         result = {
@@ -3813,7 +4033,7 @@ def get_market_data(ticker: str):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Market Data Error: {e}")
+        logger.error("Market data error [%s]: %s", ticker, e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -3869,7 +4089,7 @@ def get_chaos_features(ticker: str, period: str = "1y"):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Chaos API error [{ticker}]: {e}")
+        logger.error("Chaos API error [%s]: %s", ticker, e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -3914,7 +4134,7 @@ def get_advanced_volatility(ticker: str, period: str = "1y"):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Volatility API error [{ticker}]: {e}")
+        logger.error("Volatility API error [%s]: %s", ticker, e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -3954,7 +4174,8 @@ def get_factor_decomposition(tickers: str = "AAPL,MSFT,NVDA,AMZN,JPM,XOM,GLD,SPY
             returns = raw.pct_change().dropna()
             if len(returns) < 30:
                 raise ValueError("too short")
-        except Exception:
+        except Exception as exc:
+            logger.info("Factor decomposition using synthetic fallback: %s", exc)
             # Full local fallback — build synthetic return matrix
             is_synthetic = True
             period_bars = {"1mo": 21, "3mo": 63, "6mo": 126, "1y": 252, "2y": 504}
@@ -3988,7 +4209,7 @@ def get_factor_decomposition(tickers: str = "AAPL,MSFT,NVDA,AMZN,JPM,XOM,GLD,SPY
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Factor decompose error: {e}")
+        logger.error("Factor decompose error: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -4015,7 +4236,8 @@ def get_factor_attribution(ticker: str, universe: str = "AAPL,MSFT,NVDA,AMZN,JPM
             returns = raw.pct_change().dropna()
             if len(returns) < 30:
                 raise ValueError("too short")
-        except Exception:
+        except Exception as exc:
+            logger.info("Factor attribution using synthetic fallback for %s: %s", ticker, exc)
             is_synthetic = True
             period_bars = {"1mo": 21, "3mo": 63, "6mo": 126, "1y": 252, "2y": 504}
             n_bars = period_bars.get(period, 252)
@@ -4042,7 +4264,7 @@ def get_factor_attribution(ticker: str, universe: str = "AAPL,MSFT,NVDA,AMZN,JPM
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Factor attribution error [{ticker}]: {e}")
+        logger.error("Factor attribution error [%s]: %s", ticker, e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -4096,7 +4318,7 @@ def get_discrepancy_analysis(ticker: str, period: str = "6mo"):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Discrepancy API error [{ticker}]: {e}")
+        logger.error("Discrepancy API error [%s]: %s", ticker, e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -4368,8 +4590,8 @@ async def api_posttrade_report(payload: dict):
             try:
                 df, _ = _fetch_ohlcv_local(tkr, "2y")
                 ohlcv_map[tkr] = df
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Post-trade OHLCV unavailable for %s: %s", tkr, exc)
 
         report = analyzer.full_report(ohlcv_map, horizons=horizons)
         report["leaderboard"] = analyzer.engine_leaderboard()
@@ -4391,6 +4613,7 @@ async def api_memory_summary():
         store = EnhancedMemoryStore(path="data/memory_enhanced.json")
         return store.memory_summary()
     except Exception as e:
+        logger.warning("Memory summary unavailable: %s", e)
         return {"error": str(e), "n_runs": 0, "n_patterns": 0}
 
 
@@ -4437,12 +4660,14 @@ def get_aria_models():
     List all locally installed Ollama models.
     100% offline — queries Ollama daemon, no external calls.
     """
-    models = _get_local_models()
+    models = _get_local_models() + _cloud_model_rows(available_only=True)
+    backend_info = _aria_backend_info()
     return {
         "models":       models,
         "active_model": _aria_active_model,
-        "backend":      "ollama",
-        "local_only":   True,
+        "backend":      backend_info["backend"],
+        "local_only":   backend_info["local_only"],
+        "provider":     backend_info["provider"],
     }
 
 
@@ -4464,6 +4689,8 @@ def set_aria_model(req: SetModelRequest):
     No restart required — takes effect on the next query.
     """
     global _aria_active_model
+    if not _valid_aria_model(req.model):
+        raise HTTPException(status_code=400, detail=f"Unknown ARIA model: {req.model}")
     _aria_active_model = req.model
     is_cloud = req.model.startswith("cloud:")
     if not is_cloud and aria_instance:
@@ -4495,14 +4722,16 @@ def get_aria_audit(limit: int = 20):
     total   = len(_aria_audit_log)
     ok      = sum(1 for e in _aria_audit_log if e.get("success"))
     avg_lat = int(sum(e.get("latency_ms", 0) for e in _aria_audit_log) / total) if total else 0
+    backend_info = _aria_backend_info()
     return {
         "total_requests": total,
         "successful":     ok,
         "success_rate":   round(ok / total, 3) if total else 1.0,
         "avg_latency_ms": avg_lat,
         "active_model":   _aria_active_model,
-        "backend":        "ollama",
-        "local_only":     True,
+        "backend":        backend_info["backend"],
+        "local_only":     backend_info["local_only"],
+        "provider":       backend_info["provider"],
         "entries":        list(reversed(entries)),
     }
 
@@ -4512,10 +4741,12 @@ def get_aria_status():
     """Quick ARIA health check — model, latency stats, fully local."""
     total = len(_aria_audit_log)
     ok    = sum(1 for e in _aria_audit_log if e.get("success"))
+    backend_info = _aria_backend_info()
     return {
         "active_model":     _aria_active_model,
-        "backend":          "ollama",
-        "local_only":       True,
+        "backend":          backend_info["backend"],
+        "local_only":       backend_info["local_only"],
+        "provider":         backend_info["provider"],
         "aria_initialised": aria_instance is not None,
         "total_requests":   total,
         "success_rate":     round(ok / total, 3) if total else 1.0,
@@ -4794,6 +5025,8 @@ async def _ask_cloud(user_message: str, provider_id: str) -> tuple:
     Requires the provider's API key in the corresponding env var.
     """
     import httpx
+    if provider_id not in _CLOUD_PROVIDERS:
+        raise ValueError(f"Unknown cloud provider: {provider_id}")
     cfg   = _CLOUD_PROVIDERS[provider_id]
     key   = os.getenv(cfg["env_key"])
     if not key:
@@ -4911,7 +5144,8 @@ async def trader_analyze(ticker: str, period: str = Query("1y")):
             try:
                 import yfinance as yf
                 info = yf.Ticker(symbol).info or {}
-            except Exception:
+            except Exception as exc:
+                logger.debug("Trader analyze info unavailable for %s: %s", symbol, exc)
                 info = {}
 
         scorer = CompositeScorer()
@@ -5009,7 +5243,8 @@ async def trader_screen(
                     try:
                         import yfinance as yf
                         info = yf.Ticker(ticker).info or {}
-                    except Exception:
+                    except Exception as exc:
+                        logger.debug("Trader screen info unavailable for %s: %s", ticker, exc)
                         info = {}
                 r = scorer.score(ticker, df, info=info)
                 row = _json_safe(r.to_dict())
@@ -5085,23 +5320,30 @@ def mmo_quantum_state(ticker: str):
     import numpy as np
     ticker = ticker.upper().strip()
 
+    # Scaffold response. `degraded=True` is a structural flag for the UI:
+    # the numeric fields below are neutral placeholders (uniform superposition,
+    # zero momentum) — NOT real computations. The UI MUST read `degraded` and
+    # render an explicit "no data" banner instead of quoting these values.
+    # If the try-block below completes, `degraded` flips to False and every
+    # field gets overwritten with real measurements from yfinance.
     result = {
         "ticker": ticker,
+        "degraded": True,
         "amplitudes": {"BULL": 0.2, "BEAR": 0.2, "SIDEWAYS": 0.2, "VOLATILE": 0.2, "TRENDING": 0.2},
         "collapse_prob": 0.2,
         "collapsed_state": None,
         "entropy": 1.0,
-        "quantum_verdict": "SUPERPOSED",
-        "tunneling_risk": 0.05,
-        "string": {"amplitude": 0.5, "frequency": 0.5, "vertices_30d": 0, "nodes": []},
-        "energy": {"score": 0.5, "fatigue": 0.0, "bubble_risk": 0.0, "cooling_adequacy": 0.5},
-        "thermal": {"temperature": 0.5, "overheating": False, "phase": "NEUTRAL"},
-        "ontology": {"being": "UNKNOWN", "essence": "UNDEFINED", "entanglement": "MODERATE", "structural_stability": 0.5},
+        "quantum_verdict": "NO DATA",
+        "tunneling_risk": 0.0,
+        "string": {"amplitude": 0.0, "frequency": 0.0, "vertices_30d": 0, "nodes": []},
+        "energy": {"score": 0.0, "fatigue": 0.0, "bubble_risk": 0.0, "cooling_adequacy": 0.0},
+        "thermal": {"temperature": 0.0, "overheating": False, "phase": "UNKNOWN"},
+        "ontology": {"being": "UNKNOWN", "essence": "UNDEFINED", "entanglement": "UNKNOWN", "structural_stability": 0.0},
         "layers": [
-            {"id": "structure", "label": "GEOLOGY",     "metric": "Structural Stability", "value": 0.5, "health": "STABLE"},
-            {"id": "energy",    "label": "SUBSURFACE",  "metric": "Capital Flow Energy",  "value": 0.5, "health": "NEUTRAL"},
-            {"id": "thermal",   "label": "STATE",       "metric": "Market Temperature",   "value": 0.5, "health": "NEUTRAL"},
-            {"id": "surface",   "label": "OBSERVABLE",  "metric": "Price Momentum",       "value": 0.5, "health": "STABLE"},
+            {"id": "structure", "label": "GEOLOGY",     "metric": "Structural Stability", "value": 0.0, "health": "UNKNOWN"},
+            {"id": "energy",    "label": "SUBSURFACE",  "metric": "Capital Flow Energy",  "value": 0.0, "health": "UNKNOWN"},
+            {"id": "thermal",   "label": "STATE",       "metric": "Market Temperature",   "value": 0.0, "health": "UNKNOWN"},
+            {"id": "surface",   "label": "OBSERVABLE",  "metric": "Price Momentum",       "value": 0.0, "health": "UNKNOWN"},
         ],
         "confidence": 0.0,
         "last_close": 0.0,
@@ -5124,13 +5366,16 @@ def mmo_quantum_state(ticker: str):
                 sr = engine.analyze(ticker, df)
                 if sr:
                     strat = sr
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("MMO strategy signal unavailable for %s: %s", ticker, exc)
 
         # ── Market data ──────────────────────────────────────────────────
         hist = yf.Ticker(ticker).history(period="6mo", auto_adjust=True)
         if hist.empty:
-            result["error"] = "No market data"
+            # Leave degraded=True and return the neutral scaffold — UI will
+            # render an explicit "No market data for <TICKER>" banner.
+            result["error"] = f"No market data for {ticker}"
+            result["quantum_verdict"] = "NO DATA"
             return result
 
         closes  = hist["Close"].values
@@ -5222,7 +5467,14 @@ def mmo_quantum_state(ticker: str):
         dominant   = states[int(np.argmax(probs))]
         entropy    = float(-np.sum(probs * np.log(probs + 1e-10)) / np.log(5))
 
-        decoherence_tau = float(1.0 / (cir_temperature * max(entropy, 0.01)))
+        # Decoherence time τ ∝ 1/(T·H). Both factors can go small simultaneously
+        # (quiet, low-entropy market), sending τ → ∞. Cap at 500 trading days so
+        # the number stays physically meaningful — beyond ~2 years the "coherence
+        # time" concept loses predictive value for intraday trading signals.
+        decoherence_tau = float(min(
+            1.0 / (max(cir_temperature, 0.01) * max(entropy, 0.01)),
+            500.0
+        ))
 
         # ── HEISENBERG UNCERTAINTY ───────────────────────────────────────
         delta_p = float(vol_6mo)
@@ -5411,15 +5663,18 @@ def mmo_quantum_state(ticker: str):
             ph_b  = phases + beta_b * omega_berry * dt_CIR * 2 * np.pi
             return mag_b * np.exp(1j * ph_b)
 
+        # Berry phase γ = Im log ∏_k ⟨ψ_k | ψ_{k+1}⟩
+        # We accumulate the product of complex overlaps around the closed loop,
+        # then take its argument. `np.dot(conj(a), b)` already returns a numpy
+        # complex scalar — no need to rebuild it.
         g_acc = complex(1.0, 0.0)
         for bk in range(BERRY_N):
             th_k   = 2 * np.pi * bk       / BERRY_N
             th_kp1 = 2 * np.pi * (bk + 1) / BERRY_N
             pk     = _berry_psi(th_k)
             pkp    = _berry_psi(th_kp1)
-            overlap = complex(float(np.dot(np.conj(pk), pkp).real),
-                              float(np.dot(np.conj(pk), pkp).imag))
-            g_acc *= overlap
+            overlap = complex(np.dot(np.conj(pk), pkp))
+            g_acc  *= overlap
         berry_gamma = float(np.angle(g_acc))
         berry_phase = {
             "gamma":        round(berry_gamma, 4),
@@ -5449,12 +5704,27 @@ def mmo_quantum_state(ticker: str):
                 0, PI_BINS - 1
             ))
             pi_dist[bin_idx] += w
-        pi_max = float(pi_dist.max()) if pi_dist.max() > 0 else 1.0
+        # Normalize by total weight so `distribution` is a proper probability
+        # density (sum → 1.0, area-preserving). Max-normalization destroys the
+        # action weighting: two bins of weight (0.9, 0.1) and (0.5, 0.5) both
+        # get rendered as [1.0, 0.11] vs [1.0, 1.0], which is visually identical
+        # but quantitatively opposite. The frontend rescales for display.
+        pi_sum = float(pi_dist.sum()) if pi_dist.sum() > 0 else 1.0
+        pi_norm = pi_dist / pi_sum
+        pi_max_norm = float(pi_norm.max()) if pi_norm.max() > 0 else 1.0
         path_integral = {
-            "distribution": [round(float(d / pi_max), 3) for d in pi_dist],
-            "hbar_eff":     PI_HBAR,
-            "sigma_daily":  round(float(pi_sigma), 5),
-            "range":        round(float(pi_range), 5),
+            "distribution":    [round(float(d), 5) for d in pi_norm],
+            # Also expose a display-scaled copy so the UI can render bars
+            # without re-normalizing — peak = 1.0, shape preserved.
+            "display_scaled":  [round(float(d / pi_max_norm), 3) for d in pi_norm],
+            "hbar_eff":        PI_HBAR,
+            "sigma_daily":     round(float(pi_sigma), 5),
+            "range":           round(float(pi_range), 5),
+            "entropy":         round(
+                float(-np.sum(pi_norm[pi_norm > 0] * np.log(pi_norm[pi_norm > 0]))
+                      / np.log(max(len(pi_norm), 2))),
+                3
+            ),
         }
 
         # ── PHASE 3C — NON-HERMITIAN HAMILTONIAN H_eff ───────────────────
@@ -5477,10 +5747,17 @@ def mmo_quantum_state(ticker: str):
             })
         P_NH = round(float(sum(ev["survival"] for ev in nh_eigenvalues)), 4)
         nh_sorted = sorted(nh_eigenvalues, key=lambda x: -x["p"])
-        ep_gap = round(float(np.sqrt(
-            (nh_sorted[0]["E"] - nh_sorted[1]["E"]) ** 2 +
-            (nh_sorted[0]["Gamma"] - nh_sorted[1]["Gamma"]) ** 2
-        )), 4) if len(nh_sorted) >= 2 else 1.0
+        # Exceptional-point distance: complex-plane separation of the two
+        # most-probable eigenvalues ε = E − iΓ/2. The ΔΓ must be divided by 2
+        # because the imaginary coordinate of ε is Γ/2, not Γ itself.
+        # ep_gap → 0 signals eigenvalue coalescence (topological phase
+        # transition in non-Hermitian theory).
+        if len(nh_sorted) >= 2:
+            dE     = nh_sorted[0]["E"]     - nh_sorted[1]["E"]
+            dGamma = nh_sorted[0]["Gamma"] - nh_sorted[1]["Gamma"]
+            ep_gap = round(float(np.sqrt(dE ** 2 + (dGamma / 2.0) ** 2)), 4)
+        else:
+            ep_gap = 1.0
         non_hermitian = {
             "gamma_global": round(noise_factor, 4),
             "eigenvalues":  nh_eigenvalues,
@@ -5491,6 +5768,7 @@ def mmo_quantum_state(ticker: str):
         }
 
         result.update({
+            "degraded":         False,
             "amplitudes":       amplitudes,
             "collapse_prob":    round(max_prob, 3),
             "collapsed_state":  collapsed_state,
@@ -5544,15 +5822,600 @@ def mmo_quantum_state(ticker: str):
         })
 
     except Exception as e:
+        logger.warning("MMO quantum state degraded for %s: %s", ticker, e)
         result["error"] = str(e)
 
     return result
+
+
+# ==================== MARKET BRAIN ====================
+# Unified orchestrator — fans out to every per-ticker analyzer in parallel,
+# aggregates the signals into a compact summary, then asks ARIA to synthesize
+# a tradable plan. Two surfaces:
+#   GET /api/brain/synthesize/{ticker}  — single symbol deep dive
+#   GET /api/brain/portfolio            — full uploaded-portfolio view
+#
+# Design choices:
+#   - Self-calls via httpx so each analyzer runs through its own registered
+#     handler (cache, validation, serialization). Costs a few ms per call on
+#     localhost but buys us consistent outputs + zero refactors of the targets.
+#   - Per-module timeouts + structured error capture — one slow or broken
+#     analyzer never blocks the synthesis.
+#   - Mechanical verdict computed alongside ARIA's narrative so the UI can
+#     show a sanity-check score even when the LLM is offline.
+# =======================================================
+
+_BRAIN_MODULES_SINGLE = [
+    # (module_key,       url_template,                 per-call timeout seconds)
+    ("quote",            "/api/quote/{t}",             4),
+    ("trader",           "/api/trader/analyze/{t}",    10),
+    ("predict",          "/api/trader/predict/{t}",    10),
+    ("mmo",              "/api/mmo/quantum_state/{t}", 12),
+    ("strategy",         "/api/strategy/analyze/{t}",  10),
+    ("market_state",     "/api/market-state/{t}",       8),
+    ("chaos",            "/api/chaos/{t}",              8),
+    ("volatility",       "/api/volatility/{t}",         8),
+    ("signal",           "/api/signal/compose/{t}",     8),
+    ("analytics",        "/api/analytics/summary/{t}",  8),
+    ("fundamental",      "/api/fundamental/{t}",        8),
+    ("dcf",              "/api/dcf/{t}",                8),
+]
+
+
+def _brain_base_url(request: Request) -> str:
+    """Resolve the local base URL we should self-call. Falls back to localhost:8000."""
+    try:
+        host = request.url.hostname or "localhost"
+        port = request.url.port or int(os.getenv("ATLAS_PORT", "8000"))
+        # If we came in on 0.0.0.0, self-call via localhost instead.
+        if host in ("0.0.0.0", "::"):
+            host = "localhost"
+        return f"http://{host}:{port}"
+    except Exception:
+        return f"http://localhost:{os.getenv('ATLAS_PORT', '8000')}"
+
+
+async def _brain_fetch_all(symbol: str, base_url: str) -> Dict[str, Dict[str, Any]]:
+    """Fan out in parallel to every per-ticker analyzer. Returns {key: {data, error}}."""
+    import httpx
+
+    async def _one(client: "httpx.AsyncClient", key: str, url_t: str, timeout: int):
+        try:
+            r = await client.get(url_t.format(t=symbol), timeout=timeout)
+            if r.status_code == 200:
+                return key, r.json(), None
+            return key, None, f"HTTP {r.status_code}"
+        except Exception as exc:
+            return key, None, f"{type(exc).__name__}: {exc}"
+
+    async with httpx.AsyncClient(base_url=base_url, timeout=15) as client:
+        tasks = [_one(client, k, u, t) for (k, u, t) in _BRAIN_MODULES_SINGLE]
+        results = await asyncio.gather(*tasks, return_exceptions=False)
+
+    return {k: {"data": d, "error": e} for (k, d, e) in results}
+
+
+def _brain_pick(d: Any, *keys, default=None):
+    """Walk a dict-like grabbing the first key that exists."""
+    if not isinstance(d, dict):
+        return default
+    for k in keys:
+        if k in d and d[k] is not None:
+            return d[k]
+    return default
+
+
+def _brain_summarize_modules(symbol: str, modules: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    """Extract the decisive signals from each module into a compact dict."""
+    out: Dict[str, Any] = {
+        "symbol": symbol,
+        "verdicts": {},     # what each module says (BUY / SELL / HOLD / regime names)
+        "scores": {},       # numeric scores
+        "risks": {},        # boolean or string risk flags
+        "notes": [],        # freeform observations
+    }
+
+    # ── Quote — price + change ─────────────────────────────────────────────
+    q = (modules.get("quote") or {}).get("data") or {}
+    out["last_price"] = _brain_pick(q, "price", "last", "close", "last_close")
+    out["change_pct"] = _brain_pick(q, "change_pct", "percent_change", "pct_change")
+
+    # ── Trader composite score ─────────────────────────────────────────────
+    tr = (modules.get("trader") or {}).get("data") or {}
+    if tr:
+        out["verdicts"]["trader"] = _brain_pick(tr, "verdict", "signal")
+        out["scores"]["composite_score"] = tr.get("composite_score")
+        out["scores"]["trader_confidence"] = tr.get("confidence")
+        if tr.get("risk_flags"):
+            out["risks"]["trader_flags"] = tr["risk_flags"]
+        if tr.get("insights"):
+            out["notes"].append(f"Trader insights: {tr['insights'][:3] if isinstance(tr['insights'], list) else tr['insights']}")
+
+    # ── Price prediction (entry / stop / target) ───────────────────────────
+    pr = (modules.get("predict") or {}).get("data") or {}
+    pred = pr.get("prediction") or {}
+    if pred:
+        out["setup"] = {
+            "entry":  _brain_pick(pred, "entry", "entry_price"),
+            "stop":   _brain_pick(pred, "stop", "stop_price", "stop_loss"),
+            "target": _brain_pick(pred, "target", "target_price", "take_profit"),
+            "rr":     _brain_pick(pred, "rr", "risk_reward", "risk_reward_ratio"),
+        }
+
+    # ── MMO quantum state ──────────────────────────────────────────────────
+    mmo = (modules.get("mmo") or {}).get("data") or {}
+    if mmo and not mmo.get("degraded"):
+        out["verdicts"]["mmo_quantum"] = mmo.get("quantum_verdict")
+        out["scores"]["mmo_entropy"] = mmo.get("entropy")
+        out["scores"]["collapse_prob"] = mmo.get("collapse_prob")
+        amps = mmo.get("amplitudes") or {}
+        if amps:
+            top_state = max(amps.items(), key=lambda kv: kv[1] or 0)
+            out["notes"].append(f"MMO dominant state: {top_state[0]} @ {top_state[1]:.2%}")
+        thermal = mmo.get("thermal") or {}
+        if thermal:
+            out["scores"]["thermal_phase"] = thermal.get("phase")
+            if thermal.get("overheating"):
+                out["risks"]["mmo_overheating"] = True
+        ont = mmo.get("ontology") or {}
+        if ont:
+            out["notes"].append(f"MMO ontology: {ont.get('being','?')} / {ont.get('essence','?')}")
+    elif mmo and mmo.get("degraded"):
+        out["notes"].append("MMO: degraded (insufficient data for quantum measurement)")
+
+    # ── Strategy consensus (multi-engine rule-based) ───────────────────────
+    st = (modules.get("strategy") or {}).get("data") or {}
+    con = st.get("consensus") or {}
+    if con:
+        out["verdicts"]["strategy_consensus"] = con.get("action")
+        out["scores"]["strategy_confidence"] = con.get("confidence")
+        out["scores"]["engine_agreement"] = con.get("agreement")
+        out["scores"]["strategy_net_score"] = con.get("net_score")
+
+    # ── Market regime / state ──────────────────────────────────────────────
+    ms = (modules.get("market_state") or {}).get("data") or {}
+    if ms:
+        out["regime"] = _brain_pick(ms, "regime", "state", "phase", "classification")
+        out["scores"]["volatility_regime"] = _brain_pick(ms, "volatility_regime", "vol_regime")
+
+    # ── Chaos / Lyapunov ───────────────────────────────────────────────────
+    ch = (modules.get("chaos") or {}).get("data") or {}
+    if ch:
+        out["scores"]["lyapunov"] = _brain_pick(ch, "lyapunov", "lyapunov_exponent")
+        out["scores"]["chaos_score"] = _brain_pick(ch, "chaos_score", "hurst_exponent")
+        if _brain_pick(ch, "is_chaotic", "chaotic"):
+            out["risks"]["chaotic_regime"] = True
+
+    # ── Volatility ─────────────────────────────────────────────────────────
+    vl = (modules.get("volatility") or {}).get("data") or {}
+    if vl:
+        out["scores"]["realized_vol"] = _brain_pick(vl, "realized_vol", "annualized_vol", "historical_vol")
+        out["scores"]["implied_vol"]  = _brain_pick(vl, "iv", "implied_volatility")
+        out["scores"]["vol_rank"]     = _brain_pick(vl, "iv_rank", "vol_rank", "percentile")
+
+    # ── Signal composer (unified signal) ───────────────────────────────────
+    sg = (modules.get("signal") or {}).get("data") or {}
+    if sg:
+        out["verdicts"]["composed_signal"] = _brain_pick(sg, "signal", "action", "verdict")
+        out["scores"]["signal_conviction"] = _brain_pick(sg, "conviction", "confidence", "strength")
+
+    # ── Analytics (sharpe, drawdown, beta) ─────────────────────────────────
+    an = (modules.get("analytics") or {}).get("data") or {}
+    if an and isinstance(an, dict):
+        for k in ("sharpe", "sortino", "max_drawdown", "beta", "win_rate"):
+            v = an.get(k)
+            if v is not None:
+                out["scores"][k] = v
+
+    # ── Fundamental + DCF ──────────────────────────────────────────────────
+    fu = (modules.get("fundamental") or {}).get("data") or {}
+    if fu:
+        out["scores"]["pe_ratio"]      = _brain_pick(fu, "pe", "pe_ratio")
+        out["scores"]["roe"]           = fu.get("roe")
+        out["scores"]["revenue_growth"] = _brain_pick(fu, "revenue_growth", "rev_growth")
+        out["verdicts"]["fundamental_grade"] = fu.get("grade")
+    dc = (modules.get("dcf") or {}).get("data") or {}
+    if dc:
+        out["scores"]["dcf_fair_value"] = _brain_pick(dc, "fair_value", "intrinsic_value", "dcf_value")
+        out["scores"]["dcf_upside_pct"] = _brain_pick(dc, "upside_pct", "upside", "margin_of_safety")
+
+    return out
+
+
+def _brain_mechanical_verdict(summary: Dict[str, Any]) -> Dict[str, Any]:
+    """A tally-based verdict. Runs even if ARIA is offline. Never trumps the LLM plan."""
+    v = summary.get("verdicts") or {}
+    buys = sells = holds = 0
+    for x in v.values():
+        if not x:
+            continue
+        s = str(x).upper()
+        if "BUY" in s or "BULL" in s or "LONG" in s:
+            buys += 1
+        elif "SELL" in s or "BEAR" in s or "SHORT" in s:
+            sells += 1
+        else:
+            holds += 1
+    total = max(buys + sells + holds, 1)
+    if buys > sells + 1:
+        verdict = "BUY"
+    elif sells > buys + 1:
+        verdict = "SELL"
+    else:
+        verdict = "HOLD"
+    conviction = round(100.0 * max(buys, sells) / total)
+    return {
+        "verdict":    verdict,
+        "tally":      {"BUY": buys, "SELL": sells, "HOLD": holds},
+        "conviction": conviction,
+    }
+
+
+def _brain_build_prompt(symbol: str, summary: Dict[str, Any], modules: Dict[str, Dict[str, Any]]) -> str:
+    """Build the prompt for ARIA to synthesize a tradable plan."""
+    summary_json = json.dumps(summary, indent=2, default=str)
+    failed = [k for k, v in modules.items() if v.get("error")]
+    failed_note = f"\nMODULES THAT FAILED: {', '.join(failed)}" if failed else ""
+    return (
+        f"You are ARIA — Atlas's senior quantitative strategist.\n"
+        f"Synthesize a TRADABLE PLAN for **{symbol}** based on the aggregated "
+        f"multi-module analysis below. Every field you see came from a different "
+        f"production analyzer (trader composite, MMO quantum physics, strategy "
+        f"consensus, chaos, volatility, fundamental/DCF, etc.).\n\n"
+        f"=== AGGREGATED SIGNALS ===\n{summary_json}{failed_note}\n\n"
+        f"Respond in this EXACT markdown structure:\n\n"
+        f"### VERDICT\n"
+        f"**[BUY / SELL / HOLD / WATCH]** — 1 line, include conviction X/10\n\n"
+        f"### THESIS\n"
+        f"2-3 sentences explaining WHY the modules agree or disagree. Cite the "
+        f"actual numbers (e.g., 'composite 42, MMO entropy 0.68, engines 4/5 BUY').\n\n"
+        f"### SETUP\n"
+        f"- **Entry:** $X.XX\n"
+        f"- **Stop:** $X.XX\n"
+        f"- **Target:** $X.XX\n"
+        f"- **R:R:** N:1\n"
+        f"- **Timeframe:** N days/weeks\n\n"
+        f"### RISK NOTES\n"
+        f"Top 2-3 risks — flag disagreements between modules, elevated volatility, "
+        f"chaotic regime, overheating, etc.\n\n"
+        f"### CONFIDENCE\n"
+        f"Final conviction as a single 0-100 score with 1-line reasoning.\n\n"
+        f"Be crisp. No filler, no disclaimers, no 'consult a professional'. "
+        f"This plan is going on a trader's desk — they have 30 seconds to read it."
+    )
+
+
+@app.get("/api/brain/synthesize/{ticker}")
+async def brain_synthesize(ticker: str, request: Request):
+    """
+    Unified Market Brain — single ticker.
+
+    Fans out to every per-ticker analyzer in parallel, aggregates the signals,
+    then asks ARIA to produce a tradable plan. Returns both the raw module
+    payloads (for the UI to show module-by-module) and the synthesized plan.
+    """
+    t0 = time.time()
+    symbol = ticker.strip().upper()
+    if not symbol or not re.match(r"^[A-Z0-9.\-]{1,12}$", symbol):
+        raise HTTPException(status_code=400, detail="Invalid ticker")
+
+    base_url = _brain_base_url(request)
+    modules = await _brain_fetch_all(symbol, base_url)
+    summary = _brain_summarize_modules(symbol, modules)
+    mech    = _brain_mechanical_verdict(summary)
+
+    # Quality gate — how many analyzers actually produced usable output?
+    modules_ok = sum(1 for m in modules.values() if m.get("error") is None)
+    verdicts_collected = len(summary.get("verdicts") or {})
+
+    # ARIA synthesis (best-effort — never block the response)
+    aria_plan = None
+    aria_provider = "none"
+    aria_latency = 0
+    aria_error: Optional[str] = None
+
+    # Short-circuit: if almost nothing came back, skip ARIA entirely.
+    # Asking an LLM to synthesize a plan from empty data produces hallucinated
+    # advice that sounds authoritative — worst failure mode for a trading tool.
+    if modules_ok < 2 or verdicts_collected == 0:
+        aria_error = f"insufficient_data (modules_ok={modules_ok}, verdicts={verdicts_collected})"
+        aria_plan = (
+            f"### NO SYNTHESIS\n\n"
+            f"Only **{modules_ok}/{len(modules)} analyzers** responded for `{symbol}` "
+            f"with **{verdicts_collected} actionable verdicts** — not enough signal to "
+            f"produce a plan. This usually means:\n\n"
+            f"- `{symbol}` is delisted / misspelled / too illiquid\n"
+            f"- yfinance rate-limited or blocked this session\n"
+            f"- Atlas analyzers are warming up (first call after restart)\n\n"
+            f"Check the module status panel below to see which analyzers failed, "
+            f"then retry in ~30 seconds."
+        )
+    else:
+        try:
+            prompt = _brain_build_prompt(symbol, summary, modules)
+            aria_plan, aria_provider, aria_latency = await _ask_with_provider(
+                prompt, preferred=_aria_active_model
+            )
+        except Exception as exc:
+            logger.warning("Brain synthesize ARIA call failed for %s: %s", symbol, exc)
+            aria_error = f"{type(exc).__name__}: {exc}"
+            aria_plan = (
+                f"_ARIA synthesis unavailable ({aria_error}). "
+                "Raw module signals are still available in the table above — "
+                "use `/model cloud:groq` or start Ollama to enable narrative synthesis._"
+            )
+
+    return {
+        "ticker":       symbol,
+        "generated_at": datetime.now().isoformat(),
+        "elapsed_ms":   int((time.time() - t0) * 1000),
+        "summary":      summary,
+        "mechanical":   mech,
+        "quality": {
+            "modules_ok":         modules_ok,
+            "modules_total":      len(modules),
+            "verdicts_collected": verdicts_collected,
+        },
+        "modules": {
+            k: {
+                "ok":    v.get("error") is None,
+                "error": v.get("error"),
+                "data":  v.get("data"),
+            }
+            for k, v in modules.items()
+        },
+        "aria": {
+            "plan":        aria_plan,
+            "provider":    aria_provider,
+            "latency_ms":  aria_latency,
+            "error":       aria_error,
+            "model":       _aria_active_model,
+        },
+    }
+
+
+@app.get("/api/brain/portfolio")
+async def brain_portfolio(request: Request, max_positions: int = 20):
+    """
+    Unified Market Brain — full uploaded portfolio.
+
+    Runs the single-ticker synthesis per holding (bounded concurrency),
+    then aggregates the verdicts into a portfolio-level view (weight-by-verdict,
+    concentration, aggregate risks) and asks ARIA for a portfolio action plan.
+    """
+    t0 = time.time()
+
+    # Load the uploaded portfolio directly (same process).
+    pf = get_uploaded_portfolio()
+    positions = pf.get("positions") or []
+    if not positions:
+        return {
+            "generated_at":  datetime.now().isoformat(),
+            "has_portfolio": False,
+            "source":        pf.get("source", "none"),
+            "message":       "No portfolio uploaded. POST /api/portfolio/upload first.",
+            "positions":     [],
+        }
+
+    # Top N by market value so we don't hammer yfinance for 200-line portfolios.
+    positions = sorted(
+        positions,
+        key=lambda p: float(p.get("market_value") or 0),
+        reverse=True,
+    )[:max_positions]
+    total_equity = sum(float(p.get("market_value") or 0) for p in positions) or 1.0
+
+    base_url = _brain_base_url(request)
+    sem = asyncio.Semaphore(4)  # cap parallel yfinance fan-out
+
+    async def analyze_one(pos: Dict[str, Any]):
+        sym = (pos.get("symbol") or "").strip().upper()
+        if not sym or not re.match(r"^[A-Z0-9.\-]{1,12}$", sym):
+            return None
+        async with sem:
+            modules = await _brain_fetch_all(sym, base_url)
+        summary = _brain_summarize_modules(sym, modules)
+        mech = _brain_mechanical_verdict(summary)
+        mv = float(pos.get("market_value") or 0)
+        return {
+            "symbol":       sym,
+            "qty":          pos.get("qty"),
+            "avg_price":    pos.get("avg_price"),
+            "current_price":pos.get("current_price") or summary.get("last_price"),
+            "market_value": mv,
+            "weight_pct":   round(100.0 * mv / total_equity, 2),
+            "pnl_pct":      pos.get("pnl_pct"),
+            "verdict":      mech["verdict"],
+            "conviction":   mech["conviction"],
+            "summary":      summary,
+        }
+
+    enriched = [x for x in await asyncio.gather(*(analyze_one(p) for p in positions)) if x]
+
+    # Guard: portfolio had positions but none were analyzable (all symbols invalid,
+    # or every yfinance call failed). Return a structured "no data" response
+    # instead of asking ARIA to invent a plan from empty aggregates.
+    if not enriched:
+        return {
+            "generated_at":       datetime.now().isoformat(),
+            "elapsed_ms":         int((time.time() - t0) * 1000),
+            "has_portfolio":      True,
+            "as_of":              pf.get("as_of"),
+            "total_equity":       pf.get("total_equity"),
+            "positions_analyzed": 0,
+            "aggregate":          {},
+            "positions":          [],
+            "aria": {
+                "plan": (
+                    "### NO SYNTHESIS\n\n"
+                    f"Portfolio has **{len(positions)} position(s)** uploaded, but "
+                    f"none could be analyzed — every ticker either failed validation "
+                    f"or every underlying analyzer returned an error. Check "
+                    f"`/api/portfolio/uploaded` and `/api/health` to diagnose."
+                ),
+                "provider":   "none",
+                "latency_ms": 0,
+                "error":      "no_positions_analyzed",
+                "model":      _aria_active_model,
+            },
+        }
+
+    # Aggregate the verdicts by count + by capital weight
+    by_verdict_count  = {"BUY": 0, "SELL": 0, "HOLD": 0}
+    by_verdict_weight = {"BUY": 0.0, "SELL": 0.0, "HOLD": 0.0}
+    for e in enriched:
+        v = e["verdict"]
+        by_verdict_count[v] = by_verdict_count.get(v, 0) + 1
+        by_verdict_weight[v] = by_verdict_weight.get(v, 0) + e["weight_pct"]
+    by_verdict_weight = {k: round(v, 2) for k, v in by_verdict_weight.items()}
+
+    # Concentration check — flag any single name > 15%
+    concentration_flags = [
+        {"symbol": e["symbol"], "weight_pct": e["weight_pct"]}
+        for e in enriched if e["weight_pct"] > 15
+    ]
+
+    # Collect top aggregate risks
+    risk_bullets: List[str] = []
+    for e in enriched:
+        for k, v in (e["summary"].get("risks") or {}).items():
+            risk_bullets.append(f"{e['symbol']}: {k}" + (f"={v}" if not isinstance(v, bool) else ""))
+
+    aggregate = {
+        "positions_analyzed": len(enriched),
+        "by_verdict":         by_verdict_count,
+        "weight_by_verdict":  by_verdict_weight,
+        "concentration_flags": concentration_flags,
+        "top_positions": [
+            {"symbol": e["symbol"], "weight_pct": e["weight_pct"],
+             "verdict": e["verdict"], "conviction": e["conviction"],
+             "pnl_pct": e["pnl_pct"]}
+            for e in enriched[:10]
+        ],
+        "aggregate_risks": risk_bullets[:15],
+    }
+
+    # Ask ARIA for the portfolio-level plan
+    prompt = (
+        "You are ARIA — Atlas's senior portfolio strategist.\n"
+        "Review the portfolio-level Market Brain summary below and produce a "
+        "concise portfolio action plan.\n\n"
+        f"=== PORTFOLIO AGGREGATE ===\n{json.dumps(aggregate, indent=2, default=str)}\n\n"
+        "Respond in this EXACT markdown structure:\n\n"
+        "### PORTFOLIO STANCE\n"
+        "**[RISK-ON / NEUTRAL / DEFENSIVE / TRIM]** — 1 line reasoning\n\n"
+        "### TOP ACTIONS\n"
+        "3-5 bullet actions. Each one specific: 'Trim NVDA to 5% — overheated, "
+        "engines SELL 4/5', 'Add SPY put hedge — portfolio beta 1.3 with 78% long'.\n\n"
+        "### CONCENTRATION CHECK\n"
+        "Flag any single-name > 15% or obvious sector skew.\n\n"
+        "### RISK NOTES\n"
+        "Top 2-3 portfolio risks, prioritized.\n\n"
+        "### SCORE\n"
+        "Portfolio health 0-100 + 1-line reasoning.\n\n"
+        "Be crisp. This is going on a PM's desk — 30 seconds to read."
+    )
+
+    aria_plan = None
+    aria_provider = "none"
+    aria_latency = 0
+    aria_error: Optional[str] = None
+    try:
+        aria_plan, aria_provider, aria_latency = await _ask_with_provider(
+            prompt, preferred=_aria_active_model
+        )
+    except Exception as exc:
+        logger.warning("Brain portfolio ARIA call failed: %s", exc)
+        aria_error = f"{type(exc).__name__}: {exc}"
+        aria_plan = f"_ARIA synthesis unavailable ({aria_error})._"
+
+    return {
+        "generated_at":        datetime.now().isoformat(),
+        "elapsed_ms":          int((time.time() - t0) * 1000),
+        "has_portfolio":       True,
+        "as_of":               pf.get("as_of"),
+        "total_equity":        pf.get("total_equity"),
+        "positions_analyzed":  len(enriched),
+        "aggregate":           aggregate,
+        "positions":           enriched,
+        "aria": {
+            "plan":       aria_plan,
+            "provider":   aria_provider,
+            "latency_ms": aria_latency,
+            "error":      aria_error,
+            "model":      _aria_active_model,
+        },
+    }
 
 
 # ==================== AI AGENT SYSTEM ====================
 
 # Lazy-init orchestrator (built once on first request)
 _agent_orchestrator = None
+
+# Live event bus — agent execution lifecycle (start/end) is broadcast here.
+# Frontends subscribe via WebSocket /ws/agents/{session_id} to drive the
+# Atlas OS terminal's "Swarm" pill + ARIA Core state.
+_agent_event_subscribers: "List[asyncio.Queue]" = []
+_agent_event_history: "List[Dict[str, Any]]" = []   # ring buffer (last 50 events)
+_AGENT_EVENT_HISTORY_MAX = 50
+_agent_event_loop: "Optional[asyncio.AbstractEventLoop]" = None
+
+
+def _agent_publish_event(evt: Dict[str, Any]) -> None:
+    """
+    Push an agent lifecycle event to all subscribed WebSocket queues +
+    the recent-history ring buffer.
+
+    Called from sync code (orchestrator hooks). Uses
+    `loop.call_soon_threadsafe` to enqueue safely from worker threads.
+    """
+    # Ring buffer (sync-safe)
+    _agent_event_history.append(evt)
+    if len(_agent_event_history) > _AGENT_EVENT_HISTORY_MAX:
+        del _agent_event_history[: len(_agent_event_history) - _AGENT_EVENT_HISTORY_MAX]
+
+    loop = _agent_event_loop
+    if loop is None or not _agent_event_subscribers:
+        return
+
+    def _enqueue(snapshot=tuple(_agent_event_subscribers)):
+        for q in snapshot:
+            try:
+                q.put_nowait(evt)
+            except Exception:
+                pass
+
+    try:
+        loop.call_soon_threadsafe(_enqueue)
+    except Exception as exc:
+        logging.debug("[agents] event broadcast failed: %s", exc)
+
+
+def _agent_on_start(task) -> None:
+    _agent_publish_event({
+        "type":       "agent_start",
+        "task_id":    getattr(task, "task_id", None),
+        "agent":      getattr(task, "agent_name", None),
+        "objective":  (getattr(task, "objective", "") or "")[:200],
+        "risk_level": getattr(task, "risk_level", "low"),
+        "ts":         datetime.now().isoformat(),
+    })
+
+
+def _agent_on_end(result) -> None:
+    md = getattr(result, "metadata", {}) or {}
+    _agent_publish_event({
+        "type":         "agent_end",
+        "task_id":      getattr(result, "task_id", None),
+        "agent":        md.get("agent"),
+        "status":       getattr(result, "status", "unknown"),
+        "summary":      (getattr(result, "summary", "") or "")[:200],
+        "execution_ms": md.get("execution_ms"),
+        "errors":       list(getattr(result, "errors", []) or [])[:3],
+        "ts":           datetime.now().isoformat(),
+    })
+
 
 def _get_agent_orchestrator():
     global _agent_orchestrator
@@ -5561,6 +6424,12 @@ def _get_agent_orchestrator():
             _add_sys_path()
             from atlas.core.ai_assistant import build_system
             _agent_orchestrator = build_system()
+            # Wire lifecycle hooks for live streaming
+            try:
+                _agent_orchestrator._on_start = _agent_on_start
+                _agent_orchestrator._on_end   = _agent_on_end
+            except Exception as exc:
+                logging.debug("[agents] hook wiring skipped: %s", exc)
             logging.info("Agent orchestrator ready — %d agents loaded",
                          len(_agent_orchestrator.registry.list_agents()))
         except Exception as e:
@@ -5586,6 +6455,7 @@ def list_agents():
                 "class":   type(agent).__name__,
             })
     except Exception as e:
+        logger.warning("Agent listing failed: %s", e)
         return {"error": str(e), "agents": []}
 
     return {
@@ -5604,8 +6474,14 @@ class AgentRunRequest(BaseModel):
 
 
 @app.post("/api/agents/run")
-def run_agent(req: AgentRunRequest):
-    """Execute an agent task and return the result."""
+async def run_agent(req: AgentRunRequest):
+    """
+    Execute an agent task and return the result.
+
+    Runs the (sync) orchestrator inside a thread executor so the FastAPI
+    event loop stays free to broadcast lifecycle events over the agents
+    WebSocket while the agent is working.
+    """
     orch = _get_agent_orchestrator()
     if orch is None:
         return {"status": "error", "errors": ["Agent system not available"], "result": {}}
@@ -5619,7 +6495,8 @@ def run_agent(req: AgentRunRequest):
             inputs     = req.inputs or {},
             risk_level = req.risk_level or "low",
         )
-        result = orch.execute(task)
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, orch.execute, task)
         return {
             "task_id":  result.task_id,
             "status":   result.status,
@@ -5629,6 +6506,7 @@ def run_agent(req: AgentRunRequest):
             "metadata": result.metadata,
         }
     except Exception as e:
+        logger.warning("Agent run failed for %s: %s", req.agent_name, e)
         return {"status": "error", "errors": [str(e)], "result": {}}
 
 
@@ -5642,12 +6520,112 @@ def agents_status():
     try:
         count = len(orch.registry.list_agents())
         return {
-            "available":    True,
-            "agents_count": count,
-            "agents":       orch.registry.list_agents(),
+            "available":      True,
+            "agents_count":   count,
+            "agents":         orch.registry.list_agents(),
+            "subscribers":    len(_agent_event_subscribers),
+            "recent_events":  len(_agent_event_history),
         }
     except Exception as e:
+        logger.warning("Agent status check failed: %s", e)
         return {"available": False, "agents_count": 0, "reason": str(e)}
+
+
+@app.get("/api/agents/audit")
+def agents_audit(limit: int = 20):
+    """
+    Return the most recent agent lifecycle events (start/end).
+
+    Used by the Atlas OS terminal to populate the activity feed before a
+    WebSocket connection is established. Capped at the in-memory ring
+    buffer size (50). For full historical audit, see TaskLogger logs on
+    disk (`logs/agents/`).
+    """
+    if limit <= 0:
+        limit = 20
+    limit = min(limit, _AGENT_EVENT_HISTORY_MAX)
+    return {
+        "total":  len(_agent_event_history),
+        "events": _agent_event_history[-limit:],
+    }
+
+
+@app.websocket("/ws/agents/{session_id}")
+async def agents_websocket(websocket: WebSocket, session_id: str):
+    """
+    Live agent execution stream.
+
+    On connect, the client receives:
+      1. {"type": "hello", agents_count, agents, recent_events}
+    Then, for every subsequent agent run:
+      2. {"type": "agent_start", task_id, agent, objective, risk_level, ts}
+      3. {"type": "agent_end",   task_id, agent, status, summary, execution_ms, errors, ts}
+
+    Client may send a JSON ping {"type":"ping"} to keep-alive; server
+    replies with {"type":"pong"}.
+    """
+    global _agent_event_loop
+
+    await websocket.accept()
+
+    # Capture loop on first connect so sync `_agent_publish_event` knows
+    # which loop to schedule into.
+    if _agent_event_loop is None:
+        try:
+            _agent_event_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            _agent_event_loop = asyncio.get_event_loop()
+
+    # Eagerly boot the orchestrator so the hello payload reflects truth
+    orch = _get_agent_orchestrator()
+    agents_list = []
+    if orch is not None:
+        try:
+            agents_list = orch.registry.list_agents()
+        except Exception:
+            agents_list = []
+
+    queue: asyncio.Queue = asyncio.Queue(maxsize=200)
+    _agent_event_subscribers.append(queue)
+
+    try:
+        await websocket.send_json({
+            "type":          "hello",
+            "session_id":    session_id,
+            "available":     orch is not None,
+            "agents_count":  len(agents_list),
+            "agents":        agents_list,
+            "recent_events": _agent_event_history[-10:],
+            "ts":            datetime.now().isoformat(),
+        })
+
+        async def _pump_events():
+            while True:
+                evt = await queue.get()
+                await websocket.send_json(evt)
+
+        async def _pump_ingress():
+            while True:
+                raw = await websocket.receive_text()
+                try:
+                    msg = json.loads(raw)
+                except Exception:
+                    continue
+                if msg.get("type") == "ping":
+                    await websocket.send_json({
+                        "type": "pong",
+                        "ts":   datetime.now().isoformat(),
+                    })
+
+        await asyncio.gather(_pump_events(), _pump_ingress())
+
+    except Exception as exc:
+        logger.debug("[agents/ws] session %s closed: %s", session_id, exc)
+    finally:
+        try:
+            _agent_event_subscribers.remove(queue)
+        except ValueError:
+            pass
 
 
 # ==================== WEBSOCKET ====================
@@ -5702,7 +6680,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                 })
     
     except Exception as e:
-        print(f"WebSocket error: {e}")
+        logger.warning("WebSocket error for session %s: %s", session_id, e)
     
     finally:
         # Remove from active connections
@@ -5728,17 +6706,18 @@ try:
 
     app.include_router(_st_router, prefix="/api/signals")
 
-    @app.on_event("startup")
     async def _start_signal_terminal():
         sch = _st_init()
         await sch.start()
         logger.info("[SignalTerminal] background scheduler started")
 
-    @app.on_event("startup")
     async def _start_agent_system():
         import asyncio
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, _get_agent_orchestrator)
+
+    app.router.on_startup.append(_start_signal_terminal)
+    app.router.on_startup.append(_start_agent_system)
 
     logger.info("[SignalTerminal] router registered at /api/signals")
 

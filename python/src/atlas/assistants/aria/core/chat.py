@@ -1,70 +1,96 @@
 """
-ARIA Chat Engine - V2.0 REFINED
+ARIA Chat Engine — v3.0 (Provider-Agnostic)
 
-Enhanced with:
+Previously this file hard-imported `ollama` at the top and called
+`ollama.chat()` directly. That made Ollama a hard dependency and crashed
+the whole app if the Ollama daemon wasn't running.
+
+v3.0 change: route every chat call through `ProviderManager`, which
+already handles fallback across Ollama / Groq / OpenRouter / Cerebras /
+OpenAI / Mock. Ollama is now ONE option in a chain, not a requirement.
+
+Enhancements preserved from v2:
 - Professional system prompt v2.0
 - Parameter validation
 - Robust error handling
-- Tool calling with Ollama
-
-Based on patterns from Claude Code, Cursor, and AI tool analysis
+- Tool calling
 """
 
 import json
 import logging
-import ollama
+import os
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 from datetime import datetime, timezone
 
-# Import validation and system prompt v2
 from .validation import validate_tool_params, ValidationError
 from .system_prompt import get_system_prompt
+
+# Lazy-import the provider manager so this module doesn't explode if one
+# of the optional provider SDKs isn't installed.
+try:
+    from ..ai_layer.provider_manager import ProviderManager
+    from ..ai_layer.providers.base import LLMResponse
+    _PROVIDER_MANAGER_AVAILABLE = True
+except Exception as _pm_exc:  # pragma: no cover - defensive
+    ProviderManager = None  # type: ignore
+    LLMResponse = None       # type: ignore
+    _PROVIDER_MANAGER_AVAILABLE = False
+    logging.getLogger("atlas.aria").warning(
+        "ProviderManager unavailable (%s); ARIA will fall back to direct Ollama if present.",
+        _pm_exc,
+    )
 
 logger = logging.getLogger("atlas.aria")
 
 
 class ARIA:
     """
-    ARIA (Atlas Reasoning & Intelligence Assistant)
-    
-    Enhanced with:
-    - Professional system prompt (v2.0)
-    - Parameter validation before tool execution
-    - Robust error handling with user-friendly messages
-    - Tool calling support with Ollama
+    ARIA (Atlas Reasoning & Intelligence Assistant) — v3.0
+
+    Backend is selected automatically:
+      1. ProviderManager picks the first available provider in the fallback
+         chain based on env vars (GROQ_API_KEY, OPENROUTER_API_KEY, etc.)
+      2. If none are configured, it falls back to MockProvider so the app
+         still boots and the UI stays responsive.
+      3. Ollama is supported but no longer required.
     """
-    
-    def __init__(self, 
-                 model: str = "llama3.1:8b",
-                 host: str = "http://localhost:11434",
-                 temperature: float = 0.7):
+
+    def __init__(self,
+                 model: Optional[str] = None,
+                 host: Optional[str] = None,
+                 temperature: float = 0.7,
+                 preferred_provider: Optional[str] = None,
+                 fallback_chain: Optional[List[str]] = None):
         """
-        Initialize ARIA with Ollama backend
-        
+        Initialize ARIA with a provider-agnostic backend.
+
         Args:
-            model: Ollama model name (default: llama3.1:8b)
-            host: Ollama server URL
-            temperature: LLM temperature (0.0-1.0)
+            model: Optional model override (used only if the preferred provider
+                   needs one). Defaults per-provider.
+            host:  Kept for backward compatibility (Ollama host).
+            temperature: Sampling temperature.
+            preferred_provider: e.g. "groq", "openrouter", "ollama", "anthropic".
+                                Falls back automatically if unavailable.
+            fallback_chain: Override the default provider priority order.
         """
-        self.model = model
-        self.host = host
+        self.model = model or os.getenv("ARIA_DEFAULT_MODEL", "llama3.1:8b")
+        self.host = host or os.getenv("OLLAMA_HOST", "http://localhost:11434")
         self.temperature = temperature
-        self.backend = "ollama"
-        
+
         # Conversation history
         self.history: List[Dict[str, str]] = []
-        
+
         # Tool registry
         self.tools: Dict[str, Any] = {}
         self.tool_schemas: List[Dict] = []
-        
+
         # System prompt v2.0
         self.system_prompt = get_system_prompt(version="2.0")
-        
+
         # Version
-        self.__version__ = "2.6.0"
-        
+        self.__version__ = "3.0.0"
+
         # Statistics
         self.stats = {
             "total_queries": 0,
@@ -77,13 +103,32 @@ class ARIA:
         # Structured tool-call audit trail
         self.tool_event_log_path = Path("outputs") / "runs" / "aria_tool_calls.jsonl"
         self.tool_event_log_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Verify Ollama connection
-        self._verify_connection()
-        
-        # Print welcome banner
+
+        # --- Provider setup (the actual v3 change) -----------------------
+        # Preferred provider defaults to the env var, else None (=> manager
+        # picks the first available in the chain).
+        self.preferred_provider = (
+            preferred_provider
+            or os.getenv("ARIA_LLM_BACKEND")
+            or None
+        )
+        self.backend = self.preferred_provider or "auto"
+
+        self._provider_manager = None
+        if _PROVIDER_MANAGER_AVAILABLE:
+            try:
+                self._provider_manager = ProviderManager(
+                    fallback_chain=fallback_chain,
+                    preferred_provider=self.preferred_provider,
+                )
+            except Exception as exc:
+                logger.warning("ProviderManager init failed: %s", exc)
+                self._provider_manager = None
+
+        # Print welcome banner (no hard Ollama dependency)
         self.print_banner()
 
+    # ------------------------------------------------------------------ utils
     @staticmethod
     def _safe_print(message: str) -> None:
         """Print safely across Windows console encodings."""
@@ -93,7 +138,6 @@ class ARIA:
             fallback = message.encode("ascii", errors="replace").decode("ascii")
             print(fallback)
         except Exception:
-            # Logging should never break runtime behavior.
             try:
                 print(str(message))
             except Exception:
@@ -101,41 +145,32 @@ class ARIA:
 
     def print_banner(self):
         """Print startup banner."""
+        available = self._available_providers_summary()
         banner = (
             "\n"
             + "=" * 60
             + "\nARIA - Atlas Reasoning & Intelligence Assistant\n"
-            + "v5.0 - Autonomous Edition\n"
-            + "System: 100% Local (no commercial APIs)\n"
-            + f"Model: {self.model}\n"
+            + "v3.0 - Provider-Agnostic Edition\n"
+            + f"Backends available: {available}\n"
+            + f"Preferred: {self.preferred_provider or 'auto (first available)'}\n"
             + "Status: Ready\n"
             + "=" * 60
         )
         self._safe_print(banner)
-    
-    def _verify_connection(self):
-        """Verify connection to Ollama"""
-        try:
-            ollama.list()
-        except Exception as e:
-            raise ConnectionError(
-                f"Failed to connect to Ollama at {self.host}. "
-                f"Make sure Ollama is running.\nError: {e}"
-            )
 
-        self._safe_print(f"✅ Connected to Ollama ({self.host})")
-        self._safe_print(f"📦 Using model: {self.model}")
-    
+    def _available_providers_summary(self) -> str:
+        if not self._provider_manager:
+            return "direct-ollama (legacy fallback)"
+        try:
+            providers = self._provider_manager.get_available_providers()
+            return ", ".join(providers) if providers else "mock only"
+        except Exception:
+            return "unknown"
+
+    # ----------------------------------------------------------- tool registry
     def register_tool(self, tool):
-        """
-        Register a tool for ARIA to use
-        
-        Args:
-            tool: Tool instance with name, description, and execute method
-        """
+        """Register a tool for ARIA to use."""
         self.tools[tool.name] = tool
-        
-        # Add tool schema for Ollama function calling
         tool_schema = {
             "type": "function",
             "function": {
@@ -145,192 +180,186 @@ class ARIA:
             }
         }
         self.tool_schemas.append(tool_schema)
-        
         self._safe_print(f"🔧 Registered tool: {tool.name}")
-    
-    def ask(self, 
+
+    # -------------------------------------------------------------- main loop
+    def ask(self,
             user_message: str,
             max_iterations: int = 5) -> str:
-        """
-        Ask ARIA a question
-        
-        Supports multi-step tool calling:
-        1. User asks question
-        2. ARIA decides if tools needed
-        3. ARIA calls tools (with validation)
-        4. ARIA synthesizes response
-        
-        Args:
-            user_message: User's question
-            max_iterations: Max tool calling iterations
-        
-        Returns:
-            ARIA's response
-        """
+        """Ask ARIA a question (supports multi-step tool calling)."""
         self.stats["total_queries"] += 1
-        
+
         try:
             # Add user message to history
-            self.history.append({
-                "role": "user",
-                "content": user_message
-            })
+            self.history.append({"role": "user", "content": user_message})
 
-            # Check for self-description commands (Fast Path)
+            # Fast path: self-description commands
             triggers = ["who are you", "what are you", "describe yourself", "/intro", "/info"]
             if any(trigger in user_message.lower() for trigger in triggers):
                 description = (
                     "🤖 **I am ARIA (Atlas Reasoning & Intelligence Assistant).**\n\n"
-                    "I am a refined, 100% local AI designed to be your autonomous co-pilot. "
-                    "Unlike standard chatbots, I run entirely on your machine using Ollama, ensuring total privacy.\n\n"
+                    "I am Atlas's autonomous reasoning co-pilot. I route through whichever LLM "
+                    "backend is available — local (Ollama), free cloud (Groq, OpenRouter, Cerebras), "
+                    "or premium (OpenAI, Anthropic) — and fall back automatically if one goes down.\n\n"
                     "**My Key Capabilities:**\n"
-                    "- 🧠 **Reasoning:** I use advanced models (Llama 3, Deepseek) to solve complex problems.\n"
-                    "- 🛠️ **Tools:** I can access your files, search the web, and manage your schedule (ClickUp/Notion).\n"
+                    "- 🧠 **Reasoning:** I use Llama 3, DeepSeek, Claude, or GPT depending on what's available.\n"
+                    "- 🛠️ **Tools:** Files, web search, schedule (ClickUp/Notion), market data.\n"
                     "- 👁️ **Vision:** I can see and analyze images you share.\n"
                     "- 🗣️ **Voice:** I can speak and listen via my Voice Terminal.\n"
-                    "- 🔌 **Integration:** I connect with WhatsApp, Discord, and your local apps.\n\n"
+                    "- 🔌 **Integration:** WhatsApp, Discord, and your local apps.\n\n"
                     "I am built to be precise, helpful, and secure. How can I assist you today?"
                 )
-                
-                # Add to history
-                self.history.append({
-                    "role": "assistant",
-                    "content": description
-                })
-                
+                self.history.append({"role": "assistant", "content": description})
                 return description
-            
-            # Prepare messages for Ollama
+
+            # Prepare messages
             messages = [
                 {"role": "system", "content": self.system_prompt},
                 *self.history
             ]
-            
+
             # Multi-step reasoning with tools
             iterations = 0
             while iterations < max_iterations:
                 iterations += 1
-                
-                # Call Ollama with tool support
-                response = ollama.chat(
-                    model=self.model,
-                    messages=messages,
-                    tools=self.tool_schemas if self.tool_schemas else None,
-                    options={
-                        "temperature": self.temperature
-                    }
-                )
-                
-                assistant_message = response['message']
-                
+
+                # Route through provider manager (or direct ollama as legacy fallback)
+                response, provider_used = self._call_backend(messages)
+
+                # provider_used is a string. Response may be LLMResponse OR a raw dict
+                # from legacy ollama (kept for backward compat).
+                assistant_message = self._normalize_response(response)
+
                 # Check if ARIA wants to call tools
-                if 'tool_calls' in assistant_message and assistant_message['tool_calls']:
-                    # Execute tools
-                    tool_results = self._execute_tools(assistant_message['tool_calls'])
-                    
-                    # Add assistant's tool call to history
+                tool_calls = assistant_message.get("tool_calls") or []
+                if tool_calls:
+                    tool_results = self._execute_tools(tool_calls)
                     messages.append(assistant_message)
-                    
-                    # Add tool results to history
                     for tool_result in tool_results:
                         messages.append({
                             "role": "tool",
                             "content": json.dumps(tool_result)
                         })
-                    
-                    # Continue loop - ARIA will synthesize response
                     continue
-                
                 else:
-                    # ARIA has final response
-                    final_response = assistant_message.get('content', '')
-                    
-                    # Add to history
-                    self.history.append({
-                        "role": "assistant",
-                        "content": final_response
-                    })
-                    
+                    final_response = assistant_message.get("content", "") or ""
+                    self.history.append({"role": "assistant", "content": final_response})
                     self.stats["successful_queries"] += 1
                     return final_response
-            
-            # Max iterations reached
-            return "I apologize, but I'm having trouble completing this request. Could you try rephrasing or breaking it into smaller questions?"
-        
+
+            return ("I apologize, but I'm having trouble completing this request. "
+                    "Could you try rephrasing or breaking it into smaller questions?")
+
         except Exception as e:
             self.stats["failed_queries"] += 1
             return self._handle_error(e)
-    
-    def _execute_tools(self, tool_calls: List[Dict]) -> List[Dict]:
+
+    # ------------------------------------------------------------- backends
+    def _call_backend(self, messages: List[Dict[str, str]]):
         """
-        Execute tool calls with validation
-        
-        Args:
-            tool_calls: List of tool call dictionaries from Ollama
-        
+        Route the chat call through ProviderManager if available, otherwise
+        fall back to direct Ollama (legacy path) for environments that still
+        rely on it.
+
         Returns:
-            List of tool result dictionaries
+            (response_obj, provider_name)  — response may be LLMResponse OR raw dict.
         """
+        # Preferred path: provider manager
+        if self._provider_manager is not None:
+            response, provider_name = self._provider_manager.chat_with_fallback(
+                messages=messages,
+                tools=self.tool_schemas if self.tool_schemas else None,
+                max_retries=3,
+            )
+            return response, provider_name
+
+        # Legacy fallback: direct Ollama (only if the package actually exists)
+        try:
+            import ollama  # lazy import
+        except ImportError:
+            raise RuntimeError(
+                "No LLM backend available: ProviderManager failed to initialize and "
+                "'ollama' package is not installed. Install one of: "
+                "ollama / groq / openai / anthropic, or set an API key."
+            )
+
+        raw = ollama.chat(
+            model=self.model,
+            messages=messages,
+            tools=self.tool_schemas if self.tool_schemas else None,
+            options={"temperature": self.temperature},
+        )
+        return raw, "ollama-direct"
+
+    @staticmethod
+    def _normalize_response(response) -> Dict[str, Any]:
+        """
+        Normalize LLMResponse / raw-ollama-dict into a common shape:
+            {"role": "assistant", "content": str, "tool_calls": list}
+        """
+        # LLMResponse case
+        if LLMResponse is not None and isinstance(response, LLMResponse):
+            tc = []
+            for call in (response.tool_calls or []):
+                tc.append({
+                    "function": {
+                        "name": call.get("name", ""),
+                        "arguments": call.get("arguments", {}),
+                    }
+                })
+            return {
+                "role": "assistant",
+                "content": response.content or "",
+                "tool_calls": tc,
+            }
+
+        # Raw dict from ollama.chat()
+        if isinstance(response, dict) and "message" in response:
+            return response["message"]
+
+        # Fallback: try best-effort attribute access
+        return {
+            "role": "assistant",
+            "content": getattr(response, "content", str(response)),
+            "tool_calls": getattr(response, "tool_calls", []) or [],
+        }
+
+    # ---------------------------------------------------------------- tools
+    def _execute_tools(self, tool_calls: List[Dict]) -> List[Dict]:
+        """Execute tool calls with validation."""
         results = []
-        
         for tool_call in tool_calls:
             function = tool_call.get('function', {})
             tool_name = function.get('name')
             tool_params = function.get('arguments', {})
-            
-            # Parse arguments if string
+
             if isinstance(tool_params, str):
                 try:
                     tool_params = json.loads(tool_params)
                 except json.JSONDecodeError:
                     tool_params = {}
-            
+
             try:
-                # Validate parameters
                 validated_params = validate_tool_params(tool_name, tool_params)
-                
-                # Get tool
                 tool = self.tools.get(tool_name)
-                
                 if not tool:
-                    result = {
-                        "success": False,
-                        "error": f"Tool '{tool_name}' not found"
-                    }
+                    result = {"success": False, "error": f"Tool '{tool_name}' not found"}
                 else:
-                    # Execute tool with validated params
                     self._safe_print(f"🔧 Executing: {tool_name}({validated_params})")
                     result = tool.execute(**validated_params)
                     self.stats["tools_called"] += 1
-            
             except ValidationError as e:
-                # Parameter validation failed
                 self.stats["validation_errors"] += 1
-                result = {
-                    "success": False,
-                    "error": str(e),
-                    "error_type": "validation"
-                }
-            
+                result = {"success": False, "error": str(e), "error_type": "validation"}
             except Exception as e:
-                # Tool execution failed
-                result = {
-                    "success": False,
-                    "error": str(e),
-                    "error_type": "execution"
-                }
+                result = {"success": False, "error": str(e), "error_type": "execution"}
 
             self._log_tool_event(
                 tool_name=tool_name or "unknown",
                 params=tool_params,
                 result=result,
             )
-
-            results.append({
-                "tool": tool_name,
-                "result": result
-            })
-
+            results.append({"tool": tool_name, "result": result})
         return results
 
     def _log_tool_event(self, tool_name: str, params: Dict[str, Any], result: Dict[str, Any]) -> None:
@@ -346,68 +375,58 @@ class ARIA:
                 handle.write(json.dumps(record, ensure_ascii=False) + "\n")
         except Exception as exc:
             logger.debug("Failed to write tool event log: %s", exc)
-    
+
+    # ---------------------------------------------------------------- error
     def _handle_error(self, error: Exception) -> str:
-        """
-        Handle errors with user-friendly messages
-        
-        Args:
-            error: Exception that occurred
-        
-        Returns:
-            User-friendly error message
-        """
+        """Handle errors with user-friendly messages."""
         error_type = type(error).__name__
         error_msg = str(error)
-        
-        # Specific error handlers
+
         if isinstance(error, ConnectionError):
             return (
                 "I'm having trouble connecting to my language model. "
-                "Please make sure Ollama is running and try again."
+                "All configured backends appear to be offline. "
+                "Check your API keys (.env) or start Ollama if you use it locally."
             )
-        
         elif isinstance(error, ValidationError):
             return f"I need some clarification: {error_msg}"
-        
         elif "timeout" in error_msg.lower():
             return (
-                "This request is taking longer than expected. "
-                "Could you try:\n"
+                "This request is taking longer than expected. Could you try:\n"
                 "1. Simplifying the query\n"
                 "2. Breaking it into smaller questions\n"
                 "3. Trying again in a moment"
             )
-        
         else:
-            # Generic error
             return (
                 f"I encountered an unexpected issue: {error_msg}\n\n"
                 "Could you try rephrasing your question or asking something else?"
             )
-    
+
+    # -------------------------------------------------------------- misc api
     def reset(self):
-        """Reset conversation history"""
+        """Reset conversation history."""
         self.history = []
         self._safe_print("🔄 Conversation history cleared")
-    
+
     def get_stats(self) -> Dict:
-        """Get usage statistics"""
-        return {
+        """Get usage statistics."""
+        base = {
             **self.stats,
             "success_rate": (
                 self.stats["successful_queries"] / self.stats["total_queries"]
                 if self.stats["total_queries"] > 0 else 0
             )
         }
-    
+        if self._provider_manager is not None:
+            try:
+                base["provider_stats"] = self._provider_manager.get_stats()
+            except Exception:
+                pass
+        return base
+
     def export_conversation(self, filepath: str):
-        """
-        Export conversation history to file
-        
-        Args:
-            filepath: Path to save conversation
-        """
+        """Export conversation history to file."""
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump({
                 "model": self.model,
@@ -415,54 +434,48 @@ class ARIA:
                 "history": self.history,
                 "stats": self.get_stats()
             }, f, indent=2)
-        
         self._safe_print(f"💾 Conversation exported to {filepath}")
 
 
 # Convenience function
-def create_aria(model: str = "llama3.1:8b") -> ARIA:
+def create_aria(model: Optional[str] = None,
+                preferred_provider: Optional[str] = None) -> ARIA:
     """
-    Create ARIA instance with default settings
-    
+    Create ARIA instance with default settings.
+
     Args:
-        model: Ollama model to use
-    
+        model: Optional model override.
+        preferred_provider: e.g. "groq", "ollama", "openrouter". If None,
+                            ARIA auto-selects the first available backend.
+
     Returns:
         ARIA instance
     """
-    return ARIA(model=model)
+    return ARIA(model=model, preferred_provider=preferred_provider)
 
 
 if __name__ == "__main__":
-    # Quick test
-    print("🧪 Testing ARIA v2.0 (Refined Edition)")
+    print("🧪 Testing ARIA v3.0 (Provider-Agnostic Edition)")
     print("=" * 60)
-    
     try:
-        # Create ARIA
         aria = create_aria()
-        
-        # Test 1: Simple query
         print("\nTest 1: Simple question")
         print("-" * 60)
         response = aria.ask("Hello! Who are you?")
         print(f"ARIA: {response}\n")
-        
-        # Test 2: Capabilities
-        print("Test 2: What can you do?")
+
+        print("Test 2: Capabilities")
         print("-" * 60)
         response = aria.ask("What can you help me with?")
         print(f"ARIA: {response}\n")
-        
-        # Show stats
+
         print("=" * 60)
         print("📊 Statistics:")
         stats = aria.get_stats()
         for key, value in stats.items():
             print(f"  {key}: {value}")
-        
-        print("\n✅ ARIA v2.0 is working!")
-        
+
+        print("\n✅ ARIA v3.0 is working!")
     except Exception as e:
         print(f"❌ Test failed: {e}")
         import traceback

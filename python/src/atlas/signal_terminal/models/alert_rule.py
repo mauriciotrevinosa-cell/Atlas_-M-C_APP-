@@ -2,10 +2,10 @@
 AlertRule — when-to-fire and what-to-do configuration.
 """
 from __future__ import annotations
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 import uuid
 
 
@@ -17,6 +17,8 @@ class AlertAction(str, Enum):
 
 
 class AlertRule(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
     id:      str  = Field(default_factory=lambda: str(uuid.uuid4()))
     name:    str
     enabled: bool = True
@@ -35,9 +37,6 @@ class AlertRule(BaseModel):
     action:        AlertAction        = AlertAction.LOG
     action_config: Dict[str, Any]     = Field(default_factory=dict)
 
-    created_at:        datetime           = Field(default_factory=datetime.utcnow)
+    created_at:        datetime           = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_triggered_at: Optional[datetime] = None
     trigger_count:     int                = 0
-
-    class Config:
-        use_enum_values = True

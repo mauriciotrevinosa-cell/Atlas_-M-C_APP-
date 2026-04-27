@@ -2,10 +2,10 @@
 Signal — a normalized market signal from any source.
 """
 from __future__ import annotations
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 import uuid
 
 
@@ -34,6 +34,8 @@ class Urgency(str, Enum):
 
 
 class Signal(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
     id:            str      = Field(default_factory=lambda: str(uuid.uuid4()))
     source_id:     str
     raw_id:        str      = ""     # original ID/GUID from the source
@@ -42,7 +44,7 @@ class Signal(BaseModel):
     body:          Optional[str] = None
     author:        Optional[str] = None
     published_at:  datetime
-    collected_at:  datetime  = Field(default_factory=datetime.utcnow)
+    collected_at:  datetime  = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Classification
     category:        SignalCategory = SignalCategory.UNKNOWN
@@ -60,6 +62,3 @@ class Signal(BaseModel):
     # Scoring
     relevance_score: float  = 0.0   # 0.0 … 1.0
     urgency:         Urgency = Urgency.LOW
-
-    class Config:
-        use_enum_values = True

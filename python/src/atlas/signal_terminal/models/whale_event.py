@@ -2,10 +2,10 @@
 WhaleEvent — large transaction or unusual market activity.
 """
 from __future__ import annotations
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 import uuid
 
 
@@ -40,6 +40,8 @@ def _size_label(dollars: Optional[float]) -> str:
 
 
 class WhaleEvent(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
     id:          str  = Field(default_factory=lambda: str(uuid.uuid4()))
     signal_id:   Optional[str] = None   # FK to Signal if derived from one
     ticker:      str
@@ -49,11 +51,8 @@ class WhaleEvent(BaseModel):
     description: str              = ""
     source:      str              = ""    # where it was detected
     confidence:  float            = 0.5   # 0.0 … 1.0
-    detected_at: datetime         = Field(default_factory=datetime.utcnow)
+    detected_at: datetime         = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def model_post_init(self, __context):
         if not self.size_label:
             object.__setattr__(self, "size_label", _size_label(self.size))
-
-    class Config:
-        use_enum_values = True

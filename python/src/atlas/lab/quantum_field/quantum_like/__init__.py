@@ -1,0 +1,1 @@
+"""Quantum-like lab package."""

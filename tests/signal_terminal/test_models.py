@@ -3,7 +3,7 @@ Tests — Signal Terminal domain models
 """
 from __future__ import annotations
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 
 from atlas.signal_terminal.models import (
     Signal, SignalCategory, Sentiment, Urgency,
@@ -15,9 +15,13 @@ from atlas.signal_terminal.models import (
 )
 
 
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 class TestSignal:
     def test_defaults(self):
-        sig = Signal(source_id="s1", title="Test", published_at=datetime.utcnow())
+        sig = Signal(source_id="s1", title="Test", published_at=utc_now())
         assert sig.id != ""
         assert sig.category == SignalCategory.UNKNOWN
         assert sig.sentiment == Sentiment.NEUTRAL
@@ -26,8 +30,8 @@ class TestSignal:
         assert sig.urgency == Urgency.LOW
 
     def test_id_unique(self):
-        s1 = Signal(source_id="s", title="T", published_at=datetime.utcnow())
-        s2 = Signal(source_id="s", title="T", published_at=datetime.utcnow())
+        s1 = Signal(source_id="s", title="T", published_at=utc_now())
+        s2 = Signal(source_id="s", title="T", published_at=utc_now())
         assert s1.id != s2.id
 
 

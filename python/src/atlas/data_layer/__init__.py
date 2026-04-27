@@ -12,7 +12,7 @@ Usage:
 Copyright (c) 2026 M&C. All rights reserved.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 
@@ -51,10 +51,12 @@ def get_data(
         enable_cache=use_cache,
         enable_validation=True,
     )
+    fetch_end = (end_dt + timedelta(days=1)).isoformat() if start_dt == end_dt else end
+
     df = manager.get_historical(
         symbol=symbol,
         start_date=start,
-        end_date=end,
+        end_date=fetch_end,
         interval=interval,
         provider=provider,
         use_cache=use_cache,
@@ -63,6 +65,11 @@ def get_data(
 
     if df is None or df.empty:
         raise ValueError(f"No data found for {symbol} between {start} and {end}")
+
+    if start_dt == end_dt and isinstance(df.index, pd.DatetimeIndex):
+        df = df[df.index.date == start_dt]
+        if df.empty:
+            raise ValueError(f"No data found for {symbol} on {start}")
 
     legacy_df = df.rename(
         columns={
@@ -80,8 +87,16 @@ def get_data(
     return legacy_df[expected]
 
 
+def get_provider_registry():
+    """Factory for the unified DataProviderRegistry (lazy import)."""
+    from atlas.data_layer.provider_registry import get_registry
+
+    return get_registry()
+
+
 __all__ = [
     "get_data",
+    "get_provider_registry",
     "DataManager",
     "normalize_ohlcv",
     "add_returns",
