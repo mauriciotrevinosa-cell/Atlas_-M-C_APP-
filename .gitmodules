@@ -1,0 +1,4 @@
+[submodule "pixel-agents"]
+	path = pixel-agents
+	url = https://github.com/mauriciotrevinosa-cell/pixel-agents-atlas.git
+	branch = main
