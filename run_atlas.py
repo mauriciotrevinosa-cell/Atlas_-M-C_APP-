@@ -54,12 +54,28 @@ from atlas.assistants.aria.tools.read_file import ReadFileTool
 from atlas.assistants.aria.tools.web_search import WebSearchTool
 from atlas.data_layer import get_provider_registry
 
-DEFAULT_HOST = "0.0.0.0"
+def _resolve_default_host() -> str:
+    """Bind to localhost unless network access is explicitly requested.
+
+    ATLAS_HOST takes precedence; otherwise ATLAS_LAN=1 opts into 0.0.0.0.
+    Network exposure should be paired with ATLAS_API_TOKEN.
+    """
+    explicit = os.environ.get("ATLAS_HOST", "").strip()
+    if explicit:
+        return explicit
+    if os.environ.get("ATLAS_LAN", "").strip().lower() in ("1", "true", "yes"):
+        return "0.0.0.0"
+    return "127.0.0.1"
+
+
+DEFAULT_HOST = _resolve_default_host()
 DEFAULT_PORT = 8088
 DEFAULT_ARIA_MODEL = "llama3.2:1b"
 FAST_BROWSER_SYSTEM_PROMPT = (
     "You are ARIA, Atlas's local assistant. "
     "Answer clearly and directly in the user's language. "
+    "Use registered Atlas tools for web search, file access, code execution, "
+    "and workspace actions only when the request needs live data or an action. "
     "Keep responses concise unless asked for detail."
 )
 
@@ -467,13 +483,20 @@ def _build_governance_prompt_context(
 
 
 def _register_browser_tools(aria: ARIA, root: Path) -> int:
-    """Register tools needed in browser mode."""
+    """Register tools needed in browser mode.
+
+    ExecuteCodeTool runs arbitrary Python in-process (it is NOT sandboxed), so
+    it is only registered when ATLAS_ENABLE_CODE_EXEC=1 is set explicitly.
+    """
     tools = [
         WebSearchTool(),
         CreateFileTool(base_dir=str(root / "outputs")),
-        ExecuteCodeTool(),
         ReadFileTool(base_dir=str(root)),
     ]
+    if _env_enabled("ATLAS_ENABLE_CODE_EXEC", "0"):
+        tools.append(ExecuteCodeTool())
+    else:
+        _dim("Code execution tool disabled (ATLAS_ENABLE_CODE_EXEC=1 to enable).")
 
     registered = 0
     for tool in tools:
@@ -568,6 +591,71 @@ def _build_runtime_observability_report(aria: ARIA) -> str:
 def _env_enabled(name: str, default: str = "0") -> bool:
     value = os.getenv(name, default).strip().lower()
     return value in {"1", "true", "yes", "on"}
+
+
+def _path_newer_than(path: Path, reference: Path) -> bool:
+    try:
+        return path.stat().st_mtime > reference.stat().st_mtime
+    except OSError:
+        return False
+
+
+def _ui_web_needs_build(root: Path) -> bool:
+    """Return True when the React UI dist is missing or stale."""
+    ui_dir = root / "ui_web"
+    dist_index = ui_dir / "dist" / "index.html"
+    if not ui_dir.exists() or not (ui_dir / "package.json").exists():
+        return False
+    if _env_enabled("ATLAS_REBUILD_UI", "0"):
+        return True
+    if not dist_index.exists():
+        return True
+
+    candidates = [
+        ui_dir / "package.json",
+        ui_dir / "package-lock.json",
+        ui_dir / "vite.config.js",
+        ui_dir / "tailwind.config.js",
+        ui_dir / "index.html",
+    ]
+    src_dir = ui_dir / "src"
+    if src_dir.exists():
+        candidates.extend(src_dir.rglob("*"))
+
+    return any(path.is_file() and _path_newer_than(path, dist_index) for path in candidates)
+
+
+def _ensure_ui_web_build(root: Path) -> None:
+    """
+    Build ui_web before importing the FastAPI app.
+
+    server.py chooses the static frontend at import time, so this must happen
+    before `from apps.server import server`.
+    """
+    if _env_enabled("ATLAS_SKIP_WEB_BUILD", "0"):
+        _dim("ui_web build skipped (ATLAS_SKIP_WEB_BUILD=1).")
+        return
+
+    ui_dir = root / "ui_web"
+    if not ui_dir.exists() or not (ui_dir / "package.json").exists():
+        _dim("ui_web package not found; serving legacy desktop UI.")
+        return
+
+    if not _ui_web_needs_build(root):
+        _ok("ui_web build is current")
+        return
+
+    _info("Building ui_web so START_ATLAS serves the latest Atlas workspace ...")
+    try:
+        if not (ui_dir / "node_modules").exists():
+            _dim("node_modules missing; running npm install ...")
+            subprocess.run("npm install", cwd=str(ui_dir), shell=True, check=True)
+        subprocess.run("npm run build", cwd=str(ui_dir), shell=True, check=True)
+        _ok("ui_web build completed")
+    except FileNotFoundError:
+        _warn("npm was not found; serving the last available frontend build.")
+    except subprocess.CalledProcessError as exc:
+        _warn(f"ui_web build failed with exit code {exc.returncode}; serving last available build.")
 
 
 def _is_port_available(host: str, port: int) -> bool:
@@ -762,9 +850,9 @@ def main() -> None:
                     time.sleep(5)
                 except Exception as exc:
                     _err(f"Failed to auto-start Ollama: {exc}")
-                    _dim("ARIA will fall back to cloud/mock providers automatically.")
+                    _dim("ARIA will use cloud providers if configured; mock mode is disabled by default.")
             else:
-                _dim("Auto-start disabled. ARIA will use its fallback chain (cloud → mock).")
+                _dim("Auto-start disabled. ARIA will use real providers only; configure cloud API keys or start Ollama.")
 
     # ── 02 / 03 · ARIA NEURAL ENGINE ---------------------------------
     _print_section("ARIA Neural Engine", index=2, total=3)
@@ -775,6 +863,8 @@ def main() -> None:
         return
 
     try:
+        _ensure_ui_web_build(PROJECT_ROOT)
+
         import uvicorn
         from apps.server import server
 
@@ -786,7 +876,7 @@ def main() -> None:
             aria.system_prompt = FAST_BROWSER_SYSTEM_PROMPT
             _dim("Fast browser prompt enabled (ATLAS_FAST_PROMPT=0 to disable).")
 
-        if _env_enabled("ATLAS_ENABLE_ARIA_TOOLS", "0"):
+        if _env_enabled("ATLAS_ENABLE_ARIA_TOOLS", "1"):
             registered_tools = _register_browser_tools(aria, PROJECT_ROOT)
             _ok(f"Registered {registered_tools} browser tools")
         else:
@@ -834,6 +924,14 @@ def main() -> None:
         _kv("API",        f"http://localhost:{server_port}/query")
         _kv("Health",     f"http://localhost:{server_port}/api/health")
         _kv("ARIA model", aria_model)
+        _kv("Bind host",  DEFAULT_HOST)
+        if DEFAULT_HOST not in ("127.0.0.1", "localhost") and not os.environ.get(
+            "ATLAS_API_TOKEN", ""
+        ).strip():
+            _warn(
+                "Server is exposed to the network without ATLAS_API_TOKEN — "
+                "anyone on the LAN can reach the AI endpoints."
+            )
         _safe_print("")
         _safe_print(f"  {_C.MUTED}{_C.ITALIC}Press Ctrl+C to stop the server.{_C.RESET}")
         _safe_print(f"  {_C.NAVY}{'─' * 62}{_C.RESET}")

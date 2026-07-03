@@ -133,6 +133,30 @@ class PortfolioMonteCarloRequest(BaseModel):
     seed: Optional[int] = None
 
 
+class MMOQuantumPortfolioRequest(BaseModel):
+    assets: List[str]
+    expected_returns: List[float]
+    covariance: List[List[float]]
+    cardinality: int = 2
+    risk_aversion: float = 1.0
+
+
+class ChallengeSubmissionRequest(BaseModel):
+    run_id: str
+    participant: str
+    metrics: Dict[str, Any]
+    artifacts: Optional[Dict[str, str]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class ChallengeScoreRequest(BaseModel):
+    challenge_name: str = "Atlas Research Challenge"
+    initial_capital: float = 100_000.0
+    max_drawdown_limit_pct: float = 20.0
+    min_trades: int = 1
+    submissions: List[ChallengeSubmissionRequest]
+
+
 # ==================== DATABASE ====================
 
 class ConversationDB:
@@ -206,14 +230,50 @@ class ConversationDB:
 
 app = FastAPI(title="ARIA Multi-Device Server", version="1.0")
 
-# CORS for web access
+# CORS for web access.
+# The UI is served by this same server (same origin), so cross-origin access is
+# only needed for local dev servers (e.g. Vite on :5173). Extra origins can be
+# added with ATLAS_CORS_ORIGINS as a comma-separated list.
+_extra_origins = [
+    o.strip() for o in os.environ.get("ATLAS_CORS_ORIGINS", "").split(",") if o.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_extra_origins,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Optional shared-token auth for the AI/tool endpoints.
+# Off by default so the local UI keeps working; set ATLAS_API_TOKEN to require
+# "Authorization: Bearer <token>" (or "X-Atlas-Token: <token>") on sensitive routes.
+_API_TOKEN = os.environ.get("ATLAS_API_TOKEN", "").strip()
+_PROTECTED_PREFIXES = ("/query", "/api/aria", "/api/agents")
+
+
+@app.middleware("http")
+async def _require_api_token(request: Request, call_next):
+    # OPTIONS is exempt: CORS preflights never carry credentials, and this
+    # middleware runs outside CORSMiddleware so it would break preflight.
+    if (
+        _API_TOKEN
+        and request.method != "OPTIONS"
+        and request.url.path.startswith(_PROTECTED_PREFIXES)
+    ):
+        auth = request.headers.get("Authorization", "")
+        token = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
+        if not token:
+            token = request.headers.get("X-Atlas-Token", "").strip()
+        if token != _API_TOKEN:
+            return Response(
+                content=json.dumps({"detail": "Invalid or missing API token"}),
+                status_code=401,
+                media_type="application/json",
+            )
+    return await call_next(request)
 
 # Database
 db = ConversationDB()
@@ -398,6 +458,78 @@ def _build_aria_runtime_snapshot() -> Dict[str, Any]:
     }
 
 
+def _build_provider_health_snapshot(limit: int = 25) -> Dict[str, Any]:
+    """Return a UI/API friendly provider registry health snapshot."""
+    try:
+        registry = get_provider_registry()
+        provider_info = registry.get_provider_info()
+        request_log = registry.get_request_log(limit=limit)
+    except Exception as exc:
+        logger.warning("Provider health snapshot unavailable: %s", exc)
+        return {
+            "status": "critical",
+            "generated_at": datetime.now().isoformat(),
+            "channels_total": 0,
+            "providers_total": 0,
+            "providers_available": 0,
+            "providers_unavailable": 0,
+            "channels": [],
+            "recent_requests": [],
+            "error": str(exc),
+        }
+
+    channels = []
+    providers_total = 0
+    providers_available = 0
+
+    for channel_name in sorted(provider_info.keys()):
+        providers = provider_info.get(channel_name) or []
+        available_count = sum(1 for item in providers if item.get("available", True))
+        providers_total += len(providers)
+        providers_available += available_count
+        channels.append(
+            {
+                "name": channel_name,
+                "providers_total": len(providers),
+                "providers_available": available_count,
+                "providers": providers,
+                "status": (
+                    "online"
+                    if available_count > 0
+                    else ("degraded" if providers else "offline")
+                ),
+            }
+        )
+
+    if providers_total == 0:
+        status = "critical"
+    elif providers_available == providers_total:
+        status = "online"
+    elif providers_available > 0:
+        status = "degraded"
+    else:
+        status = "critical"
+
+    return {
+        "status": status,
+        "generated_at": datetime.now().isoformat(),
+        "channels_total": len(channels),
+        "providers_total": providers_total,
+        "providers_available": providers_available,
+        "providers_unavailable": providers_total - providers_available,
+        "channels": channels,
+        "recent_requests": [
+            {
+                **entry,
+                "timestamp": entry.get("timestamp").isoformat()
+                if hasattr(entry.get("timestamp"), "isoformat")
+                else entry.get("timestamp"),
+            }
+            for entry in request_log
+        ],
+    }
+
+
 def _build_command_center_snapshot() -> Dict[str, Any]:
     models = _get_local_models()
     modules = dict(_SYSTEM_MODULE_FLAGS)
@@ -525,6 +657,14 @@ def _build_connectivity_checks() -> Dict[str, Any]:
             "kind": "route",
             "target": "/api/aria/providers",
             "connected": "/api/aria/providers" in route_paths,
+            "required": False,
+        },
+        {
+            "id": "api_data_provider_health",
+            "label": "Data provider health",
+            "kind": "route",
+            "target": "/api/providers/health",
+            "connected": "/api/providers/health" in route_paths,
             "required": False,
         },
         {
@@ -1108,12 +1248,327 @@ def _slash_audit(n: int = 10) -> str:
     return "\n".join(lines)
 
 
+def _info_category_for_path(path: str) -> str:
+    if path.startswith("/api/aria") or path.startswith("/query") or path.startswith("/api/agents"):
+        return "ai"
+    if any(token in path for token in ("/providers", "/macro", "/prediction", "/context", "/signals")):
+        return "data"
+    if any(token in path for token in ("/strategy", "/backtest", "/trader")):
+        return "strategy"
+    if any(token in path for token in ("/chaos", "/volatility", "/factors", "/market-state")):
+        return "feature"
+    if any(token in path for token in ("/correlation", "/pairs")):
+        return "correlation"
+    if any(token in path for token in ("/viz", "/vizlab")):
+        return "viz"
+    if "/mmo" in path or "/quantum" in path:
+        return "quantum"
+    return "infra"
+
+
+def _info_icon_for_category(category: str) -> str:
+    return {
+        "data": "DB",
+        "strategy": "ST",
+        "feature": "FX",
+        "correlation": "CR",
+        "viz": "VZ",
+        "ai": "AI",
+        "infra": "API",
+        "quantum": "Q",
+    }.get(category, "API")
+
+
+def _info_entry(
+    *,
+    entry_id: str,
+    category: str,
+    name: str,
+    desc: str,
+    source: str,
+    how: str,
+    tags: Optional[List[str]] = None,
+    api: Optional[str] = None,
+    icon: Optional[str] = None,
+) -> Dict[str, Any]:
+    return {
+        "id": entry_id,
+        "category": category,
+        "name": name,
+        "icon": icon or _info_icon_for_category(category),
+        "desc": desc,
+        "source": source,
+        "how": how,
+        "tags": tags or [],
+        "api": api,
+    }
+
+
+def _build_api_info_entries(limit: int = 80) -> List[Dict[str, Any]]:
+    entries: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for route in app.routes:
+        path = str(getattr(route, "path", "") or "")
+        if not path.startswith(("/api/", "/query")):
+            continue
+        if path in seen:
+            continue
+        seen.add(path)
+        methods = sorted(
+            method
+            for method in getattr(route, "methods", set()) or []
+            if method not in {"HEAD", "OPTIONS"}
+        )
+        category = _info_category_for_path(path)
+        route_name = str(getattr(route, "name", "") or path.strip("/").replace("/", " "))
+        entries.append(
+            _info_entry(
+                entry_id=f"api:{path}",
+                category=category,
+                name=route_name.replace("_", " ").title(),
+                desc=f"{', '.join(methods) or 'ROUTE'} {path}",
+                source="Atlas FastAPI route registry.",
+                how="Discovered from the live FastAPI app route table at request time.",
+                tags=["API", "Live", *(methods or ["ROUTE"])],
+                api=path,
+            )
+        )
+        if len(entries) >= limit:
+            break
+    return entries
+
+
+def _build_provider_info_entries() -> List[Dict[str, Any]]:
+    entries: List[Dict[str, Any]] = []
+    try:
+        provider_info = get_provider_registry().get_provider_info()
+    except Exception as exc:
+        return [
+            _info_entry(
+                entry_id="provider:error",
+                category="data",
+                name="Provider Registry",
+                desc="Provider registry could not be loaded.",
+                source="Atlas provider registry.",
+                how=f"Registry call failed: {exc}",
+                tags=["Provider", "Error"],
+                api="/api/providers/health",
+            )
+        ]
+
+    for channel, providers in sorted(provider_info.items()):
+        available = sum(1 for provider in providers if provider.get("available", True))
+        entries.append(
+            _info_entry(
+                entry_id=f"provider-channel:{channel}",
+                category="data",
+                name=f"{channel.replace('_', ' ').title()} Providers",
+                desc=f"{available}/{len(providers)} provider(s) available in this channel.",
+                source="Atlas provider registry health snapshot.",
+                how="Loaded through get_provider_registry().get_provider_info(); providers report availability before Info renders the card.",
+                tags=["Provider", "Live", channel],
+                api="/api/providers/health",
+            )
+        )
+    return entries
+
+
+def _build_agent_info_entries() -> List[Dict[str, Any]]:
+    entries: List[Dict[str, Any]] = []
+    orch = _get_agent_orchestrator()
+    if orch is None:
+        return [
+            _info_entry(
+                entry_id="agents:offline",
+                category="ai",
+                name="Agent Orchestrator",
+                desc="Agent orchestrator is not available yet.",
+                source="Atlas agent runtime.",
+                how="The backend attempted to initialize the orchestrator and returned offline status.",
+                tags=["Agents", "Offline"],
+                api="/api/agents/status",
+            )
+        ]
+
+    for name in orch.registry.list_agents():
+        try:
+            agent = orch.registry.get(name)
+            class_name = type(agent).__name__
+            version = getattr(agent, "version", "v1")
+        except Exception:
+            class_name = "AtlasAgent"
+            version = "v1"
+        entries.append(
+            _info_entry(
+                entry_id=f"agent:{name}",
+                category="ai",
+                name=name.replace("_", " ").title(),
+                desc=f"{class_name} registered in the live Atlas agent orchestrator.",
+                source="Atlas AgentRegistry.",
+                how="Discovered by reading the active orchestrator registry, not from a static documentation list.",
+                tags=["Agent", version, class_name],
+                api="/api/agents",
+                icon="AG",
+            )
+        )
+    return entries
+
+
+def _build_document_info_entries(limit: int = 40) -> List[Dict[str, Any]]:
+    entries: List[Dict[str, Any]] = []
+    for base_name in ("docs", "project_governance", "info_instructions"):
+        base = _ATLAS_ROOT / base_name
+        if not base.exists():
+            continue
+        files = sorted(base.rglob("*.md"), key=lambda item: item.as_posix().lower())[:limit]
+        for path in files:
+            rel = path.relative_to(_ATLAS_ROOT).as_posix()
+            text = _safe_read_text(path)
+            first_line = next((line.strip("# ").strip() for line in text.splitlines() if line.strip()), path.stem)
+            entries.append(
+                _info_entry(
+                    entry_id=f"doc:{rel}",
+                    category="infra" if base_name != "info_instructions" else "data",
+                    name=first_line[:90],
+                    desc=f"Markdown source: {rel}",
+                    source="Atlas local documentation files.",
+                    how="Extracted from the live repo filesystem by the backend.",
+                    tags=["Docs", base_name],
+                    api=f"/api/info/catalog?source={base_name}",
+                    icon="DOC",
+                )
+            )
+    return entries[:limit]
+
+
+def _build_web_info_entries(query: str, limit: int = 5) -> List[Dict[str, Any]]:
+    if not query:
+        return []
+    try:
+        from atlas.assistants.aria.tools.web_search import WebSearchTool
+
+        result = WebSearchTool().execute(query=query, max_results=limit)
+    except Exception as exc:
+        return [
+            _info_entry(
+                entry_id=f"web:error:{query}",
+                category="data",
+                name="Internet Search Unavailable",
+                desc="Atlas could not run the configured web search tool.",
+                source="ARIA WebSearchTool.",
+                how=str(exc),
+                tags=["Web", "Error"],
+            )
+        ]
+
+    if not result.get("success"):
+        return [
+            _info_entry(
+                entry_id=f"web:error:{query}",
+                category="data",
+                name="Internet Search Unavailable",
+                desc=str(result.get("error") or "Search returned no result."),
+                source="ARIA WebSearchTool.",
+                how="The Info panel requested internet enrichment, but the search provider returned an error.",
+                tags=["Web", "Error"],
+            )
+        ]
+
+    results = result.get("results", [])[:limit]
+    if not results:
+        return [
+            _info_entry(
+                entry_id=f"web:empty:{query}",
+                category="data",
+                name="Internet Search Returned No Results",
+                desc=f"No web results were returned for: {query}",
+                source="ARIA WebSearchTool.",
+                how="The Info panel requested internet enrichment; the search provider responded successfully with an empty result set.",
+                tags=["Web", "Internet", "Empty"],
+            )
+        ]
+
+    entries = []
+    for idx, item in enumerate(results, start=1):
+        url = item.get("url") or ""
+        entries.append(
+            _info_entry(
+                entry_id=f"web:{idx}:{url}",
+                category="data",
+                name=item.get("title") or "Web Result",
+                desc=item.get("snippet") or "Live internet result.",
+                source=url or "Internet search",
+                how="Fetched on demand through ARIA's WebSearchTool and shown as external context, not local simulated module info.",
+                tags=["Web", "Internet", item.get("source", "Search")],
+                api=url,
+                icon="WEB",
+            )
+        )
+    return entries
+
+
+def _filter_info_entries(entries: List[Dict[str, Any]], query: Optional[str]) -> List[Dict[str, Any]]:
+    q = (query or "").strip().lower()
+    if not q:
+        return entries
+    filtered = []
+    for item in entries:
+        haystack = " ".join(
+            [
+                str(item.get("name", "")),
+                str(item.get("desc", "")),
+                str(item.get("source", "")),
+                str(item.get("how", "")),
+                " ".join(str(tag) for tag in item.get("tags", [])),
+                str(item.get("api", "")),
+                str(item.get("category", "")),
+            ]
+        ).lower()
+        if q in haystack:
+            filtered.append(item)
+    return filtered
+
+
 # ==================== REST API ====================
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
     """Silence browser favicon 404s in logs."""
     return Response(status_code=204, media_type="image/x-icon")
+
+
+@app.get("/api/info/catalog")
+def info_catalog(
+    query: Optional[str] = None,
+    include_web: bool = False,
+    limit: int = Query(120, ge=1, le=300),
+):
+    """Live Info panel catalog built from APIs, providers, docs, agents, and optional web search."""
+    entries = []
+    entries.extend(_build_provider_info_entries())
+    entries.extend(_build_agent_info_entries())
+    entries.extend(_build_api_info_entries(limit=limit))
+    entries.extend(_build_document_info_entries(limit=50))
+
+    filtered = _filter_info_entries(entries, query)
+    web_entries = _build_web_info_entries(query or "", limit=5) if include_web and query else []
+    payload_items = (filtered + web_entries)[:limit]
+
+    categories: Dict[str, int] = {}
+    for item in payload_items:
+        category = str(item.get("category") or "infra")
+        categories[category] = categories.get(category, 0) + 1
+
+    return {
+        "status": "ok",
+        "source": "atlas_api",
+        "generated_at": datetime.now().isoformat(),
+        "query": query,
+        "include_web": include_web,
+        "count": len(payload_items),
+        "categories": categories,
+        "items": payload_items,
+    }
 
 
 @app.get("/api/health")
@@ -1138,6 +1593,171 @@ def root():
         "agent_ready":     _agent_orchestrator is not None,
         "signal_terminal": st_ok,
         "ts":              datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/providers/health")
+def providers_health(limit: int = Query(25, ge=0, le=100)):
+    """Provider registry health for dashboards and agent preflight checks."""
+    return _build_provider_health_snapshot(limit=limit)
+
+
+def _dataframe_records(df, limit: int = 250) -> List[Dict[str, Any]]:
+    """Convert provider DataFrames to JSON records with index date included."""
+    if df is None or getattr(df, "empty", True):
+        return []
+    row_limit = int(getattr(limit, "default", limit))
+    records = []
+    for idx, row in df.head(row_limit).iterrows():
+        item = row.to_dict()
+        item["date"] = idx.isoformat() if hasattr(idx, "isoformat") else str(idx)
+        records.append(_json_safe(item))
+    return records
+
+
+@app.get("/api/macro/series/{series_id}")
+def macro_series(
+    series_id: str,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    limit: int = Query(250, ge=1, le=1000),
+):
+    """Atlas macro series endpoint backed by the internal provider registry."""
+    registry = get_provider_registry()
+    frame = registry.get_macro(series_id=series_id, start=start, end=end)
+    records = _dataframe_records(frame, limit=limit)
+    return {
+        "status": "ok" if records else "empty",
+        "series_id": series_id,
+        "start": start,
+        "end": end,
+        "count": len(records),
+        "records": records,
+    }
+
+
+@app.get("/api/context/weather")
+def weather_context(
+    latitude: float,
+    longitude: float,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    limit: int = Query(250, ge=1, le=1000),
+):
+    """Atlas weather context endpoint for commodity and regional risk analysis."""
+    registry = get_provider_registry()
+    frame = registry.get_weather(latitude=latitude, longitude=longitude, start=start, end=end)
+    records = _dataframe_records(frame, limit=limit)
+    return {
+        "status": "ok" if records else "empty",
+        "latitude": latitude,
+        "longitude": longitude,
+        "start": start,
+        "end": end,
+        "count": len(records),
+        "records": records,
+    }
+
+
+@app.get("/api/prediction/markets")
+def prediction_markets(query: Optional[str] = None, limit: int = Query(20, ge=1, le=100)):
+    """Read-only prediction-market snapshots for event probability context."""
+    from atlas.data_layer.sources.prediction import PolymarketGammaProvider
+
+    provider = PolymarketGammaProvider()
+    markets = provider.search_markets(query=query, limit=limit)
+    return {
+        "status": "ok" if markets else "empty",
+        "provider": "PolymarketGamma",
+        "mode": "read_only",
+        "trading_supported": False,
+        "query": query,
+        "count": len(markets),
+        "markets": _json_safe(markets),
+    }
+
+
+@app.get("/api/prediction/resolve")
+def prediction_resolve(identifier: str, outcome: Optional[str] = None):
+    """Resolve one prediction market/outcome by id, condition id, slug, or search text."""
+    from atlas.data_layer.sources.prediction import PolymarketGammaProvider
+
+    provider = PolymarketGammaProvider()
+    market = provider.find_market(identifier, outcome=outcome)
+    return {
+        "status": "ok" if market else "empty",
+        "provider": "PolymarketGamma",
+        "mode": "read_only",
+        "trading_supported": False,
+        "identifier": identifier,
+        "outcome": outcome,
+        "market": _json_safe(market),
+    }
+
+
+@app.post("/api/mmo/quantum_portfolio")
+def mmo_quantum_portfolio(req: MMOQuantumPortfolioRequest):
+    """
+    Mau's Market Ontology quantum-inspired portfolio state selection.
+
+    Rebuilds the quantum-finance intake idea as Atlas-owned deterministic code:
+    binary/QUBO-style portfolio selection, lab-only, no order execution.
+    """
+    from atlas.lab.quantum import QuantumPortfolioQUBO
+
+    try:
+        result = QuantumPortfolioQUBO().optimize(
+            assets=req.assets,
+            expected_returns=req.expected_returns,
+            covariance=req.covariance,
+            cardinality=req.cardinality,
+            risk_aversion=req.risk_aversion,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "status": "ok",
+        "module": "mmo_quantum_portfolio",
+        "ontology": "mau_market_ontology",
+        "read_only": True,
+        "trading_supported": False,
+        "result": result.to_dict(),
+    }
+
+
+@app.post("/api/evaluation/challenge-score")
+def evaluation_challenge_score(req: ChallengeScoreRequest):
+    """
+    Score strategy/agent/research submissions into an Atlas leaderboard.
+
+    Consumes existing Atlas metrics from backtests or research reports. This is
+    read-only evaluation and does not execute trades or create user accounts.
+    """
+    from atlas.evaluation import ChallengeEvaluator, ChallengeSpec, ChallengeSubmission
+
+    spec = ChallengeSpec(
+        name=req.challenge_name,
+        initial_capital=req.initial_capital,
+        max_drawdown_limit_pct=req.max_drawdown_limit_pct,
+        min_trades=req.min_trades,
+    )
+    submissions = [
+        ChallengeSubmission(
+            run_id=item.run_id,
+            participant=item.participant,
+            metrics=item.metrics,
+            artifacts=item.artifacts or {},
+            metadata=item.metadata or {},
+        )
+        for item in req.submissions
+    ]
+    return {
+        "status": "ok",
+        "module": "evaluation_challenge_score",
+        "read_only": True,
+        "trading_supported": False,
+        "result": ChallengeEvaluator(spec).evaluate(submissions),
     }
 
 
@@ -1255,7 +1875,7 @@ async def system_verify(ticker: str = "AAPL"):
 
     # Summary
     stages_ok = sum(1 for s in report["stages"].values() if s.get("ok"))
-    report["summary"] = f"{stages_ok}/{len(report["stages"])} stages passing"
+    report["summary"] = f"{stages_ok}/{len(report['stages'])} stages passing"
     return report
 
 
@@ -1736,7 +2356,11 @@ def get_portfolio():
     # Find most recent session
     if not scenario_sessions:
         return {
+            "status": "unavailable",
             "source": "none",
+            "mode": "LIVE",
+            "updated_at": datetime.now().isoformat(),
+            "error": None,
             "has_active_session": False,
             "capital": 0,
             "total_equity": 0,
@@ -1767,7 +2391,11 @@ def get_portfolio():
         total_equity += market_val
         
     return {
+        "status": "live",
         "source": "scenario",
+        "mode": "SIMULATION",
+        "updated_at": datetime.now().isoformat(),
+        "error": None,
         "has_active_session": True,
         "capital": session.capital,
         "total_equity": total_equity,
@@ -1784,14 +2412,19 @@ def get_portfolio_summary():
     positions = base.get("positions", [])
     total_value = float(base.get("total_equity", 0) or 0)
     # Start capital vs current equity gives total P&L
-    start_capital = float(base.get("capital", 100_000) or 100_000)
-    total_pnl = total_value - start_capital
+    has_session = bool(base.get("has_active_session", False))
+    start_capital = float(base.get("capital", 0) or 0)
+    total_pnl = total_value - start_capital if has_session else 0.0
     return {
+        "status": base.get("status", "unavailable"),
         "total_value": round(total_value, 2),
         "total_pnl":   round(total_pnl, 2),
         "positions":   len(positions),
-        "has_session": base.get("has_active_session", False),
+        "has_session": has_session,
         "source":      base.get("source", "none"),
+        "mode":        base.get("mode", "LIVE"),
+        "updated_at":  base.get("updated_at"),
+        "error":       base.get("error"),
         "details":     positions[:5],  # top 5 positions
     }
 
@@ -2400,7 +3033,7 @@ def generate_3d_viz(viz_type: str):
         return {"status": "ok", "path": path, "url": url}
         
     except Exception as e:
-        logger.error("3D render error [%s]: %s", render_type, e)
+        logger.error("3D render error [%s]: %s", viz_type, e)
         raise HTTPException(status_code=500, detail=str(e))
 
 # ─────────────────────────────────────────────────────────
@@ -5316,7 +5949,6 @@ def mmo_quantum_state(ticker: str):
     Returns quantum amplitudes (Born rule), string theory metrics,
     energy/entropy, thermal state, geology, and 4-layer ecosystem data.
     """
-    import yfinance as yf
     import numpy as np
     ticker = ticker.upper().strip()
 
@@ -5325,7 +5957,7 @@ def mmo_quantum_state(ticker: str):
     # zero momentum) — NOT real computations. The UI MUST read `degraded` and
     # render an explicit "no data" banner instead of quoting these values.
     # If the try-block below completes, `degraded` flips to False and every
-    # field gets overwritten with real measurements from yfinance.
+    # field gets overwritten with real measurements from valid market data.
     result = {
         "ticker": ticker,
         "degraded": True,
@@ -5370,12 +6002,13 @@ def mmo_quantum_state(ticker: str):
             logger.debug("MMO strategy signal unavailable for %s: %s", ticker, exc)
 
         # ── Market data ──────────────────────────────────────────────────
-        hist = yf.Ticker(ticker).history(period="6mo", auto_adjust=True)
-        if hist.empty:
-            # Leave degraded=True and return the neutral scaffold — UI will
-            # render an explicit "No market data for <TICKER>" banner.
-            result["error"] = f"No market data for {ticker}"
+        hist, is_synthetic = _fetch_ohlcv_local(ticker, period="6mo")
+        if hist.empty or is_synthetic:
+            # If there is no real market data or only synthetic fallback data,
+            # keep the response degraded so the UI does not present it as live.
+            result["error"] = f"No live market data for {ticker}"
             result["quantum_verdict"] = "NO DATA"
+            result["source"] = "synthetic_local" if is_synthetic else "unavailable"
             return result
 
         closes  = hist["Close"].values
@@ -6531,6 +7164,53 @@ def agents_status():
         return {"available": False, "agents_count": 0, "reason": str(e)}
 
 
+def _collect_agent_registry_snapshot() -> List[Dict[str, Any]]:
+    agents_info: List[Dict[str, Any]] = []
+    orch = _get_agent_orchestrator()
+    if orch is not None:
+        try:
+            for name in orch.registry.list_agents():
+                agent = orch.registry.get(name)
+                agents_info.append({
+                    "name":    agent.name,
+                    "version": agent.version,
+                    "class":   type(agent).__name__,
+                })
+        except Exception as exc:
+            logger.warning("Pixel workspace agent snapshot failed: %s", exc)
+    return agents_info
+
+
+def _build_pixel_workspace_payload() -> Dict[str, Any]:
+    agents_info = _collect_agent_registry_snapshot()
+
+    try:
+        from atlas.core.ai_assistant.pixel_workspace import build_pixel_workspace
+
+        return build_pixel_workspace(_ATLAS_ROOT, agents=agents_info)
+    except Exception as exc:
+        logger.warning("Pixel workspace failed: %s", exc)
+        return {
+            "status": "error",
+            "read_only": True,
+            "error": str(exc),
+            "agents_total": len(agents_info),
+            "agents": agents_info,
+        }
+
+
+@app.get("/api/agents/pixel-workspace")
+def agents_pixel_workspace():
+    """
+    Atlas-native Pixel Operations workspace.
+
+    This exposes the useful Pixel Agents concepts as Atlas data: desks, teams,
+    local Claude transcript visibility, and agent roster. It stays read-only and
+    does not execute VS Code extension code.
+    """
+    return _build_pixel_workspace_payload()
+
+
 @app.get("/api/agents/audit")
 def agents_audit(limit: int = 20):
     """
@@ -6548,6 +7228,35 @@ def agents_audit(limit: int = 20):
         "total":  len(_agent_event_history),
         "events": _agent_event_history[-limit:],
     }
+
+
+@app.websocket("/ws/pixel-agents/{session_id}")
+async def pixel_agents_websocket(websocket: WebSocket, session_id: str):
+    """
+    Live Pixel Operations stream.
+
+    Sends an Atlas-native snapshot of Claude sessions, recent tool events,
+    token usage, and desks every two seconds. This is read-only and intended as
+    the bridge for ARIA/Jarvis and the React dashboard.
+    """
+    await websocket.accept()
+    try:
+        await websocket.send_json({
+            "type": "hello",
+            "session_id": session_id,
+            "stream": "pixel-agents",
+            "ts": datetime.now().isoformat(),
+        })
+        while True:
+            await websocket.send_json({
+                "type": "pixel_workspace",
+                "session_id": session_id,
+                "payload": _build_pixel_workspace_payload(),
+                "ts": datetime.now().isoformat(),
+            })
+            await asyncio.sleep(2)
+    except Exception as exc:
+        logger.debug("[pixel-agents/ws] session %s closed: %s", session_id, exc)
 
 
 @app.websocket("/ws/agents/{session_id}")
@@ -6701,6 +7410,15 @@ async def broadcast_message(session_id: str, message: dict):
 
 try:
     _add_sys_path()
+    from atlas.operations.api import router as _operations_router
+
+    app.include_router(_operations_router)
+    logger.info("[Operations] workflow router registered at /api/operations")
+except Exception as _operations_err:
+    logger.warning("[Operations] not loaded: %s", _operations_err)
+
+try:
+    _add_sys_path()
     from atlas.signal_terminal.api import router as _st_router
     from atlas.signal_terminal.scheduler import init_scheduler as _st_init
 
@@ -6732,28 +7450,39 @@ except Exception as _st_err:
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-frontend_path = Path(__file__).parent.parent / "desktop"
+desktop_path = _ATLAS_ROOT / "apps" / "desktop"
+web_dist_path = _ATLAS_ROOT / "ui_web" / "dist"
+frontend_path = web_dist_path if web_dist_path.exists() else desktop_path
+
+if desktop_path.exists():
+    app.mount(
+        "/desktop",
+        StaticFiles(directory=str(desktop_path), html=True),
+        name="desktop-static",
+    )
 
 if frontend_path.exists():
+    logger.info("[Frontend] serving %s", frontend_path)
     app.mount("/", StaticFiles(directory=str(frontend_path), html=True), name="static")
 
 # ==================== STARTUP ====================
 
-def run_server(aria, host: str = "0.0.0.0", port: int = 8000):
+def run_server(aria, host: str = "127.0.0.1", port: int = 8000):
     """
     Run multi-device server
-    
+
     Args:
         aria: ARIA instance
-        host: Server host (0.0.0.0 = accessible from network)
+        host: Server host (default localhost-only; pass "0.0.0.0" explicitly
+              to expose on the network — set ATLAS_API_TOKEN when doing so)
         port: Server port
-    
+
     Example:
         from atlas.assistants.aria import ARIA
         from aria.server import run_server
-        
+
         aria = ARIA()
-        run_server(aria, host="0.0.0.0", port=8000)
+        run_server(aria)
     
     Access:
         - From same PC: http://localhost:8000

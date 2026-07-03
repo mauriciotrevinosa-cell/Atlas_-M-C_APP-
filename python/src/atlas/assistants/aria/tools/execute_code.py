@@ -1,5 +1,9 @@
 """
-ARIA Execute Code Tool - Python sandbox
+ARIA Execute Code Tool
+
+WARNING: this runs code with exec() inside the Atlas server process with full
+builtins — it is NOT a sandbox. Only register it in trusted, local-only
+setups (see ATLAS_ENABLE_CODE_EXEC in run_atlas.py).
 """
 import sys
 import io
@@ -7,7 +11,7 @@ from typing import Dict, Any
 
 class ExecuteCodeTool:
     name = "execute_code"
-    description = "Execute Python code in a safe sandbox"
+    description = "Execute Python code in the Atlas server process (not sandboxed)"
     
     def execute(self, code: str, timeout: int = 30) -> Dict[str, Any]:
         try:
