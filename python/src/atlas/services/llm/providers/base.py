@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -60,7 +60,8 @@ class BaseLLMProvider(ABC):
         Generate and parse a structured JSON response.
         Default: call generate() then JSON-parse. Override for native JSON mode.
         """
-        import json, re
+        import json
+        import re
         response = self.generate(prompt, model=model, **kwargs)
         text     = response.text.strip()
         # Extract JSON block if wrapped in markdown

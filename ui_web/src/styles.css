@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    min-height: 100%;
+    background: #f8fafc;
+  }
+
+  body {
+    min-height: 100%;
+    margin: 0;
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", sans-serif;
+  }
+
+  button,
+  input {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .atlas-glass {
+    background: rgba(255, 255, 255, 0.42);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+  }
+
+  .atlas-glass-dark {
+    background: rgba(15, 23, 42, 0.86);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.24);
+  }
+
+  .atlas-zoom-card {
+    transition: transform 220ms ease, box-shadow 220ms ease;
+  }
+
+  .atlas-zoom-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .atlas-zoom-card:active {
+    transform: translateY(0);
+  }
+}
+
+.atlas-bg-gradient {
+  background: linear-gradient(135deg, #f8fafc, #e8eef5 42%, #ffffff);
+  background-size: 220% 220%;
+  animation: atlas-gradient 16s ease infinite;
+}
+
+@keyframes atlas-gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}

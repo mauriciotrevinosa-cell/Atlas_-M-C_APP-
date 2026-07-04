@@ -8,7 +8,7 @@ Copyright (c) 2026 M&C. All rights reserved.
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List
 
 import numpy as np
 import pandas as pd

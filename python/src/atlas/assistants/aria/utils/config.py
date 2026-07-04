@@ -5,7 +5,7 @@ Supports any combination of:
   - Local:  Ollama
   - Free cloud:   Groq, OpenRouter, Cerebras
   - Paid cloud:   OpenAI, Anthropic
-  - Testing:  Mock
+  - Testing:  Mock (explicit only)
 
 Backend is selected by ARIA_LLM_BACKEND. If unset, ARIA auto-picks the first
 provider that has valid credentials (via ProviderManager).
@@ -32,7 +32,7 @@ SUPPORTED_BACKENDS = (
     "cerebras",     # Free tier, fastest inference
     "openai",       # Paid
     "anthropic",    # Paid
-    "mock",         # No network, always works
+    "mock",         # Explicit test mode only
     "auto",         # Let ProviderManager decide
 )
 
@@ -70,6 +70,12 @@ class Config:
     # --- Model settings ---------------------------------------------------
     MAX_TOKENS = int(os.getenv("ARIA_MAX_TOKENS", "4096"))
     TEMPERATURE = float(os.getenv("ARIA_TEMPERATURE", "0.7"))
+    ALLOW_MOCK = os.getenv("ARIA_ALLOW_MOCK", "0").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
     # --- Voice / memory ---------------------------------------------------
     VOICE_MODE = os.getenv("ARIA_VOICE_MODE", "basic")
@@ -108,8 +114,8 @@ class Config:
     @classmethod
     def validate(cls) -> bool:
         """
-        Validate configuration. NEVER hard-fail — we always have a fallback
-        (mock provider) so the app keeps running.
+        Validate configuration without enabling mock responses unless they were
+        explicitly requested for tests.
         """
         backend = cls.LLM_BACKEND
 
@@ -124,12 +130,16 @@ class Config:
         elif backend == "auto":
             cloud = cls.available_cloud_keys()
             if cloud:
-                cls._safe_print(f"[OK] ARIA backend: auto (will try: ollama, {', '.join(cloud)}, mock)")
+                cls._safe_print(f"[OK] ARIA backend: auto (will try: ollama, {', '.join(cloud)})")
             else:
-                cls._safe_print("[OK] ARIA backend: auto (will try ollama -> mock; "
-                                "add GROQ_API_KEY or OPENROUTER_API_KEY to .env for free cloud fallback)")
+                cls._safe_print("[OK] ARIA backend: auto (will try ollama; "
+                                "add GROQ_API_KEY or OPENROUTER_API_KEY to .env for cloud fallback)")
         elif backend == "mock":
-            cls._safe_print("[OK] ARIA backend: mock (testing mode - no real LLM calls)")
+            if not cls.ALLOW_MOCK:
+                cls._safe_print("[!] ARIA backend mock requested but ARIA_ALLOW_MOCK is not set. "
+                                "Set ARIA_ALLOW_MOCK=1 only for tests.")
+            else:
+                cls._safe_print("[OK] ARIA backend: mock (explicit testing mode - no real LLM calls)")
         else:
             key_attr = f"{backend.upper()}_API_KEY"
             key = getattr(cls, key_attr, None)

@@ -13,7 +13,6 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 import pandas as pd
 import numpy as np
-from datetime import datetime
 
 logger = logging.getLogger("atlas.scenario")
 

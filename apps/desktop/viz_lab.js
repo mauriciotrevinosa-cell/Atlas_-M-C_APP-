@@ -28,6 +28,18 @@ window.VizLab = (() => {
   let _mouseY = 0;
   let _localCleanup = null;   // cleanup fn returned by local-renderer vizzes
   let _launchSeq = 0;         // invalidates delayed launches after close/switch
+  let _provenanceBadge = null;
+
+  // These views intentionally contain generated/modelled values, even when an
+  // API supplies an anchor. They must never be presented as live observations.
+  const _SIMULATION_VIZZES = new Set([
+    'montecarlo', 'orderbook', 'worldmodel', 'dcfuniverse', 'speedracer',
+    'rltrack', 'entropy', 'marketdna', 'quantum', 'spread'
+  ]);
+  const _PROVENANCE_COLORS = {
+    LIVE: '#39d98a', CACHED: '#f5c451', SIMULATION: '#ff9f43',
+    DEMO: '#b084ff', UNAVAILABLE: '#ff5c5c'
+  };
 
   // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function lerp(a, b, t) { return a + (b - a) * t; }
@@ -41,6 +53,35 @@ window.VizLab = (() => {
       _overlay = document.getElementById('viz-overlay');
     }
     return _overlay;
+  }
+
+  function _setProvenance(state, detail = '') {
+    const overlay = _ensureOverlay();
+    if (!overlay) return;
+    const normalized = Object.prototype.hasOwnProperty.call(_PROVENANCE_COLORS, state)
+      ? state : 'UNAVAILABLE';
+    if (!_provenanceBadge || !_provenanceBadge.isConnected) {
+      _provenanceBadge = document.createElement('div');
+      _provenanceBadge.id = 'viz-provenance-badge';
+      _provenanceBadge.setAttribute('role', 'status');
+      _provenanceBadge.style.cssText = [
+        'position:absolute', 'top:12px', 'right:58px', 'z-index:10020',
+        'padding:6px 10px', 'border-radius:4px', 'background:rgba(5,8,18,.92)',
+        'border:1px solid currentColor', 'font:700 11px/1.2 monospace',
+        'letter-spacing:.08em', 'pointer-events:none', 'max-width:46vw'
+      ].join(';');
+      overlay.appendChild(_provenanceBadge);
+    }
+    _provenanceBadge.style.color = _PROVENANCE_COLORS[normalized];
+    _provenanceBadge.textContent = detail ? `${normalized} · ${detail}` : normalized;
+    _provenanceBadge.dataset.provenance = normalized;
+  }
+
+  function _initialProvenance(vizName) {
+    const meta = VIZ_META[vizName];
+    if (!meta || meta.cat === 'art') return ['DEMO', 'generated visual; no live data'];
+    if (_SIMULATION_VIZZES.has(vizName)) return ['SIMULATION', 'modelled/generated values'];
+    return ['UNAVAILABLE', 'checking data source'];
   }
 
   function _getCanvas2D(id = 'viz-canvas') {
@@ -106,6 +147,7 @@ window.VizLab = (() => {
     }
 
     _activeViz = vizName;
+    _setProvenance(..._initialProvenance(vizName));
     _mouseX = 0; _mouseY = 0;
     const launchSeq = ++_launchSeq;
     // Save cleanup fn so _stop() can tear down local renderers properly
@@ -3302,6 +3344,7 @@ window.VizLab = (() => {
 
   /* â”€â”€â”€ Fallback 2D message when Three.js unavailable â”€â”€â”€ */
   function _fallback2D(name) {
+    _setProvenance('UNAVAILABLE', 'renderer dependency missing');
     const { canvas, ctx } = _getCanvas2D();
     if (!canvas || !ctx) return;
     ctx.fillStyle = '#060610';
@@ -3326,9 +3369,25 @@ window.VizLab = (() => {
       try {
         const r = await fetch(BASE + path, { signal: AbortSignal.timeout(4000) });
         if (!r.ok) throw new Error(r.status);
-        return await r.json();
+        const data = await r.json();
+        if (_activeViz) {
+          const declared = String(data?.provenance || data?.data_status || data?.status || '').toUpperCase();
+          if (declared === 'CACHED') {
+            _setProvenance('CACHED', path);
+          } else if (declared === 'DEMO' || declared === 'SIMULATION' || _SIMULATION_VIZZES.has(_activeViz)) {
+            _setProvenance('SIMULATION', `API-assisted · ${path}`);
+          } else {
+            _setProvenance('LIVE', path);
+          }
+        }
+        return data;
       } catch (err) {
         console.warn('[VizLab] live data bridge request failed:', err.message);
+        if (_activeViz) {
+          const hasGeneratedFallback = VIZ_META[_activeViz]?.cat === 'art' || _SIMULATION_VIZZES.has(_activeViz);
+          _setProvenance(hasGeneratedFallback ? 'SIMULATION' : 'UNAVAILABLE',
+            hasGeneratedFallback ? `generated fallback · ${path}` : `source failed · ${path}`);
+        }
         return null;
       }
     }

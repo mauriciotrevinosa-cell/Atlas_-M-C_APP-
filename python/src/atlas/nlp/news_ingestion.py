@@ -22,7 +22,7 @@ import time
 import hashlib
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 from urllib.request import urlopen, Request
 from urllib.error import URLError
 

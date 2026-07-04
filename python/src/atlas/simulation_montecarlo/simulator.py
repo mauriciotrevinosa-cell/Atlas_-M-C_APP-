@@ -11,7 +11,7 @@ Copyright © 2026 M&C. All Rights Reserved.
 """
 
 from typing import Optional, Tuple, Dict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 
 import numpy as np

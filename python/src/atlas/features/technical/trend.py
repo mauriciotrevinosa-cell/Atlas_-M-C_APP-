@@ -7,8 +7,7 @@ Copyright © 2026 M&C. All Rights Reserved.
 """
 
 import pandas as pd
-import numpy as np
-from typing import Union, Tuple
+from typing import Tuple
 import logging
 
 logger = logging.getLogger(__name__)
@@ -86,7 +85,7 @@ def macd(
           Trading Method"
     """
     if fast >= slow:
-        raise ValueError(f"Fast period must be < slow period")
+        raise ValueError("Fast period must be < slow period")
     
     ema_fast = ema(data, fast)
     ema_slow = ema(data, slow)

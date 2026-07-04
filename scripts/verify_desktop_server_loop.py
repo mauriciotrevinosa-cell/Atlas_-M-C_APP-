@@ -66,6 +66,7 @@ def main() -> int:
 
     checks = [
         ("Health", "GET", "/api/health", None),
+        ("Provider Health", "GET", "/api/providers/health?limit=5", None),
         ("Command Center", "GET", "/api/system/command_center", None),
         ("Thought Map", "GET", "/api/system/thought_map", None),
         ("System Verify", "GET", "/api/system/verify?ticker=AAPL", None),
@@ -93,6 +94,10 @@ def main() -> int:
             },
         ),
         ("Portfolio", "GET", "/api/portfolio", None),
+        ("Signal Feed", "GET", "/api/signals?limit=4", None),
+        ("Whale Events", "GET", "/api/signals/whales?limit=3", None),
+        ("Operations Handlers", "GET", "/api/operations/handlers", None),
+        ("Operations Workflows", "GET", "/api/operations/workflows", None),
         ("Signal Compose", "GET", "/api/signal/compose/AAPL?capital=100000", None),
         ("Strategy Analyze", "GET", "/api/strategy/analyze/AAPL?period=6mo", None),
         ("Strategy Backtest", "GET", "/api/strategy/backtest/AAPL?period=1y", None),

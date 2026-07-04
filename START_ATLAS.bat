@@ -2,6 +2,11 @@
 title ATLAS SYSTEM
 color 0f
 cls
+cd /d "%~dp0"
+
+set "PYTHON_EXE=%~dp0.venv\Scripts\python.exe"
+if not exist "%PYTHON_EXE%" set "PYTHON_EXE=python"
+
 echo ==================================================
 echo      ATLAS SYSTEM - BROWSER EDITION
 echo ==================================================
@@ -21,7 +26,7 @@ if "%CHOICE%"=="4" goto UPGRADE
 :NORMAL
 echo.
 echo Starting Atlas (single run)...
-python run_atlas.py
+"%PYTHON_EXE%" run_atlas.py
 pause
 goto END
 
@@ -30,7 +35,7 @@ echo.
 echo Starting Atlas in 24/7 daemon mode...
 echo Press Ctrl+C to stop. Logs: logs\daemon.log
 echo.
-python run_daemon.py
+"%PYTHON_EXE%" run_daemon.py
 pause
 goto END
 

@@ -3,7 +3,7 @@ Hyperliquid API Connector — Phase 1.2
 Fetches perpetual futures data directly from Hyperliquid DEX.
 No API key required — public endpoints.
 """
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import pandas as pd
 
 try:

@@ -20,7 +20,6 @@ Copyright (c) 2026 M&C. All rights reserved.
 import logging
 from typing import Dict, List, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 
 from atlas.analytics.returns import returns_matrix

@@ -20,6 +20,11 @@ wheels/
 .installed.cfg
 *.egg
 
+# Node / frontend
+node_modules/
+ui_web/dist/
+*.tsbuildinfo
+
 # Virtual environments
 venv/
 env/
@@ -92,4 +97,7 @@ experiments/
 personal_notes/
 
 # Large local reference imports
+# Zips stay local-only: several exceed GitHub's 100MB hard push limit.
+# The folders and their notes/logs stay tracked; only archives are excluded.
 info_instructions/Folder 1 (Repos we can extract everything without problem)/
+info_instructions/**/*.zip

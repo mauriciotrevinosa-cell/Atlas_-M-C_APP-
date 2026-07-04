@@ -24,7 +24,7 @@ from __future__ import annotations
 import math
 import numpy as np
 import pandas as pd
-from typing import Dict, Optional
+from typing import Dict
 import logging
 
 logger = logging.getLogger(__name__)
@@ -430,6 +430,6 @@ if __name__ == "__main__":
         bar = "█" * int(abs(v)*20)
         sign = "+" if v > 0 else "-"
         print(f"  {sign}{bar:<20} {k:<30} {v:+.4f}")
-    print(f"\nGroup averages:")
+    print("\nGroup averages:")
     for g, s in engine.group_scores(df).items():
         print(f"  {g:<12} {s:+.4f}")

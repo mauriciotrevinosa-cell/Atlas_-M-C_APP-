@@ -28,6 +28,7 @@ class ProviderType(Enum):
     NEWS = "news"
     FILINGS = "filings"
     SENTIMENT = "sentiment"
+    WEATHER = "weather"
 
 
 class RateLimiter:
@@ -184,13 +185,18 @@ class DataProviderRegistry:
 
         from atlas.data_layer.sources.traditional import (
             AlphaVantageProvider,
+            BLSProvider,
             FREDProvider,
             FinnhubProvider,
             HuggingFaceProvider,
+            IMFDataMapperProvider,
             NewsAPIProvider,
             SECEDGARProvider,
+            TreasuryFiscalProvider,
+            WorldBankProvider,
             YahooFinanceProvider,
         )
+        from atlas.data_layer.sources.alternative import OpenMeteoProvider
 
         try:
             from atlas.data_layer.sources.traditional import PolygonProvider
@@ -227,6 +233,10 @@ class DataProviderRegistry:
         _safe_register(ProviderType.MARKET_DATA, "YahooFinance", YahooFinanceProvider, 30, 10)
 
         _safe_register(ProviderType.MACRO, "FRED", FREDProvider, 120, 100)
+        _safe_register(ProviderType.MACRO, "BLS", BLSProvider, 25, 80)
+        _safe_register(ProviderType.MACRO, "WorldBank", WorldBankProvider, 60, 70)
+        _safe_register(ProviderType.MACRO, "TreasuryFiscal", TreasuryFiscalProvider, 60, 60)
+        _safe_register(ProviderType.MACRO, "IMFDataMapper", IMFDataMapperProvider, 60, 50)
 
         _safe_register(ProviderType.NEWS, "Finnhub", FinnhubProvider, 60, 100)
         _safe_register(ProviderType.NEWS, "NewsAPI", NewsAPIProvider, 30, 90)
@@ -235,6 +245,8 @@ class DataProviderRegistry:
 
         _safe_register(ProviderType.SENTIMENT, "HuggingFace", HuggingFaceProvider, 30, 100)
         _safe_register(ProviderType.SENTIMENT, "Finnhub", FinnhubProvider, 60, 80)
+
+        _safe_register(ProviderType.WEATHER, "OpenMeteo", OpenMeteoProvider, 60, 100)
 
         self._defaults_registered = True
         logger.info("Registered %d default providers", registered)
@@ -435,8 +447,45 @@ class DataProviderRegistry:
             result = self._try_providers(
                 ProviderType.SENTIMENT,
                 lambda p: self._get_text_sentiment_from_provider(p, text),
-                f"text sentiment analysis",
+                "text sentiment analysis",
             )
+
+        if result is not None:
+            self._set_cache(cache_key, result)
+
+        return result
+
+    def get_weather(
+        self,
+        latitude: float,
+        longitude: float,
+        start: Optional[str] = None,
+        end: Optional[str] = None,
+    ) -> Optional[pd.DataFrame]:
+        """
+        Get weather context data with automatic fallback.
+
+        Args:
+            latitude: WGS84 latitude
+            longitude: WGS84 longitude
+            start: Optional start date YYYY-MM-DD
+            end: Optional end date YYYY-MM-DD
+
+        Returns:
+            DataFrame with weather variables or None if all providers fail
+        """
+        cache_key = f"weather:{latitude}:{longitude}:{start}:{end}"
+        cached = self._get_cache(cache_key)
+        if cached is not None:
+            return cached
+
+        result = self._try_providers(
+            ProviderType.WEATHER,
+            lambda p: p.get_weather(latitude, longitude, start=start, end=end)
+            if hasattr(p, "get_weather")
+            else None,
+            f"weather for {latitude},{longitude}",
+        )
 
         if result is not None:
             self._set_cache(cache_key, result)
@@ -479,12 +528,26 @@ class DataProviderRegistry:
                 # Call provider
                 result = call_fn(provider_instance)
 
-                if result is not None:
+                # Empty frames/collections are not a successful answer. Treat
+                # them as unavailable so lower-priority providers can supply
+                # real data instead of silently stopping the fallback chain.
+                is_empty = bool(getattr(result, "empty", False))
+                if isinstance(result, (list, tuple, dict, set)):
+                    is_empty = len(result) == 0
+
+                if result is not None and not is_empty:
                     self._log_request(provider_name, description, success=True)
                     logger.info(
                         f"Got {description} from {provider_name}"
                     )
                     return result
+
+                self._log_request(
+                    provider_name,
+                    description,
+                    success=False,
+                    error="provider returned no data",
+                )
 
             except Exception as e:
                 logger.warning(

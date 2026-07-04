@@ -129,8 +129,26 @@ class TestRepoScoutParsing:
         assert result.status == "error"
         assert "objective cannot be empty" in result.errors[0]
 
-    def test_agent_identity(self):
-        agent = RepoScoutAgent()
+def test_agent_identity():
+    agent = RepoScoutAgent()
 
-        assert agent.name == "repo_scout_agent"
-        assert agent.version == "v1"
+    assert agent.name == "repo_scout_agent"
+    assert agent.version == "v1"
+
+
+def test_repo_scout_can_attach_repo_map(tmp_path):
+    (tmp_path / "module.py").write_text(
+        "import json\n\nclass Module:\n    pass\n",
+        encoding="utf-8",
+    )
+    task = AgentTask(
+        objective="Map this repo",
+        agent_name="repo_scout_agent",
+        inputs={"repo_root": str(tmp_path)},
+    )
+
+    result = RepoScoutAgent().safe_run(task)
+
+    assert result.status == "partial"
+    assert result.result["repo_map"]["file_count"] == 1
+    assert result.result["repo_map"]["files"][0]["symbols"] == ["Module"]

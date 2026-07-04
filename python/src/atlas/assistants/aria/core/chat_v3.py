@@ -23,17 +23,15 @@ Usage:
     response = aria.chat_with_tools("Get latest stock prices")
 """
 
-import os
 import json
 import logging
 import time
 from typing import List, Dict, Any, Optional, Generator
 from datetime import datetime, timezone
-from pathlib import Path
 
 # Import from AI layer
 from ..ai_layer.provider_manager import ProviderManager
-from ..ai_layer.providers.base import Message, LLMResponse
+from ..ai_layer.providers.base import LLMResponse
 from ..ai_layer.logger import AILogger
 from ..memory.retrieval import MemoryRetrieval
 from .system_prompt import get_system_prompt

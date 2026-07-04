@@ -11,7 +11,6 @@ Every run is immutable once logged. Never modify or delete logs.
 from __future__ import annotations
 
 import json
-import os
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
@@ -54,6 +53,7 @@ class TaskLogger:
             "agent_name": task.agent_name,
             "objective":  task.objective[:200],
             "risk_level": task.risk_level,
+            "allowed_tools": task.allowed_tools[:20],
             "timestamp":  self._now(),
         }
         self._starts[task.task_id] = record
@@ -78,6 +78,7 @@ class TaskLogger:
         }
         self._buffer.append(record)
         self._write(record["agent_name"], record)
+        self._write_checkpoint(start, record, result)
 
     # ── Query ─────────────────────────────────────────────────────────────────
 
@@ -94,6 +95,41 @@ class TaskLogger:
     def by_task(self, task_id: str) -> List[Dict]:
         """Return all records for a specific task_id."""
         return [r for r in self._buffer if r.get("task_id") == task_id]
+
+    def load_checkpoint(self, task_id: str) -> Optional[Dict]:
+        """Load a completed task checkpoint by task_id, if it exists."""
+        path = self._checkpoint_path(task_id)
+        if not path.exists():
+            candidates = sorted(self._checkpoint_dir().glob(f"{self._safe_name(task_id)}__*.json"))
+            if not candidates:
+                return None
+            path = candidates[-1]
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+
+    def list_checkpoints(self, n: int = 20) -> List[Dict]:
+        """Return recent checkpoint manifests, newest last."""
+        paths = sorted(
+            self._checkpoint_dir().glob("*.json"),
+            key=lambda p: p.stat().st_mtime,
+        )
+        rows: List[Dict] = []
+        for path in paths[-max(1, n):]:
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                rows.append({
+                    "task_id": payload.get("task_id"),
+                    "agent_name": payload.get("agent_name"),
+                    "status": payload.get("result", {}).get("status"),
+                    "summary": payload.get("result", {}).get("summary"),
+                    "completed_at": payload.get("completed_at"),
+                    "checkpoint_path": str(path.resolve()),
+                })
+            except Exception:
+                continue
+        return rows
 
     def stats(self) -> Dict:
         """Return summary statistics."""
@@ -123,6 +159,39 @@ class TaskLogger:
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
         except Exception:
             pass  # Disk errors never crash the agent
+
+    def _write_checkpoint(self, start: Dict, end: Dict, result: AgentResult) -> None:
+        """Persist one immutable checkpoint with the completed AgentResult."""
+        try:
+            path = self._checkpoint_path(result.task_id)
+            if path.exists():
+                stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+                path = self._checkpoint_dir() / f"{self._safe_name(result.task_id)}__{stamp}.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "schema": "atlas.agent_checkpoint.v1",
+                "task_id": result.task_id,
+                "agent_name": end.get("agent_name", "unknown"),
+                "started_at": start.get("timestamp"),
+                "completed_at": end.get("timestamp"),
+                "start": start,
+                "end": end,
+                "result": result.to_dict(),
+            }
+            path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+    def _checkpoint_dir(self) -> Path:
+        return self._dir / "checkpoints"
+
+    def _checkpoint_path(self, task_id: str) -> Path:
+        return self._checkpoint_dir() / f"{self._safe_name(task_id)}.json"
+
+    @staticmethod
+    def _safe_name(value: str) -> str:
+        safe = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in str(value))
+        return safe[:120] or "unknown"
 
     @staticmethod
     def _default_dir() -> Path:

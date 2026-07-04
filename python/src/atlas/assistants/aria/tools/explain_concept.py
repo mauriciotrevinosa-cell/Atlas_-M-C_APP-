@@ -21,12 +21,11 @@ Copyright (c) 2026 M&C. All rights reserved.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from atlas.assistants.aria.tools.base import Tool
 from atlas.shared.finance_concepts import (
     FINANCE_KB,
-    format_summary,
     format_full,
     format_math_only,
 )

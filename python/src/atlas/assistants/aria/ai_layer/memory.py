@@ -13,7 +13,7 @@ import sqlite3
 import json
 import time
 from pathlib import Path
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 
 

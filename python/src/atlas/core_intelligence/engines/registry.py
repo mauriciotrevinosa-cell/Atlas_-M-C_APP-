@@ -8,7 +8,7 @@ Allows dynamic loading of strategies (Rule-Based, ML, RL).
 Copyright (c) 2026 M&C. All rights reserved.
 """
 
-from typing import Dict, List, Type, Optional
+from typing import Dict, List, Optional
 import logging
 from .base_engine import BaseEngine, EngineType
 

@@ -6,9 +6,8 @@ Abstract class that all data providers must implement
 Copyright (c) 2026 M&C. All rights reserved.
 """
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 import pandas as pd
-from datetime import datetime
 
 
 class DataProvider(ABC):

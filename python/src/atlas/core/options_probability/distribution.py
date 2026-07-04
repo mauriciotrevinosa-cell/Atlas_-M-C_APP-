@@ -5,7 +5,7 @@ Risk-neutral style distribution approximation from options data.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import erf, exp, log, sqrt
+from math import erf, log, sqrt
 
 import numpy as np
 

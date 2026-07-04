@@ -20,10 +20,11 @@ logger = logging.getLogger("atlas.data_layer")
 
 class CacheStore:
     """
-    Parquet-based cache with TTL and metadata tracking.
+    DataFrame cache with TTL and metadata tracking.
 
     Each cached item gets two files:
-      - {key}.parquet  -> the actual data
+      - {key}.parquet  -> the actual data when a parquet engine is installed
+      - {key}.pkl      -> fallback data when parquet support is unavailable
       - {key}.meta     -> JSON metadata (timestamp, rows, etc.)
     """
 
@@ -45,8 +46,17 @@ class CacheStore:
     def _data_path(self, key: str) -> Path:
         return self.cache_dir / f"{self._safe_key(key)}.parquet"
 
+    def _pickle_path(self, key: str) -> Path:
+        return self.cache_dir / f"{self._safe_key(key)}.pkl"
+
     def _meta_path(self, key: str) -> Path:
         return self.cache_dir / f"{self._safe_key(key)}.meta"
+
+    def _existing_data_path(self, key: str) -> Optional[Path]:
+        for path in (self._data_path(key), self._pickle_path(key)):
+            if path.exists():
+                return path
+        return None
 
     def _read_meta(self, key: str) -> Dict[str, Any]:
         """Read sidecar metadata safely."""
@@ -78,9 +88,9 @@ class CacheStore:
         Returns:
             DataFrame (or tuple) on hit, None on miss
         """
-        data_path = self._data_path(key)
+        data_path = self._existing_data_path(key)
 
-        if not data_path.exists():
+        if data_path is None:
             return None
 
         # TTL check
@@ -103,7 +113,10 @@ class CacheStore:
                 stale = True
 
         try:
-            df = pd.read_parquet(data_path)
+            if data_path.suffix == ".pkl":
+                df = pd.read_pickle(data_path)
+            else:
+                df = pd.read_parquet(data_path)
             logger.debug("Cache HIT: %s (%d rows%s)", key, len(df), ", stale" if stale else "")
             if with_metadata:
                 meta_out = dict(meta)
@@ -136,15 +149,27 @@ class CacheStore:
             metadata: Optional extra metadata for this cache entry
         """
         data_path = self._data_path(key)
+        pickle_path = self._pickle_path(key)
         meta_path = self._meta_path(key)
 
         try:
-            df.to_parquet(data_path, index=True)
+            storage_format = "parquet"
+            try:
+                df.to_parquet(data_path, index=True)
+                if pickle_path.exists():
+                    pickle_path.unlink()
+            except Exception as exc:
+                logger.debug("Parquet cache write unavailable for %s: %s", key, exc)
+                if data_path.exists():
+                    data_path.unlink()
+                df.to_pickle(pickle_path)
+                storage_format = "pickle"
 
             meta: Dict[str, Any] = {
                 "cached_at": time.time(),
                 "rows": len(df),
                 "columns": list(df.columns),
+                "storage_format": storage_format,
                 "date_range": {
                     "start": str(df.index.min()) if len(df) > 0 else None,
                     "end": str(df.index.max()) if len(df) > 0 else None,
@@ -164,7 +189,7 @@ class CacheStore:
 
     def _remove(self, key: str) -> None:
         """Remove a single cached entry."""
-        for path in [self._data_path(key), self._meta_path(key)]:
+        for path in [self._data_path(key), self._pickle_path(key), self._meta_path(key)]:
             if path.exists():
                 path.unlink()
 
@@ -180,7 +205,8 @@ class CacheStore:
             Number of entries removed
         """
         removed = 0
-        for f in self.cache_dir.glob("*.parquet"):
+        data_files = list(self.cache_dir.glob("*.parquet")) + list(self.cache_dir.glob("*.pkl"))
+        for f in data_files:
             key = f.stem
             if pattern is None or pattern in key:
                 self._remove(key)
@@ -196,9 +222,9 @@ class CacheStore:
         Returns:
             Dict with total_entries, total_size_mb, oldest, newest
         """
-        parquet_files = list(self.cache_dir.glob("*.parquet"))
+        data_files = list(self.cache_dir.glob("*.parquet")) + list(self.cache_dir.glob("*.pkl"))
 
-        if not parquet_files:
+        if not data_files:
             return {
                 "total_entries": 0,
                 "total_size_mb": 0.0,
@@ -206,16 +232,17 @@ class CacheStore:
                 "newest": None,
             }
 
-        total_size = sum(f.stat().st_size for f in parquet_files)
-        mod_times = [f.stat().st_mtime for f in parquet_files]
+        total_size = sum(f.stat().st_size for f in data_files)
+        mod_times = [f.stat().st_mtime for f in data_files]
 
         return {
-            "total_entries": len(parquet_files),
-            "total_size_mb": round(total_size / (1024 * 1024), 2),
+            "total_entries": len({f.stem for f in data_files}),
+            "total_size_mb": round(total_size / (1024 * 1024), 6),
             "oldest": time.ctime(min(mod_times)),
             "newest": time.ctime(max(mod_times)),
         }
 
     def list_keys(self) -> list[str]:
         """Return all cached keys."""
-        return [f.stem for f in self.cache_dir.glob("*.parquet")]
+        data_files = list(self.cache_dir.glob("*.parquet")) + list(self.cache_dir.glob("*.pkl"))
+        return sorted({f.stem for f in data_files})

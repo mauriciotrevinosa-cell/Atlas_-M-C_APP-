@@ -9,11 +9,19 @@ Copyright © 2026 M&C. All Rights Reserved.
 __version__ = "1.0.0"
 
 from .registry import FeatureRegistry
+from .expressions import (
+    DEFAULT_QLIB_LITE_EXPRESSIONS,
+    FeatureExpression,
+    FeatureExpressionEngine,
+)
 from .technical import trend, momentum, volatility, volume
 from .microstructure import vpin, kyle_lambda, order_book_imbalance
 
 __all__ = [
     'FeatureRegistry',
+    'FeatureExpression',
+    'FeatureExpressionEngine',
+    'DEFAULT_QLIB_LITE_EXPRESSIONS',
     'trend',
     'momentum', 
     'volatility',

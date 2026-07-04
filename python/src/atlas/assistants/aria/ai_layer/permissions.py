@@ -14,7 +14,7 @@ Usage:
     perms.check("write_file")  # raises PermissionError if denied
 """
 
-from typing import Set, Dict, Optional
+from typing import Set, Dict
 from dataclasses import dataclass
 
 

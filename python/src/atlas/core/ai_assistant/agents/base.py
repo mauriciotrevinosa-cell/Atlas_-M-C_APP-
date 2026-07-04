@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Dict, List
 
 from atlas.core.ai_assistant.task_schema import AgentTask, AgentResult
 

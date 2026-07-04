@@ -31,12 +31,16 @@ Usage:
 """
 
 from .agent_registry   import AgentRegistry, get_registry
-from .orchestrator     import AgentOrchestrator
+from .orchestrator     import AgentOrchestrator, PipelineRunReport
 from .task_schema      import AgentTask, AgentResult
 from .result_validator import ResultValidator
+from .repo_map import RepoMap, RepoMapBuilder, build_repo_map
+from .pixel_workspace import build_pixel_workspace
+from .permissions import PermissionChecker, PermissionLevel, PreflightDecision
 from .agents import (
     PlannerAgent, ReviewerAgent, TestAgent, ContextCuratorAgent,
     CodeBuilderAgent, RepoScoutAgent, IngestionAgent, DocsAgent,
+    MarketIntelAgent,
 )
 
 
@@ -93,6 +97,7 @@ def build_system(
         RepoScoutAgent(llm_client=llm_client, prompt_store=prompt_store),
         IngestionAgent(llm_client=llm_client, prompt_store=prompt_store),
         DocsAgent(llm_client=llm_client, prompt_store=prompt_store),
+        MarketIntelAgent(),
     ])
 
     logger    = TaskLogger(log_dir=log_dir)
@@ -107,10 +112,14 @@ def build_system(
 
 __all__ = [
     "AgentRegistry", "get_registry",
-    "AgentOrchestrator",
+    "AgentOrchestrator", "PipelineRunReport",
     "AgentTask", "AgentResult",
     "ResultValidator",
+    "RepoMap", "RepoMapBuilder", "build_repo_map",
+    "build_pixel_workspace",
+    "PermissionChecker", "PermissionLevel", "PreflightDecision",
     "PlannerAgent", "ReviewerAgent", "TestAgent", "ContextCuratorAgent",
     "CodeBuilderAgent", "RepoScoutAgent", "IngestionAgent", "DocsAgent",
+    "MarketIntelAgent",
     "build_system",
 ]

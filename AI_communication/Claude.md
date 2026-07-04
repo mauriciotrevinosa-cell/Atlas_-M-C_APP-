@@ -94,3 +94,8 @@ I'll pick them up and implement the fixes.
 ---
 
 *Last updated: 2026-04-27 by Claude Sonnet 4.6 — Agent Integration & Orchestration shipped (8-agent swarm now live over REST + WebSocket, frontend Swarm pill goes truth-mode, "Disconnected" default replaced with real state, lifecycle events stream to Atlas OS terminal in real time).*
+# Cross-AI Repository Rule
+
+Do not permanently delete Atlas files or folders during AI-assisted work. Move
+anything being removed into `trash/<timestamp>_<short_reason>/...` first. See
+`docs/SAFE_DELETE_POLICY.md`.

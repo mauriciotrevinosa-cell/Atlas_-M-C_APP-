@@ -15,7 +15,6 @@ Copyright (c) 2026 M&C. All rights reserved.
 import logging
 from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime, timedelta, date
-from dateutil.relativedelta import relativedelta  # Ensure dateutil is available or use simple math
 
 import pandas as pd
 

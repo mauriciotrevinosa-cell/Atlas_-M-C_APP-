@@ -178,7 +178,7 @@ class MultiStrategyEngine(BaseEngine):
         for key, (engine, _) in self._engines.items():
             try:
                 result[key] = engine.analyze(data, context)
-            except Exception as e:
+            except Exception:
                 result[key] = []
         return result
 

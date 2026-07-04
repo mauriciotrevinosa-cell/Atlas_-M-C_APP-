@@ -3,7 +3,6 @@ Common Mathematical Utilities for Atlas
 """
 import numpy as np
 import pandas as pd
-from typing import Union, List
 
 def calculate_returns(prices: pd.Series, period: int = 1) -> pd.Series:
     """Calculate simple percentage returns."""

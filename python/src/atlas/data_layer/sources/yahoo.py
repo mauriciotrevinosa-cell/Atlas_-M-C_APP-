@@ -15,7 +15,6 @@ Copyright (c) 2026 M&C. All rights reserved.
 
 import yfinance as yf
 import pandas as pd
-from typing import Optional
 from ..base import DataProvider
 from ..quality.validator import DataValidator
 from ..normalization.normalizer import DataNormalizer
@@ -203,7 +202,7 @@ if __name__ == "__main__":
     print("\n[Test 3] Invalid symbol (INVALID123)...")
     try:
         data = yahoo.download("INVALID123", "2024-01-01", "2024-12-31")
-        print(f"❌ Should have failed but didn't")
+        print("❌ Should have failed but didn't")
     except Exception as e:
         print(f"✅ Correctly failed: {e}")
     

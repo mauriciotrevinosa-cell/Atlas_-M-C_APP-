@@ -1,0 +1,115 @@
+import {
+  BrainCircuit,
+  CandlestickChart,
+  DatabaseZap,
+  FileCode2,
+  GitBranch,
+  Radar,
+  ShieldCheck,
+  Workflow,
+} from 'lucide-react';
+
+const integrations = [
+  {
+    title: 'Public Data Layer',
+    source: 'public-apis',
+    detail: 'World Bank, BLS, Treasury, IMF, Open-Meteo, provider health.',
+    href: '/api/providers/health',
+    icon: DatabaseZap,
+  },
+  {
+    title: 'Prediction Markets',
+    source: 'polymarket-cli / AI-Trader',
+    detail: 'Read-only search, market resolution, outcome tokens, no wallet/order paths.',
+    href: '/api/prediction/markets?query=CPI&limit=5',
+    icon: CandlestickChart,
+  },
+  {
+    title: 'Market Intelligence',
+    source: 'moon-dev / AI-Trader',
+    detail: 'Funding, OI, liquidations, whale events, MarketIntelAgent.',
+    href: '/api/agents',
+    icon: Radar,
+  },
+  {
+    title: 'Agent Gateway',
+    source: 'TradingAgents / Shannon / n8n patterns',
+    detail: 'Task checkpoints, preflight permissions, critical-risk approval, paper mode.',
+    href: '/api/agents/status',
+    icon: ShieldCheck,
+  },
+  {
+    title: 'Repo Intelligence',
+    source: 'GitNexus / git-city',
+    detail: 'Repo map, symbols/imports, module summaries, Mermaid graph support.',
+    href: '/api/agents',
+    icon: GitBranch,
+  },
+  {
+    title: 'Quant + RL Core',
+    source: 'qlib / TensorTrade / speed-racer',
+    detail: 'Safe feature expressions, RL action/reward schemes, reward components.',
+    href: '/docs',
+    icon: BrainCircuit,
+  },
+  {
+    title: 'Prompt + Model Catalog',
+    source: 'everything-claude-code / free-llm resources',
+    detail: 'Prompt manifests, strict rendering, provider route catalog.',
+    href: '/docs',
+    icon: FileCode2,
+  },
+  {
+    title: 'Scenario + State Simulation',
+    source: 'open-genie / ALADDIN concepts',
+    detail: 'Market-state tokens and black-swan run manifests for auditable simulations.',
+    href: '/docs',
+    icon: Workflow,
+  },
+];
+
+export const InfoInstructionsPanel = () => (
+  <section className="atlas-glass col-span-1 rounded-lg p-6 lg:col-span-12">
+    <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div>
+        <p className="text-xs uppercase tracking-widest text-slate-500">
+          Info Instructions
+        </p>
+        <h4 className="text-2xl font-semibold tracking-tight">
+          Rebuilt Into Atlas
+        </h4>
+      </div>
+      <a
+        href="/desktop/index.html"
+        className="rounded-lg border border-slate-200 bg-white/60 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white"
+      >
+        Legacy desktop
+      </a>
+    </div>
+
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      {integrations.map((item) => {
+        const Icon = item.icon;
+        return (
+          <a
+            key={item.title}
+            href={item.href}
+            className="rounded-lg border border-white/70 bg-white/55 p-4 transition hover:-translate-y-0.5 hover:bg-white"
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <Icon size={20} className="text-slate-700" />
+              <span className="rounded bg-emerald-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-widest text-emerald-700">
+                Atlas code
+              </span>
+            </div>
+            <p className="text-base font-semibold text-slate-950">{item.title}</p>
+            <p className="mt-1 text-xs uppercase tracking-widest text-slate-500">
+              {item.source}
+            </p>
+            <p className="mt-3 text-sm leading-6 text-slate-600">{item.detail}</p>
+          </a>
+        );
+      })}
+    </div>
+  </section>
+);

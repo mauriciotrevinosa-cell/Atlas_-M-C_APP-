@@ -6,7 +6,6 @@ Provides TRUE real-time market data (FREE)
 Copyright (c) 2026 M&C. All rights reserved.
 """
 import pandas as pd
-from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from .base import DataProvider
 

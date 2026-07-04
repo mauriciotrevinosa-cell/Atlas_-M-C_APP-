@@ -8,7 +8,7 @@ Used by: monitoring dashboard, evaluation, model comparison.
 from __future__ import annotations
 
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Deque, Dict, List, Optional
 

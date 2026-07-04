@@ -442,7 +442,7 @@
     const r = await fetch(url);
     if (!r.ok) {
       let detail = '';
-      try { const j = await r.json(); detail = j.detail || JSON.stringify(j); } catch (_) {}
+      try { const j = await r.json(); detail = j.detail || JSON.stringify(j); } catch (err) { console.warn('[Brain] parse error response failed:', err.message); }
       throw new Error(`HTTP ${r.status}${detail ? ' — ' + detail : ''}`);
     }
     return await r.json();

@@ -20,10 +20,9 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import numpy as np
-import pandas as pd
 
 logger = logging.getLogger("atlas.black_swan.n_dimensional")
 
@@ -195,7 +194,7 @@ class TailRiskResult:
     def summary(self) -> str:
         lines = [
             f"{'═'*50}",
-            f"  N-DIMENSIONAL BLACK SWAN RISK ANALYSIS",
+            "  N-DIMENSIONAL BLACK SWAN RISK ANALYSIS",
             f"  Assets: {self.n_assets}   Simulations: {self.n_simulations:,}",
             f"{'─'*50}",
             f"  Portfolio VaR(95%): {self.portfolio_var_95:.2%}",

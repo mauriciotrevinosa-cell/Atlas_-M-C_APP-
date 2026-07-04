@@ -17,7 +17,6 @@ Copyright (c) 2026 M&C. All rights reserved.
 import logging
 from typing import Any, Dict, List
 
-import numpy as np
 import pandas as pd
 
 logger = logging.getLogger("atlas.data_layer")

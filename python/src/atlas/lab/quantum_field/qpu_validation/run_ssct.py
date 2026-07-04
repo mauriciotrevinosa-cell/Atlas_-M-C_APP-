@@ -1,6 +1,7 @@
 from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
 from ssct_circuits import build_job_bundle
-import json, datetime
+import json
+import datetime
 
 SHOTS = 1024
 

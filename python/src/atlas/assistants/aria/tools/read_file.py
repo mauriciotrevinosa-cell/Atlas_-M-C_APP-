@@ -4,9 +4,8 @@ ARIA Read File Tool
 Read files from filesystem
 """
 
-import os
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 
 
 class ReadFileTool:
@@ -297,7 +296,7 @@ if __name__ == "__main__":
     if not result["success"]:
         print(f"✅ Error caught: {result['error']}")
     else:
-        print(f"❌ Should have failed")
+        print("❌ Should have failed")
     
     # Cleanup
     test_file.unlink()

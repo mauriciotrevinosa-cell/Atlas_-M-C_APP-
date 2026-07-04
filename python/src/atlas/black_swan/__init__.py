@@ -58,6 +58,7 @@ from .hedge_generator import (
 )
 from .scenario_engine import (
     ScenarioEngine,
+    ScenarioRunManifest,
     ScenarioReport,
     ScenarioResult,
     ScenarioDefinition,
@@ -74,6 +75,6 @@ __all__ = [
     "HedgeGenerator", "HedgePackage", "HedgeRecommendation",
     "SAFE_HAVENS", "INVERSE_ETFS", "TAIL_INSTRUMENTS",
     # Scenario engine
-    "ScenarioEngine", "ScenarioReport", "ScenarioResult", "ScenarioDefinition",
+    "ScenarioEngine", "ScenarioRunManifest", "ScenarioReport", "ScenarioResult", "ScenarioDefinition",
     "HISTORICAL_SCENARIOS", "HYPOTHETICAL_SCENARIOS", "ALL_SCENARIOS",
 ]

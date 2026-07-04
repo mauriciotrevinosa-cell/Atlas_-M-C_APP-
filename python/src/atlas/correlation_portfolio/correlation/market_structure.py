@@ -17,8 +17,8 @@ Copyright (c) 2026 M&C. All rights reserved.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -241,7 +241,7 @@ class MarketStructureAnalyzer:
         }
         base = msgs.get(regime.regime, "Unknown regime")
         if regime.breakdown_detected:
-            base += f" | BREAKDOWN detected in correlation structure."
+            base += " | BREAKDOWN detected in correlation structure."
         return base
 
     def top_correlated_pairs(

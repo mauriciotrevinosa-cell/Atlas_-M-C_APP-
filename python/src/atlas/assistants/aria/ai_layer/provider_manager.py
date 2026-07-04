@@ -20,7 +20,7 @@ import os
 import time
 import logging
 from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime
 from collections import defaultdict
 
 from .providers.base import BaseProvider, LLMResponse
@@ -47,26 +47,35 @@ class ProviderManager:
 
     def __init__(self,
                  fallback_chain: Optional[List[str]] = None,
-                 preferred_provider: Optional[str] = None):
+                 preferred_provider: Optional[str] = None,
+                 ollama_model: Optional[str] = None):
         """
         Initialize provider manager.
 
         Args:
             fallback_chain: List of provider names in fallback order
-                (default: ["ollama", "groq", "openrouter", "cerebras", "openai", "mock"])
+                (default: real providers only; mock requires ARIA_ALLOW_MOCK=1)
             preferred_provider: User's preferred provider (may be overridden if unavailable)
+            ollama_model: Optional Ollama model override.
         """
-        # Default fallback chain (free options first, then paid)
+        self.mock_enabled = self._mock_enabled(preferred_provider)
+        self.ollama_model = ollama_model
+
+        # Default fallback chain (free/local options first, then paid).
+        # Mock is intentionally excluded in normal runtime so ARIA never appears
+        # "ready" while only serving canned answers.
         self.default_fallback_chain = [
             "ollama",
             "groq",
             "openrouter",
             "cerebras",
             "openai",
-            "mock",
         ]
+        if self.mock_enabled:
+            self.default_fallback_chain.append("mock")
 
-        self.fallback_chain = fallback_chain or self.default_fallback_chain
+        selected_chain = fallback_chain or self.default_fallback_chain
+        self.fallback_chain = self._filter_mock(selected_chain)
         self.preferred_provider = preferred_provider
 
         # Provider instances
@@ -94,11 +103,28 @@ class ProviderManager:
         self._initialize_providers()
         logger.info("ProviderManager initialized with chain: %s", self.fallback_chain)
 
+    @staticmethod
+    def _truthy(value: str | None) -> bool:
+        return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+    def _mock_enabled(self, preferred_provider: Optional[str]) -> bool:
+        return (
+            self._truthy(os.getenv("ARIA_ALLOW_MOCK"))
+            or self._truthy(os.getenv("ATLAS_TEST_ALLOW_MOCK"))
+            or (preferred_provider or "").lower() == "mock"
+            or os.getenv("ARIA_LLM_BACKEND", "").lower() == "mock"
+        )
+
+    def _filter_mock(self, chain: List[str]) -> List[str]:
+        if self.mock_enabled:
+            return list(chain)
+        return [name for name in chain if name != "mock"]
+
     def _initialize_providers(self):
         """Initialize all known providers (even if not available)."""
         providers_config = {
             "ollama": lambda: OllamaProvider(
-                model=os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
+                model=self.ollama_model or os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
                 host=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
             ),
             "openai": lambda: OpenAIProvider(
@@ -117,11 +143,19 @@ class ProviderManager:
         }
 
         for name, factory in providers_config.items():
+            if name == "mock" and not self.mock_enabled:
+                continue
             try:
                 self._providers[name] = factory()
                 logger.debug("Initialized provider: %s", name)
             except Exception as e:
                 logger.debug("Failed to initialize %s provider: %s", name, str(e))
+
+    def set_provider_model(self, provider_name: str, model: str) -> None:
+        """Update a provider's model when the UI switches model at runtime."""
+        provider = self._providers.get(provider_name)
+        if provider is not None and hasattr(provider, "model"):
+            provider.model = model
 
     def get_available_providers(self) -> List[str]:
         """

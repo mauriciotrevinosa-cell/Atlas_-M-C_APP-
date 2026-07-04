@@ -20,6 +20,7 @@ import re
 from typing import Dict, List
 
 from .base import BaseAgent
+from atlas.core.ai_assistant.repo_map import build_repo_map
 from atlas.core.ai_assistant.task_schema import AgentTask, AgentResult
 
 
@@ -41,6 +42,7 @@ class RepoScoutAgent(BaseAgent):
 
     def run(self, task: AgentTask) -> AgentResult:
         criteria = task.inputs.get("criteria", "") or ", ".join(task.context.get("criteria", []))
+        repo_map = self._build_repo_context(task)
         prompt   = self._build_prompt(task, criteria)
         raw      = self._call_llm(task, prompt)
         structured, errors = self._parse_response(raw)
@@ -48,6 +50,9 @@ class RepoScoutAgent(BaseAgent):
         if not structured:
             structured = self._stub_scout(task.objective)
             errors.append("LLM not available — stub research returned")
+
+        if repo_map:
+            structured["repo_map"] = repo_map
 
         status = "success" if not errors else "partial"
 
@@ -59,6 +64,18 @@ class RepoScoutAgent(BaseAgent):
             errors   = errors,
             metadata = {"agent": self.name, "version": self.version},
         )
+
+    def _build_repo_context(self, task: AgentTask) -> Dict:
+        repo_root = task.inputs.get("repo_root") or task.context.get("repo_root")
+        if not repo_root:
+            return {}
+        try:
+            max_files = int(task.inputs.get("max_repo_files", 500))
+            payload = build_repo_map(repo_root, max_files=max_files).to_dict()
+            payload["files"] = payload["files"][:50]
+            return payload
+        except Exception:
+            return {}
 
     def _build_prompt(self, task: AgentTask, criteria: str) -> str:
         if self._prompt_store:

@@ -15,6 +15,7 @@ Modules:
 from .trading_env import TradingEnvironment
 from .dqn_agent import DQNAgent, NumpyNet, ReplayBuffer
 from .rl_trainer import RLTrainer
+from .schemes import ActionScheme, RiskAdjustedRewardScheme, RewardBreakdown, TradeAction
 
 __all__ = [
     'TradingEnvironment',
@@ -22,4 +23,8 @@ __all__ = [
     'NumpyNet',
     'ReplayBuffer',
     'RLTrainer',
+    'ActionScheme',
+    'RiskAdjustedRewardScheme',
+    'RewardBreakdown',
+    'TradeAction',
 ]

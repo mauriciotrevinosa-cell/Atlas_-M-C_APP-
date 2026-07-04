@@ -4,7 +4,7 @@ Derivatives data: Liquidations, Open Interest, Funding Rates, LSR.
 Requires: COINGLASS_API_KEY in environment/.env
 """
 import os
-from typing import Optional, Dict, Any
+from typing import Optional, Dict
 import pandas as pd
 
 try:

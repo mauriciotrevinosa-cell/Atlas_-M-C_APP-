@@ -49,11 +49,12 @@ class ARIA:
     ARIA (Atlas Reasoning & Intelligence Assistant) — v3.0
 
     Backend is selected automatically:
-      1. ProviderManager picks the first available provider in the fallback
-         chain based on env vars (GROQ_API_KEY, OPENROUTER_API_KEY, etc.)
-      2. If none are configured, it falls back to MockProvider so the app
-         still boots and the UI stays responsive.
-      3. Ollama is supported but no longer required.
+      1. ProviderManager picks the first available real provider in the
+         fallback chain based on local Ollama or cloud env vars.
+      2. If no real provider is available, ARIA returns a clear backend error
+         instead of silently answering from mock mode.
+      3. MockProvider is explicit test mode only (ARIA_ALLOW_MOCK=1 or
+         ARIA_LLM_BACKEND=mock).
     """
 
     def __init__(self,
@@ -120,6 +121,7 @@ class ARIA:
                 self._provider_manager = ProviderManager(
                     fallback_chain=fallback_chain,
                     preferred_provider=self.preferred_provider,
+                    ollama_model=self.model,
                 )
             except Exception as exc:
                 logger.warning("ProviderManager init failed: %s", exc)
@@ -163,7 +165,7 @@ class ARIA:
             return "direct-ollama (legacy fallback)"
         try:
             providers = self._provider_manager.get_available_providers()
-            return ", ".join(providers) if providers else "mock only"
+            return ", ".join(providers) if providers else "no real provider online"
         except Exception:
             return "unknown"
 
@@ -217,6 +219,7 @@ class ARIA:
                 {"role": "system", "content": self.system_prompt},
                 *self.history
             ]
+            tools_enabled = self._should_offer_tools(user_message)
 
             # Multi-step reasoning with tools
             iterations = 0
@@ -224,7 +227,7 @@ class ARIA:
                 iterations += 1
 
                 # Route through provider manager (or direct ollama as legacy fallback)
-                response, provider_used = self._call_backend(messages)
+                response, provider_used = self._call_backend(messages, allow_tools=tools_enabled)
 
                 # provider_used is a string. Response may be LLMResponse OR a raw dict
                 # from legacy ollama (kept for backward compat).
@@ -240,6 +243,7 @@ class ARIA:
                             "role": "tool",
                             "content": json.dumps(tool_result)
                         })
+                    tools_enabled = False
                     continue
                 else:
                     final_response = assistant_message.get("content", "") or ""
@@ -254,8 +258,26 @@ class ARIA:
             self.stats["failed_queries"] += 1
             return self._handle_error(e)
 
+    def _should_offer_tools(self, user_message: str) -> bool:
+        """Expose tools only for requests that likely need external Atlas actions."""
+        if not self.tool_schemas:
+            return False
+
+        text = user_message.lower()
+        tool_keywords = (
+            "search", "web", "internet", "latest", "current", "today", "news",
+            "look up", "browse", "api", "status", "health", "provider", "providers",
+            "file", "read", "open", "create", "write", "save", "code", "run",
+            "execute", "agent", "agents", "swarm", "pixel", "workspace", "roadmap",
+            "docs", "info", "market", "price", "data",
+            "buscar", "internet", "actual", "hoy", "noticia", "archivo", "leer",
+            "abrir", "crear", "escribe", "guardar", "codigo", "código", "corre",
+            "ejecuta", "agente", "agentes", "estado", "datos",
+        )
+        return any(keyword in text for keyword in tool_keywords)
+
     # ------------------------------------------------------------- backends
-    def _call_backend(self, messages: List[Dict[str, str]]):
+    def _call_backend(self, messages: List[Dict[str, str]], allow_tools: bool = True):
         """
         Route the chat call through ProviderManager if available, otherwise
         fall back to direct Ollama (legacy path) for environments that still
@@ -266,9 +288,13 @@ class ARIA:
         """
         # Preferred path: provider manager
         if self._provider_manager is not None:
+            try:
+                self._provider_manager.set_provider_model("ollama", self.model)
+            except Exception:
+                pass
             response, provider_name = self._provider_manager.chat_with_fallback(
                 messages=messages,
-                tools=self.tool_schemas if self.tool_schemas else None,
+                tools=self.tool_schemas if allow_tools and self.tool_schemas else None,
                 max_retries=3,
             )
             return response, provider_name
@@ -286,7 +312,7 @@ class ARIA:
         raw = ollama.chat(
             model=self.model,
             messages=messages,
-            tools=self.tool_schemas if self.tool_schemas else None,
+            tools=self.tool_schemas if allow_tools and self.tool_schemas else None,
             options={"temperature": self.temperature},
         )
         return raw, "ollama-direct"

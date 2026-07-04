@@ -36,6 +36,24 @@ class SignalListOut(BaseModel):
     offset:  int
 
 
+class MarketEventSnapshotIn(BaseModel):
+    symbol: Optional[str] = None
+    ticker: Optional[str] = None
+    exchange: Optional[str] = None
+    timeframe: Optional[str] = None
+    observed_at: Optional[datetime] = None
+    funding_rate: Optional[float] = None
+    open_interest_change_pct: Optional[float] = None
+    liquidation_usd: Optional[float] = None
+    volume_ratio: Optional[float] = None
+
+
+class MarketEventIngestOut(BaseModel):
+    raw_items: int
+    inserted: int
+    duplicates: int
+
+
 # ── Sources ───────────────────────────────────────────────────────────────
 
 class SourceOut(BaseModel):

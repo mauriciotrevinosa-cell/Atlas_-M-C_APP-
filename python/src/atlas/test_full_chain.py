@@ -50,7 +50,7 @@ def test_full_chain():
     # 4. Memory Storage (Phase 7)
     memory = MemoryStore("data/test_memory.json")
     memory.save_run(results)
-    print(f"✅ Memory Store: Test run saved to data/test_memory.json")
+    print("✅ Memory Store: Test run saved to data/test_memory.json")
     
     print("\n🚀 FULL CHAIN SUCCESSFUL. Atlas Core is operational.")
 

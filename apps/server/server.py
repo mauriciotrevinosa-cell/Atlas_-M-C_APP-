@@ -12,7 +12,7 @@ Features:
 - Authentication (bÃ¡sico)
 """
 
-from fastapi import FastAPI, WebSocket, HTTPException, Depends, UploadFile, File, Query, Request
+from fastapi import FastAPI, WebSocket, HTTPException, UploadFile, File, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
@@ -1180,7 +1180,7 @@ async def _ask_local(user_message: str) -> tuple:
         if len(_aria_audit_log) > 500:
             _aria_audit_log.pop(0)
         return response, _aria_active_model, latency_ms
-    except Exception as e:
+    except Exception:
         _aria_audit_log.append({
             "ts":          datetime.now().isoformat(),
             "model":       _aria_active_model,
@@ -3099,7 +3099,6 @@ def vizlab_market_graph():
     """
     try:
         import yfinance as yf
-        import numpy as np
         import pandas as pd
 
         tickers = ["SPY","QQQ","AAPL","MSFT","NVDA","JPM","GS","XOM","GLD","BTC-USD"]
@@ -3462,7 +3461,6 @@ def analytics_summary(ticker: str, period: str = "1y", window: int = 21):
     """
     try:
         _add_sys_path()
-        import numpy as np
 
         from atlas.analytics.returns import log_returns, simple_returns
         from atlas.analytics.risk_metrics import (
@@ -4736,7 +4734,7 @@ def get_advanced_volatility(ticker: str, period: str = "1y"):
     _add_sys_path()
     try:
         from atlas.core_intelligence.features.volatility_advanced import (
-            RollingVolatilityEngine, garman_klass_vol, yang_zhang_vol, vol_regime_state,
+            RollingVolatilityEngine, vol_regime_state,
         )
 
         ohlcv, is_synthetic = _fetch_ohlcv_local(ticker, period=period)
@@ -4856,7 +4854,7 @@ def get_factor_attribution(ticker: str, universe: str = "AAPL,MSFT,NVDA,AMZN,JPM
     _add_sys_path()
     try:
         import pandas as pd
-        from atlas.correlation_portfolio.factor_models import FactorModelEngine, factor_attribution
+        from atlas.correlation_portfolio.factor_models import FactorModelEngine
 
         tickers = list({t.strip().upper() for t in universe.split(",") if t.strip()} | {ticker.upper()})
         is_synthetic = False
@@ -4970,7 +4968,7 @@ async def api_signal_compose(
     try:
         _add_sys_path()
         from atlas.core_intelligence.signal_composition import (
-            SignalCompositor, Signal, consensus_action, volatility_scalar,
+            SignalCompositor, Signal,
         )
         from atlas.core_intelligence.engines.rule_based.multi_strategy import MultiStrategyEngine
 

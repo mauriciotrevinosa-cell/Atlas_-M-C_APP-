@@ -15,6 +15,10 @@ Esta es la puerta de entrada a toda la documentación del proyecto.
 
 ### **Fundación**
 - [README.md](../README.md) - Visión general del proyecto
+- [ATLAS_MASTER_VISION.md](ATLAS_MASTER_VISION.md) - Vision M&C OS y limites de ARIA
+- [ATLAS_MASTER_ROADMAP_2026_CONSOLIDATED.md](ATLAS_MASTER_ROADMAP_2026_CONSOLIDATED.md) - Roadmap maestro consolidado 2026
+- [UI_RECONSTRUCTION.md](UI_RECONSTRUCTION.md) - Guia de reconstruccion frontend
+- [SAFE_DELETE_POLICY.md](SAFE_DELETE_POLICY.md) - Politica de no borrar; mover a `trash/`
 - [02_ARCHITECTURE.md](02_ARCHITECTURE.md) - Decisiones arquitectónicas
 - [03_WORKFLOW.md](03_WORKFLOW.md) - Workflow canónico (17 fases)
 - [04_DATA_CONTRACTS.md](04_DATA_CONTRACTS.md) - Contratos de datos

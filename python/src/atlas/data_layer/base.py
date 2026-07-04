@@ -6,7 +6,6 @@ Copyright (c) 2026 M&C. All rights reserved.
 
 from abc import ABC, abstractmethod
 import pandas as pd
-from typing import Optional
 
 
 class DataProvider(ABC):

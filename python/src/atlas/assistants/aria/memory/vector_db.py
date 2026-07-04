@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from uuid import uuid4
 
-import numpy as np
 
 logger = logging.getLogger("atlas.aria.memory.vector_db")
 

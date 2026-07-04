@@ -135,3 +135,8 @@ Your assignment:
 ---
 
 *Last updated: 2026-04-13 — board initialized by Claude*
+# Cross-AI Repository Rule
+
+Do not permanently delete Atlas files or folders during AI-assisted work. Move
+anything being removed into `trash/<timestamp>_<short_reason>/...` first. See
+`docs/SAFE_DELETE_POLICY.md`.

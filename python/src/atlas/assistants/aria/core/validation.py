@@ -7,7 +7,7 @@ Based on analysis of Claude Code, Cursor, and other tools
 
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 from enum import Enum
 
 
@@ -179,7 +179,7 @@ class ParameterValidator:
             if not re.match(spec['pattern'], value):
                 raise ValidationError(
                     parameter=name,
-                    message=f"String doesn't match required pattern",
+                    message="String doesn't match required pattern",
                     expected_format=spec.get('pattern_description', spec['pattern']),
                     example=spec.get('example')
                 )

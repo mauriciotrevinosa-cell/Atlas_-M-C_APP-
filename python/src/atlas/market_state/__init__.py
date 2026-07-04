@@ -18,10 +18,13 @@ from .regime import RegimeDetector
 from .volatility import VolatilityRegime
 from .internals import MarketInternals
 from .sentiment import SentimentAnalyzer
+from .tokens import MarketStateToken, MarketStateTokenizer
 
 __all__ = [
     'RegimeDetector',
     'VolatilityRegime',
     'MarketInternals',
-    'SentimentAnalyzer'
+    'SentimentAnalyzer',
+    'MarketStateToken',
+    'MarketStateTokenizer'
 ]

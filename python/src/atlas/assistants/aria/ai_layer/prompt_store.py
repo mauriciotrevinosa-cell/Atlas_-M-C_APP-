@@ -13,10 +13,8 @@ Usage:
     classify = store.get("router_classify")
 """
 
-import os
 from pathlib import Path
 from typing import Dict, Optional
-import re
 
 
 class PromptStore:

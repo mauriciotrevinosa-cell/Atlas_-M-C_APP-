@@ -9,6 +9,7 @@ from .code_builder_agent     import CodeBuilderAgent
 from .repo_scout_agent       import RepoScoutAgent
 from .ingestion_agent        import IngestionAgent
 from .docs_agent             import DocsAgent
+from .market_intel_agent     import MarketIntelAgent
 
 __all__ = [
     "BaseAgent",
@@ -22,4 +23,5 @@ __all__ = [
     "RepoScoutAgent",
     "IngestionAgent",
     "DocsAgent",
+    "MarketIntelAgent",
 ]

@@ -250,7 +250,8 @@ def cmd_restart(_args: str) -> str:
     Kill the Atlas server subprocess — the daemon auto-restarts it.
     Sends SIGTERM to the Atlas process (atlas_server.pid), NOT the daemon.
     """
-    import os, signal as _sig
+    import os
+    import signal as _sig
     pid_file = ROOT_PATH / "atlas_server.pid"
     if not pid_file.exists():
         return (
@@ -274,8 +275,7 @@ def cmd_restart(_args: str) -> str:
 
 def cmd_upgrade(_args: str) -> str:
     """Trigger a git pull + restart via the daemon's --upgrade path."""
-    import subprocess, sys
-    from pathlib import Path
+    import subprocess
     try:
         # Run upgrade script non-blocking — daemon will handle restart
         result = subprocess.run(

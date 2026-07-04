@@ -30,6 +30,7 @@ from .pipeline import QuantResearchPipeline, PipelineConfig
 from .idea import ResearchIdea, HypothesisType
 from .validator import StatisticalValidator, ValidationResult
 from .report import ResearchReport, ResearchStage
+from .challenges import evaluate_research_reports
 
 __all__ = [
     "QuantResearchPipeline",
@@ -40,4 +41,5 @@ __all__ = [
     "ValidationResult",
     "ResearchReport",
     "ResearchStage",
+    "evaluate_research_reports",
 ]

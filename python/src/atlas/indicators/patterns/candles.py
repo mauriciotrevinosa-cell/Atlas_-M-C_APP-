@@ -3,7 +3,6 @@ Candlestick Pattern Recognition — Phase 3.1
 Detects: Doji, Hammer, Shooting Star, Engulfing (Bullish/Bearish)
 """
 import pandas as pd
-import numpy as np
 
 
 def _body_size(row) -> float:

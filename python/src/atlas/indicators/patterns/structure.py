@@ -3,8 +3,6 @@ Market Structure Analysis — Phase 3.2
 Detects: Higher Highs/Lower Lows, Break of Structure (BOS), Change of Character (CHoCH)
 """
 import pandas as pd
-import numpy as np
-from typing import List, Dict
 
 
 def _pivot_highs(data: pd.DataFrame, left: int = 3, right: int = 3) -> pd.Series:

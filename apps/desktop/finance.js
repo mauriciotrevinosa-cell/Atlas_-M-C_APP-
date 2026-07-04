@@ -1024,6 +1024,26 @@ function seedPortfolio() {
     console.log(`Portfolio seeded: ${realPositions.length} positions, $${portfolio.total_equity.toFixed(2)} total equity`);
 }
 
+function retireLegacySeedPortfolio() {
+    const seedVersion = localStorage.getItem('atlas_portfolio_seed_version');
+    if (!seedVersion) return;
+    const local = getLocalPortfolio();
+    // Migrate only the exact legacy seed shape. Preserve it under an archive
+    // key so recovery remains possible; user-created portfolios are untouched.
+    if (Array.isArray(local.positions) && local.positions.length === 27) {
+        const archiveKey = `atlas_archived_demo_portfolio_${seedVersion}`;
+        if (!localStorage.getItem(archiveKey)) {
+            localStorage.setItem(archiveKey, JSON.stringify({
+                archived_at: new Date().toISOString(),
+                reason: 'Legacy hardcoded portfolio retired from active Atlas UI',
+                portfolio: local,
+            }));
+        }
+        saveLocalPortfolio({ total_equity: 0, positions: [] });
+    }
+    localStorage.removeItem('atlas_portfolio_seed_version');
+}
+
 // ==================== SIMULATION LAB ====================
 
 function setupSimulationLab() {
@@ -1185,7 +1205,7 @@ window.updatePortfolio = updatePortfolio;
 window.runFinanceSimulationFrame = runFinanceSimulationFrame;
 
 document.addEventListener('DOMContentLoaded', () => {
-    seedPortfolio();
+    retireLegacySeedPortfolio();
     setupPortfolioForm();
     setupPortfolioUpload();
     setupSimulationLab();

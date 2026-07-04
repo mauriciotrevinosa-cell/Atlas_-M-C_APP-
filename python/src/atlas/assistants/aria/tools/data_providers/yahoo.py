@@ -7,7 +7,6 @@ Copyright (c) 2026 M&C. All rights reserved.
 """
 import yfinance as yf
 import pandas as pd
-from datetime import datetime, timedelta
 from typing import Dict, Any
 from .base import DataProvider
 

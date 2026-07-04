@@ -445,6 +445,7 @@ ${isCollapsed
         : `<div class="mmo-superposed-label">|ψ⟩ = Σ αᵢ|stateᵢ⟩</div>`}
 
 <div class="mmo-verdict ${verdictClass}">${verdict}</div>
+${qs._source ? `<div style="font-size:9px;color:#7b68ee;margin-top:4px;">Source: ${qs._source.replace('_', ' ')}</div>` : ''}
 
 <div class="mmo-collapse-meter">
   <div class="mmo-meter-label">Collapse Probability</div>
@@ -1075,9 +1076,9 @@ ${overlapHtml}
 
     // Tag tiles whose values came from local simulation (API fallback) so
     // the scanner doesn't visually lie about real vs synthetic data.
-    const isFallback = !!(qs && (qs._notice || qs._isLocalFallback));
+    const isFallback = !!(qs && (qs._notice || qs._isLocalFallback || qs._source !== 'server'));
     const fallbackMark = isFallback
-      ? `<span class="mmo-mini-fallback" title="${qs._notice ? qs._notice.replace(/"/g, '&quot;') : 'Local simulation (API unreachable)'}">◌ SIM</span>`
+      ? `<span class="mmo-mini-fallback" title="${qs._notice ? qs._notice.replace(/"/g, '&quot;') : 'Simulated or degraded data source'}">◌ SIM</span>`
       : '';
 
     el.innerHTML = `
@@ -1414,6 +1415,7 @@ ${overlapHtml}
         // Network / CORS / 5xx. Fall back to local deterministic engine but
         // warn the user — these numbers are simulated, not live.
         const state = _normalizeQuantumState({}, _ticker);
+        state._source = 'local_fallback';
         state._isLocalFallback = true;
         _qState = state;
         _renderAll(state);
@@ -1427,6 +1429,7 @@ ${overlapHtml}
         // Server responded but couldn't compute real physics (bad ticker,
         // yfinance rate-limit, etc.). Show neutral scaffold + explicit banner.
         const state = _normalizeQuantumState(qs, _ticker);
+        state._source = 'server_degraded';
         _qState = state;
         _renderAll(state);
         _showBanner(
@@ -1436,11 +1439,13 @@ ${overlapHtml}
         return;
       }
       const state = _normalizeQuantumState(qs, _ticker);
+      state._source = 'server';
       _qState = state;
       _renderAll(state);
     }).catch(err => {
       console.warn('MMO API load failed, using local fallback:', err);
       const state = _normalizeQuantumState({}, _ticker);
+      state._source = 'local_fallback';
       state._isLocalFallback = true;
       _qState = state;
       _renderAll(state);
@@ -1840,12 +1845,20 @@ ${overlapHtml}
   }
 
   function _normalizeQuantumState(qs, ticker) {
+    const local = _computeLocalQuantumState(ticker);
     if (!qs || qs.error || !qs.last_close || !qs.amplitudes) {
-      const local = _computeLocalQuantumState(ticker);
-      if (qs && qs.error) local._notice = `API fallback: ${qs.error}`;
+      local._source = 'local_fallback';
+      if (qs && qs.error) {
+        local._notice = `API fallback: ${qs.error}`;
+      } else if (qs && qs.degraded) {
+        local._notice = `API degraded response; showing local estimate.`;
+      }
       return local;
     }
-    return _augmentWithPhysics(qs);
+
+    const normal = _augmentWithPhysics(qs);
+    normal._source = qs.degraded ? 'server_degraded' : 'server';
+    return normal;
   }
 
   function _buildFocusCatalog(qs) {

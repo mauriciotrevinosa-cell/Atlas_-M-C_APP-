@@ -7,7 +7,7 @@ Supports lazy loading, version management, and capability queries.
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional
 
 from .agents.base import BaseAgent
 

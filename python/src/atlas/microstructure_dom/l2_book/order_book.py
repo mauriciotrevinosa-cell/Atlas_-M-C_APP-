@@ -2,7 +2,7 @@
 L2 Order Book Data Structure
 Handles depth of market data.
 """
-from typing import List, Dict, Any
+from typing import List, Dict
 from dataclasses import dataclass
 from datetime import datetime
 

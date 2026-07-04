@@ -17,6 +17,7 @@ dependencies = [
     "ollama>=0.0.0",
     "yfinance>=0.2.30",
     "requests>=2.31.0",
+    "ddgs>=9.0.0",
     "qiskit>=1.0.0",
     "qiskit-ibm-runtime>=0.20.0",
     "numpy>=1.24.0",
@@ -42,6 +43,7 @@ voice-advanced = [
 ]
 
 web = [
+    "ddgs>=9.0.0",
     "duckduckgo-search>=4.0.0",
     "beautifulsoup4>=4.12.0",
     "requests>=2.31.0",

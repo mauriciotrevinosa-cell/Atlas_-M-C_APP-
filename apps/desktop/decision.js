@@ -20,9 +20,30 @@ window.DecisionModule = (() => {
   // ── State ──────────────────────────────────────────────────────────────────
   let _pendingOrders = [];  // orders waiting for approval
   let _approvedLog   = [];  // completed approvals
-  let _capital       = 100_000;
+  let _capital       = 0;
   let _dailyPnl      = 0;
   let _drawdown      = 0;
+  let _riskDataMode  = "MANUAL";
+
+  async function _loadPortfolioContext() {
+    try {
+      const response = await fetch('/api/portfolio/summary');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (data.has_session && Number.isFinite(Number(data.total_value))) {
+        _capital = Number(data.total_value);
+        _riskDataMode = `${data.mode || 'SIMULATION'} · ${data.source || 'portfolio'}`;
+      } else {
+        _riskDataMode = 'MANUAL · no active portfolio';
+      }
+    } catch (error) {
+      _riskDataMode = `UNAVAILABLE · ${error.message}`;
+    }
+    const capitalInput = document.getElementById('dec-capital');
+    const sizingInput = document.getElementById('ps-capital');
+    if (capitalInput) capitalInput.value = _capital;
+    if (sizingInput) sizingInput.value = _capital;
+  }
 
   // ── Styles ─────────────────────────────────────────────────────────────────
   function _injectStyles() {
@@ -270,7 +291,7 @@ window.DecisionModule = (() => {
 
   // ── Position Sizing Calculator ────────────────────────────────────────────
   function _calcPosition() {
-    const cap      = parseFloat(document.getElementById("ps-capital")?.value  || 100000);
+    const cap      = parseFloat(document.getElementById("ps-capital")?.value  || 0);
     const wr       = parseFloat(document.getElementById("ps-winrate")?.value  || 0.55);
     const avgWin   = parseFloat(document.getElementById("ps-avgwin")?.value   || 0.02);
     const avgLoss  = parseFloat(document.getElementById("ps-avgloss")?.value  || 0.01);
@@ -301,6 +322,9 @@ window.DecisionModule = (() => {
     if (!box) return;
 
     box.innerHTML = `
+      <div style="margin-bottom:10px;color:#f59e0b;font-size:0.72rem;font-weight:700">
+        DATA MODE: ${_riskDataMode}
+      </div>
       <div class="calc-result-row">
         <span>Half-Kelly Fraction</span>
         <span>${(kelly * 100).toFixed(2)}%</span>
@@ -433,6 +457,10 @@ window.DecisionModule = (() => {
   function _approve(id) {
     const order = _pendingOrders.find(o => o.id === id);
     if (!order) return;
+    if (!Number.isFinite(_capital) || _capital <= 0) {
+      alert('Approval blocked: set a manual capital value or load an active portfolio first.');
+      return;
+    }
     order.status = "approved";
     order.approvedAt = new Date().toISOString();
     _approvedLog.push(order);
@@ -537,8 +565,8 @@ window.DecisionModule = (() => {
       <div class="dec-header">
         <h2>🎯 Decision Center</h2>
         <div class="calc-group" style="max-width:140px">
-          <label>Capital ($)</label>
-          <input type="number" id="dec-capital" value="100000" step="10000"
+          <label>Capital ($) · manual unless portfolio active</label>
+          <input type="number" id="dec-capital" value="0" step="10000"
             onchange="DecisionModule.setCapital(this.value)" />
         </div>
         <button class="dec-btn" onclick="DecisionModule.refresh()">🔄 Refresh Signals</button>
@@ -565,7 +593,7 @@ window.DecisionModule = (() => {
           <div class="calc-row">
             <div class="calc-group">
               <label>Capital ($)</label>
-              <input id="ps-capital" type="number" value="100000" step="10000" oninput="DecisionModule.calc()" />
+              <input id="ps-capital" type="number" value="0" step="10000" oninput="DecisionModule.calc()" />
             </div>
             <div class="calc-group">
               <label>Win Rate</label>
@@ -615,6 +643,7 @@ window.DecisionModule = (() => {
   async function init() {
     _injectStyles();
     _buildHTML();
+    await _loadPortfolioContext();
     _renderGuardrails();
     _calcPosition();
     await _loadLiveSignals();
@@ -647,7 +676,8 @@ window.DecisionModule = (() => {
   function modify(id)  { _modify(id);  }
 
   function setCapital(val) {
-    _capital = parseFloat(val) || 100000;
+    _capital = parseFloat(val) || 0;
+    _riskDataMode = 'MANUAL · user supplied';
     const psEl = document.getElementById("ps-capital");
     if (psEl) psEl.value = _capital;
     _calcPosition();

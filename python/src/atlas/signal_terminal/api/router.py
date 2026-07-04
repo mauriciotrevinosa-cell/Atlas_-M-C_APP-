@@ -13,9 +13,11 @@ from ..models import AlertRule, Source, SourceType, WatchlistItem
 from ..scheduler import get_scheduler
 from .schemas import (
     AlertRuleCreate, AlertRuleOut, SignalListOut, SignalOut,
+    MarketEventIngestOut, MarketEventSnapshotIn,
     SourceCreate, SourceOut, StatsOut,
     WatchlistAddRequest, WatchlistItemOut, WhaleEventOut,
 )
+from ..services import MarketEventService
 
 logger  = logging.getLogger(__name__)
 router  = APIRouter(tags=["signal_terminal"])
@@ -63,13 +65,12 @@ def list_signals(
     )
 
 
-@router.get("/{signal_id}", response_model=SignalOut, summary="Get a single signal")
-def get_signal(signal_id: str):
+@router.post("/market-events", response_model=MarketEventIngestOut, summary="Ingest market microstructure events")
+def ingest_market_events(body: List[MarketEventSnapshotIn]):
     svc, _ = _svc()
-    sig = svc.get_signal(signal_id)
-    if not sig:
-        raise HTTPException(404, "Signal not found")
-    return SignalOut(**sig.dict())
+    market_svc = MarketEventService(svc)
+    result = market_svc.ingest_snapshots([item.model_dump(exclude_none=True) for item in body])
+    return MarketEventIngestOut(**result)
 
 
 # ── Sources ───────────────────────────────────────────────────────────────
@@ -178,6 +179,18 @@ def get_whale_events(
     svc, _ = _svc()
     events = svc._repo.get_whale_events(ticker=ticker, limit=limit, offset=offset)
     return [WhaleEventOut(**e.dict()) for e in events]
+
+
+# This catch-all must remain after all named GET routes. Starlette matches in
+# declaration order, so an earlier /{signal_id} intercepts /whales and
+# /watchlist and returns a misleading "Signal not found" response.
+@router.get("/{signal_id}", response_model=SignalOut, summary="Get a single signal")
+def get_signal(signal_id: str):
+    svc, _ = _svc()
+    sig = svc.get_signal(signal_id)
+    if not sig:
+        raise HTTPException(404, "Signal not found")
+    return SignalOut(**sig.dict())
 
 
 # ── Scheduler control ─────────────────────────────────────────────────────

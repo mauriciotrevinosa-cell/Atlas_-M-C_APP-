@@ -27,6 +27,8 @@ window.IndicatorTerminal = (() => {
   let _candleSeries = null;
   let _ticker     = 'AAPL';
   let _data       = [];          // [{time, open, high, low, close, volume}]
+  let _dataStatus = 'LOADING';   // LIVE | UNAVAILABLE
+  let _dataError  = null;
   let _initialized = false;
 
   // ── Colour palette for indicator lines ────────────────────────────────────
@@ -650,30 +652,8 @@ window.IndicatorTerminal = (() => {
 
 
   /* ═══════════════════════════════════════════════════════════
-     SYNTHETIC DATA GENERATOR
+     DATA POLICY: REAL MARKET DATA ONLY
   ═══════════════════════════════════════════════════════════ */
-  function _generateData(ticker, bars = 200) {
-    // Fetch from backend API — fallback to synthetic if unavailable
-    const START_PRICE = { AAPL: 185, MSFT: 375, NVDA: 480, TSLA: 245, SPY: 445 }[ticker] || 100;
-    const data = [];
-    let price = START_PRICE;
-    const now  = Math.floor(Date.now() / 1000);
-    const DAY  = 86400;
-
-    for (let i = bars - 1; i >= 0; i--) {
-      const t = now - i * DAY;
-      const change  = (Math.random() - 0.48) * price * 0.025;
-      const open    = price;
-      const close   = Math.max(1, price + change);
-      const hi      = Math.max(open, close) * (1 + Math.random() * 0.01);
-      const lo      = Math.min(open, close) * (1 - Math.random() * 0.01);
-      const volume  = Math.floor(Math.random() * 5_000_000 + 1_000_000);
-      data.push({ time: t, open, high: hi, low: lo, close, volume });
-      price = close;
-    }
-    return data;
-  }
-
   /* ═══════════════════════════════════════════════════════════
      BUILD UI
   ═══════════════════════════════════════════════════════════ */
@@ -696,7 +676,7 @@ window.IndicatorTerminal = (() => {
     <!-- Ticker + controls -->
     <div class="ind-controls">
       <input id="ind-ticker-input" class="ind-input" type="text" value="AAPL" maxlength="6" placeholder="Ticker…" />
-      <span id="ind-fallback-chip" class="ind-fallback-chip" style="display:none;font-size:9px;color:#ff9500;margin-left:6px;">&#9888; synthetic data</span>
+      <span id="ind-fallback-chip" class="ind-fallback-chip" style="display:none;font-size:9px;color:#ff4757;margin-left:6px;">&#9888; market data unavailable</span>
       <button class="ind-btn" onclick="IndicatorTerminal.loadTicker()">Load ▶</button>
       <button class="ind-btn secondary" onclick="IndicatorTerminal.clearAll()">Clear All ✕</button>
       <span id="ind-data-badge" style="font-size:10px;font-family:monospace;padding:3px 8px;border:1px solid #2ecc71;border-radius:10px;color:#2ecc71;margin-left:4px">LIVE</span>
@@ -867,8 +847,12 @@ window.IndicatorTerminal = (() => {
   async function _loadData(ticker) {
     _ticker = ticker.toUpperCase();
     const base = (window.CONFIG && CONFIG.serverUrl) ? CONFIG.serverUrl : '';
+    _dataStatus = 'LOADING';
+    _dataError = null;
+    _updateDataBadge('LOADING', '#95a5a6');
+    _setUnavailableChip(false);
 
-    // ── 1. Fetch real OHLC from market_data API (fallback to synthetic) ──
+    // ── 1. Fetch real OHLC from market_data API ──
     try {
       const r = await fetch(`${base}/api/market_data/${_ticker}`);
       if (r.ok) {
@@ -884,7 +868,8 @@ window.IndicatorTerminal = (() => {
             volume: bar.volume,
           }));
           _updateDataBadge('LIVE', '#2ecc71');
-          _setSyntheticFallbackChip(false);
+          _dataStatus = 'LIVE';
+          _setUnavailableChip(false);
         } else {
           throw new Error('empty ohlc');
         }
@@ -892,14 +877,21 @@ window.IndicatorTerminal = (() => {
         throw new Error(`HTTP ${r.status}`);
       }
     } catch (e) {
-      console.warn('[IndicatorTerminal] market_data fallback to synthetic:', e.message);
-      _data = _generateData(_ticker);
-      _updateDataBadge('SYNTHETIC', '#f39c12');
-      _setSyntheticFallbackChip(true);
+      console.warn('[IndicatorTerminal] market_data unavailable:', e.message);
+      _data = [];
+      _dataStatus = 'UNAVAILABLE';
+      _dataError = e.message;
+      _updateDataBadge('UNAVAILABLE', '#ff4757');
+      _setUnavailableChip(true);
     }
 
     if (!_candleSeries) return;
     _candleSeries.setData(_data);
+    Object.keys(_active).forEach(_removeSeries);
+    if (_dataStatus !== 'LIVE') {
+      _renderUnavailableState();
+      return;
+    }
     _chart && _chart.timeScale().fitContent();
     _refreshActiveIndicators();
 
@@ -924,10 +916,20 @@ window.IndicatorTerminal = (() => {
     }
   }
 
-  function _setSyntheticFallbackChip(isSynthetic) {
+  function _renderUnavailableState() {
+    const reason = _dataError ? ` (${_dataError})` : '';
+    const panel = document.getElementById('ind-signal-panel');
+    if (panel) panel.innerHTML = `<div style="font-size:11px;color:#ff4757;line-height:1.5">UNAVAILABLE<br><span style="color:#7f8c8d">No real market data for ${_ticker}${reason}. Indicators and strategy diagnostics were not calculated.</span></div>`;
+    const signals = document.getElementById('ind-signals');
+    if (signals) signals.innerHTML = '<span style="color:#ff4757;font-size:11px;font-family:monospace;">UNAVAILABLE — no real market data</span>';
+    const scorecard = document.getElementById('ind-scorecard');
+    if (scorecard) scorecard.innerHTML = '<span style="color:#ff4757;font-size:11px;font-family:monospace;padding:6px 0;">Scorecard unavailable — real OHLC data is required.</span>';
+  }
+
+  function _setUnavailableChip(isUnavailable) {
     const chip = document.getElementById('ind-fallback-chip');
     if (!chip) return;
-    chip.style.display = isSynthetic ? 'inline-block' : 'none';
+    chip.style.display = isUnavailable ? 'inline-block' : 'none';
   }
 
   function _renderSignalDiagnostics(sd) {
@@ -983,7 +985,7 @@ window.IndicatorTerminal = (() => {
 
   function _renderIndicator(id) {
     const state = _active[id];
-    if (!state || !_chart) return;
+    if (!state || !_chart || _dataStatus !== 'LIVE' || !_data.length) return;
     const def = INDICATORS[id];
 
     // Remove existing series
@@ -1044,6 +1046,10 @@ window.IndicatorTerminal = (() => {
   function _updateSignals() {
     const container = document.getElementById('ind-signals');
     if (!container) return;
+    if (_dataStatus !== 'LIVE' || !_data.length) {
+      _renderUnavailableState();
+      return;
+    }
     const badges = [];
 
     Object.entries(_active).forEach(([id, state]) => {
@@ -1231,6 +1237,10 @@ ${catHtml}
      SIMULATION
   ═══════════════════════════════════════════════════════════ */
   function _runSimulation() {
+    if (_dataStatus !== 'LIVE' || !_data.length) {
+      _showSim('UNAVAILABLE — simulation requires real market data. No synthetic fallback was used.');
+      return;
+    }
     const activeIds = Object.keys(_active).filter(id => _active[id].enabled);
     if (activeIds.length === 0) {
       _showSim('⚠ Enable at least one indicator to run a simulation.');

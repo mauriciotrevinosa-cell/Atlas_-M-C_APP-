@@ -32,6 +32,7 @@ _WHALE_TRIGGERS = [
     (re.compile(r"form\s*4|insider.{0,15}(buy|sell|purchase|transact)"),
                                             WhaleEventType.INSIDER),
     (re.compile(r"short.{0,10}squeeze"),    WhaleEventType.SHORT_SQUEEZE),
+    (re.compile(r"liquidat"),               WhaleEventType.LIQUIDATION),
     (re.compile(r"large.{0,15}(buy|purchase|position|stake)"),
                                             WhaleEventType.LARGE_BUY),
     (re.compile(r"large.{0,15}(sell|dump|liquidat)"),

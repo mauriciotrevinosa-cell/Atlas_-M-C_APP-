@@ -21,7 +21,6 @@ from collections import deque
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-import pandas as pd
 
 logger = logging.getLogger("atlas.rl")
 

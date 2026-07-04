@@ -45,6 +45,10 @@ _REQUIRED_KEYS: Dict[str, List[str]] = {
     "docs_agent": [
         "document_type", "content",
     ],
+    "market_intel_agent": [
+        "market_brief", "priority_assets", "risk_flags",
+        "catalyst_map", "suggested_agent_tasks", "data_gaps",
+    ],
 }
 
 # Valid verdict values for reviewer

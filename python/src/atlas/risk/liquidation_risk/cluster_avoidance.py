@@ -3,7 +3,7 @@ Liquidation Cluster Avoidance — Phase 7.5
 Checks if a proposed position's liquidation price falls near a known
 liquidation cluster, and recommends adjustments.
 """
-from typing import Dict, List, Optional
+from typing import Dict, List
 from .liquidation_calculator import LiquidationCalculator
 
 

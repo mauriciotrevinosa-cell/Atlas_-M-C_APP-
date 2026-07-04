@@ -8,7 +8,7 @@ Copyright (c) 2026 M&C. All rights reserved.
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import numpy as np
 

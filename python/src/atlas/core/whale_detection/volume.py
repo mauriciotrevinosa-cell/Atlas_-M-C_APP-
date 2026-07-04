@@ -10,7 +10,6 @@ import logging
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)

@@ -14,7 +14,7 @@ Supports both:
 
 import re
 import json
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 from dataclasses import dataclass
 
 from .prompt_store import PromptStore
@@ -236,7 +236,7 @@ class QueryRouter:
                     tools_needed=config.get("tools", []),
                     use_context=config.get("context", False),
                 )
-        except Exception as e:
+        except Exception:
             pass  # Fall through to default
 
         return None

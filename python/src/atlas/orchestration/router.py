@@ -150,11 +150,15 @@ class PipelineRouter:
                 from atlas.data_layer import DataManager
                 self._data_manager = DataManager()
 
-            data = self._data_manager.get(
-                request.symbol,
+            data = self._data_manager.get_historical(
+                symbol=request.symbol,
                 timeframe=request.timeframe,
                 interval=request.interval,
             )
+            data = data.rename(columns={
+                "open": "Open", "high": "High", "low": "Low",
+                "close": "Close", "volume": "Volume",
+            })
             logger.debug("Fetched %d rows for %s", len(data), request.symbol)
             return data
         except Exception as exc:
@@ -171,18 +175,23 @@ class PipelineRouter:
     ) -> None:
         try:
             if self._regime_detector is None:
-                from atlas.core_intelligence.market_state import RegimeDetector, VolatilityAnalyzer
+                from atlas.market_state.regime import RegimeDetector
+                from atlas.core_intelligence.market_state.volatility import VolatilityAnalyzer
                 self._regime_detector = RegimeDetector()
                 self._vol_analyzer = VolatilityAnalyzer()
 
             regime = self._regime_detector.detect(data)
-            vol = self._vol_analyzer.analyze(data)
+            normalized = data.rename(columns={
+                "Open": "open", "High": "high", "Low": "low",
+                "Close": "close", "Volume": "volume",
+            })
+            vol = self._vol_analyzer.analyze(normalized)
 
             result.market_state = {
-                "regime": regime.get("regime", "unknown"),
-                "adx": regime.get("adx", 0),
-                "trend_strength": regime.get("trend_strength", ""),
-                "vol_regime": vol.get("regime", "unknown"),
+                "regime": regime.regime,
+                "confidence": regime.confidence,
+                "metrics": regime.metrics,
+                "vol_regime": getattr(vol.get("regime"), "value", vol.get("regime", "unknown")),
                 "hv_20": vol.get("hv_20", 0),
                 "atr_pct": vol.get("atr_pct", 0),
             }
@@ -234,7 +243,8 @@ class PipelineRouter:
         result: AnalysisResult,
     ) -> None:
         try:
-            from atlas.risk.engine import VaRCVaR, PositionSizer
+            from atlas.risk.engine.var_cvar import VaRCVaR
+            from atlas.risk.engine.position_sizing import PositionSizer
 
             returns = data["Close"].pct_change().dropna()
             realized_vol = float(returns.std() * (252 ** 0.5))

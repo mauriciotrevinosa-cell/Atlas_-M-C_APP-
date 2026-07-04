@@ -2,7 +2,6 @@
 Technical Indicators Implementation
 """
 import pandas as pd
-import numpy as np
 from atlas.common.math import exponential_moving_average, simple_moving_average
 
 class TechnicalIndicators:

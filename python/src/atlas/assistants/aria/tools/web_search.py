@@ -4,13 +4,20 @@ ARIA Web Search Tool
 Search the web using DuckDuckGo (FREE, no API key needed)
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, Optional
 try:
-    from duckduckgo_search import DDGS
+    from ddgs import DDGS
     DDGS_AVAILABLE = True
+    DDGS_BACKEND = "ddgs"
 except ImportError:
-    DDGS_AVAILABLE = False
-    print("⚠️  duckduckgo-search not installed. Run: pip install duckduckgo-search")
+    try:
+        from duckduckgo_search import DDGS
+        DDGS_AVAILABLE = True
+        DDGS_BACKEND = "duckduckgo_search"
+    except ImportError:
+        DDGS_AVAILABLE = False
+        DDGS_BACKEND = "unavailable"
+        print("Web search dependency not installed. Run: pip install ddgs")
 
 
 class WebSearchTool:
@@ -52,7 +59,7 @@ class WebSearchTool:
         if not self.available:
             return {
                 "success": False,
-                "error": "DuckDuckGo search not available. Install: pip install duckduckgo-search"
+                "error": "DuckDuckGo search not available. Install: pip install ddgs"
             }
         
         try:
@@ -64,7 +71,6 @@ class WebSearchTool:
             
             # Text search
             search_kwargs = {
-                "keywords": query,
                 "region": region,
                 "max_results": max_results
             }
@@ -72,13 +78,22 @@ class WebSearchTool:
             if time_range:
                 search_kwargs["timelimit"] = time_range
             
-            for result in ddgs.text(**search_kwargs):
-                results.append({
-                    "title": result.get("title", ""),
-                    "url": result.get("href", ""),
-                    "snippet": result.get("body", ""),
-                    "source": "DuckDuckGo"
-                })
+            try:
+                if DDGS_BACKEND == "ddgs":
+                    search_results = ddgs.text(query, **search_kwargs)
+                else:
+                    search_results = ddgs.text(keywords=query, **search_kwargs)
+                for result in search_results:
+                    results.append({
+                        "title": result.get("title", ""),
+                        "url": result.get("href", ""),
+                        "snippet": result.get("body", ""),
+                        "source": DDGS_BACKEND
+                    })
+            finally:
+                close = getattr(ddgs, "close", None)
+                if callable(close):
+                    close()
             
             return {
                 "success": True,
@@ -107,21 +122,30 @@ class WebSearchTool:
         if not self.available:
             return {
                 "success": False,
-                "error": "DuckDuckGo search not available"
+                "error": "DuckDuckGo search not available. Install: pip install ddgs"
             }
         
         try:
             ddgs = DDGS()
             results = []
             
-            for result in ddgs.news(keywords=query, max_results=max_results):
-                results.append({
-                    "title": result.get("title", ""),
-                    "url": result.get("url", ""),
-                    "snippet": result.get("body", ""),
-                    "date": result.get("date", ""),
-                    "source": result.get("source", "DuckDuckGo News")
-                })
+            try:
+                if DDGS_BACKEND == "ddgs":
+                    news_results = ddgs.news(query, max_results=max_results)
+                else:
+                    news_results = ddgs.news(keywords=query, max_results=max_results)
+                for result in news_results:
+                    results.append({
+                        "title": result.get("title", ""),
+                        "url": result.get("url", ""),
+                        "snippet": result.get("body", ""),
+                        "date": result.get("date", ""),
+                        "source": result.get("source", f"{DDGS_BACKEND} News")
+                    })
+            finally:
+                close = getattr(ddgs, "close", None)
+                if callable(close):
+                    close()
             
             return {
                 "success": True,

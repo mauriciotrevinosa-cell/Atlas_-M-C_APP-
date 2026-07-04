@@ -12,9 +12,7 @@ Features:
 - Wake word detection ("Hey ARIA")
 """
 
-import sys
-import threading
-from typing import Optional, Callable
+from typing import Optional
 
 
 class VoiceTerminal:

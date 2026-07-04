@@ -19,7 +19,6 @@ from typing import List, Optional
 
 from .base import BaseCollector, RawItem
 from .rss_collector import _parse_date
-from ..models import Source
 
 logger = logging.getLogger(__name__)
 

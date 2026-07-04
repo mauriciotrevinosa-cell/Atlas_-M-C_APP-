@@ -69,6 +69,11 @@ def register_all_tools(aria: "ARIA") -> int:
 
     _register(AtlasAgentTaskTool, "AtlasAgentTaskTool")
 
+    # Shared manual/ARIA operations workflows
+    from atlas.assistants.aria.tools.operations_workflow import AtlasOperationsWorkflowTool
+
+    _register(AtlasOperationsWorkflowTool, "AtlasOperationsWorkflowTool")
+
     logger.info("ARIA tool registration complete: %d tool(s) registered.", registered)
     return registered
 

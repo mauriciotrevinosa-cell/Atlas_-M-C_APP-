@@ -29,10 +29,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import numpy as np
-import pandas as pd
 
 logger = logging.getLogger("atlas.black_swan.scenario_engine")
 
@@ -222,6 +221,30 @@ class ScenarioResult:
 
 
 @dataclass
+class ScenarioRunManifest:
+    """Auditable inputs for one scenario run."""
+
+    schema: str
+    asset_names: List[str]
+    weights: Dict[str, float]
+    categories: List[str]
+    scenario_names: List[str]
+    beta_count: int
+    sector_count: int
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "schema": self.schema,
+            "asset_names": self.asset_names,
+            "weights": {k: round(v, 6) for k, v in self.weights.items()},
+            "categories": self.categories,
+            "scenario_names": self.scenario_names,
+            "beta_count": self.beta_count,
+            "sector_count": self.sector_count,
+        }
+
+
+@dataclass
 class ScenarioReport:
     """Full scenario analysis across all scenarios."""
     n_scenarios: int
@@ -232,9 +255,10 @@ class ScenarioReport:
     asset_names: List[str] = field(default_factory=list)
     results: List[ScenarioResult] = field(default_factory=list)
     heatmap: Optional[np.ndarray] = None   # (N_scenarios, N_assets) impact matrix
+    manifest: Optional[ScenarioRunManifest] = None
 
     def to_dict(self) -> Dict:
-        return {
+        payload = {
             "n_scenarios":   self.n_scenarios,
             "worst_scenario": self.worst_scenario,
             "worst_loss":     round(self.worst_loss, 4),
@@ -242,6 +266,9 @@ class ScenarioReport:
             "best_case_loss": round(self.best_case_loss, 4),
             "results":        [r.to_dict() for r in self.results],
         }
+        if self.manifest:
+            payload["manifest"] = self.manifest.to_dict()
+        return payload
 
     def summary(self) -> str:
         lines = [
@@ -364,6 +391,15 @@ class ScenarioEngine:
             asset_names=asset_names,
             results=results,
             heatmap=heatmap,
+            manifest=ScenarioRunManifest(
+                schema="atlas.black_swan.scenario_run.v1",
+                asset_names=list(asset_names),
+                weights={asset_names[i]: float(weights_arr[i]) for i in range(len(asset_names))},
+                categories=sorted({s.category for s in scenarios}),
+                scenario_names=[s.name for s in scenarios],
+                beta_count=len(betas),
+                sector_count=len(sectors),
+            ),
         )
 
         logger.info(

@@ -4,7 +4,6 @@ ARIA Create File Tool
 Create files in the filesystem
 """
 
-import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -217,7 +216,7 @@ if __name__ == "__main__":
     if not result["success"]:
         print(f"✅ Protection worked: {result['error']}")
     else:
-        print(f"❌ Should have failed")
+        print("❌ Should have failed")
     
     print("\n" + "=" * 60)
     print("All tests completed!")

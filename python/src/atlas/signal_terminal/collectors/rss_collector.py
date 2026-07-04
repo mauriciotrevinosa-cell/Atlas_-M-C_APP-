@@ -14,7 +14,6 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from .base import BaseCollector, RawItem
-from ..models import Source
 
 logger = logging.getLogger(__name__)
 

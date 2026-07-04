@@ -6,9 +6,10 @@ Usage:
     response = provider.chat([{"role": "user", "content": "Hello"}])
 """
 
-import time
 import json
-from typing import List, Dict, Any, Optional
+import time
+from collections.abc import Mapping
+from typing import Any, Dict, List, Optional
 
 from .base import BaseProvider, LLMResponse
 
@@ -38,11 +39,29 @@ class OllamaProvider(BaseProvider):
         """Lazy import and connect to Ollama."""
         try:
             import ollama
-            self._ollama = ollama
+            client_cls = getattr(ollama, "Client", None)
+            self._ollama = client_cls(host=self.host) if client_cls else ollama
         except ImportError:
             raise ImportError(
                 "Ollama package not installed. Run: pip install ollama"
             )
+
+    @staticmethod
+    def _get_field(value: Any, name: str, default: Any = None) -> Any:
+        """Read fields from either dict-like payloads or typed Ollama SDK objects."""
+        if isinstance(value, Mapping):
+            return value.get(name, default)
+        return getattr(value, name, default)
+
+    @classmethod
+    def _extract_model_names(cls, payload: Any) -> List[str]:
+        models = cls._get_field(payload, "models", []) or []
+        names: List[str] = []
+        for model in models:
+            name = cls._get_field(model, "name") or cls._get_field(model, "model") or ""
+            if name:
+                names.append(str(name))
+        return names
 
     def chat(self,
              messages: List[Dict[str, str]],
@@ -70,29 +89,32 @@ class OllamaProvider(BaseProvider):
             raw = self._ollama.chat(**kwargs)
 
             latency = (time.time() - t0) * 1000
-            msg = raw.get("message", {})
+            msg = self._get_field(raw, "message", {}) or {}
 
             # Extract tool calls if present
             tool_calls = []
-            if "tool_calls" in msg and msg["tool_calls"]:
-                for tc in msg["tool_calls"]:
-                    fn = tc.get("function", {})
-                    args = fn.get("arguments", {})
+            raw_tool_calls = self._get_field(msg, "tool_calls", []) or []
+            if raw_tool_calls:
+                for tc in raw_tool_calls:
+                    fn = self._get_field(tc, "function", {}) or {}
+                    args = self._get_field(fn, "arguments", {}) or {}
                     if isinstance(args, str):
                         try:
                             args = json.loads(args)
                         except json.JSONDecodeError:
                             args = {}
                     tool_calls.append({
-                        "name": fn.get("name", ""),
+                        "name": self._get_field(fn, "name", "") or "",
                         "arguments": args,
                     })
 
             # Token count (Ollama provides eval_count)
-            tokens = raw.get("eval_count", 0) + raw.get("prompt_eval_count", 0)
+            tokens = (self._get_field(raw, "eval_count", 0) or 0) + (
+                self._get_field(raw, "prompt_eval_count", 0) or 0
+            )
 
             response = LLMResponse(
-                content=msg.get("content", ""),
+                content=self._get_field(msg, "content", "") or "",
                 model=self.model,
                 provider="ollama",
                 tokens_used=tokens,
@@ -119,8 +141,15 @@ class OllamaProvider(BaseProvider):
             if not self._ollama:
                 self._connect()
             models = self._ollama.list()
-            model_names = [m.get("name", "") for m in models.get("models", [])]
-            return any(self.model in n for n in model_names)
+            model_names = self._extract_model_names(models)
+            requested = (self.model or "").strip()
+            if not requested:
+                return bool(model_names)
+            return any(
+                name == requested
+                or (":" not in requested and name.startswith(f"{requested}:"))
+                for name in model_names
+            )
         except Exception:
             return False
 

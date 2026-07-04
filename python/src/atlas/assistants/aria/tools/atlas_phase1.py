@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 import subprocess
 import sys
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+from typing import Any, Dict, Optional, Sequence
 
 from atlas.market_finance.pipeline import Phase1Workflow
 from atlas.market_finance.risk_layer import RiskConfig

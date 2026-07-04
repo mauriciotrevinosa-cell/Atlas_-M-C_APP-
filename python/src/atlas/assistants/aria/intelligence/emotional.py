@@ -28,7 +28,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 logger = logging.getLogger("atlas.aria.intelligence.emotional")
 
@@ -72,7 +72,7 @@ class ToneGuidance:
     def get_system_prompt_addition(self) -> str:
         """Generate system prompt text based on tone guidance."""
         lines = [
-            f"## Emotional Context",
+            "## Emotional Context",
             f"Market Mood: {self.market_mood.value}",
             f"User Mood: {self.user_mood.value}",
             "",

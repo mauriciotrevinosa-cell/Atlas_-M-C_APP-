@@ -9,7 +9,7 @@ Copyright (c) 2026 M&C. All Rights Reserved.
 
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, Tuple
+from typing import Dict, Any
 import logging
 
 logger = logging.getLogger(__name__)

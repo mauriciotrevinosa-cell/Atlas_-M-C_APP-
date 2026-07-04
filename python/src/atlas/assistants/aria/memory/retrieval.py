@@ -9,7 +9,7 @@ Copyright (c) 2026 M&C. All rights reserved.
 
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 logger = logging.getLogger("atlas.aria.memory.retrieval")
 

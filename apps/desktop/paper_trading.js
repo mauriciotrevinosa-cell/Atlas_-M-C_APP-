@@ -98,7 +98,7 @@ window.PaperTrading = (() => {
     ARKK:52, COIN:310, MSTR:330, PLTR:85, RBLX:44, NET:125,
   };
 
-  // Live-seeded tickers fetched from /api/quote on init
+  // Real quotes only seed this simulation. All later price ticks are synthetic.
   const SEED_TICKERS = ['AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','SPY','QQQ','GLD'];
   let _liveSeeded = false;
 
@@ -128,8 +128,8 @@ window.PaperTrading = (() => {
         _liveSeeded = true;
         const badge = document.getElementById('pt-data-badge');
         if (badge) {
-          badge.textContent = `🟢 Live prices (${seeded}/${SEED_TICKERS.length} seeded)`;
-          badge.style.color = '#00e676';
+          badge.textContent = `PAPER SIMULATION · real quote seed ${seeded}/${SEED_TICKERS.length}`;
+          badge.style.color = '#f59e0b';
         }
       }
     } catch (err) {
@@ -159,6 +159,15 @@ window.PaperTrading = (() => {
     Object.keys(_portfolio).forEach(t => {
       if (_prices[t]) _portfolio[t].currentPrice = _prices[t];
     });
+  }
+
+  function _setSimulationBadge() {
+    const badge = document.getElementById('pt-data-badge');
+    if (!badge) return;
+    badge.textContent = _liveSeeded
+      ? `PAPER SIMULATION · real quote seed ${SEED_TICKERS.length} symbols`
+      : 'PAPER SIMULATION · synthetic fallback prices';
+    badge.style.color = '#f59e0b';
   }
 
   /* ═══════════════════════════════════════════════════════════
@@ -357,7 +366,7 @@ window.PaperTrading = (() => {
       <div>
         <div class="pt-title">ARIA Paper Trading Lab</div>
         <div class="pt-sub">Autonomous strategy testing · Full market universe · Audit trail</div>
-        <div id="pt-data-badge" style="font-size:10px; color:#556; font-family:monospace; margin-top:2px;">⏳ Seeding prices…</div>
+        <div id="pt-data-badge" style="font-size:10px; color:#f59e0b; font-family:monospace; margin-top:2px;">PAPER SIMULATION · loading quote seeds…</div>
       </div>
     </div>
     <div class="pt-header-right">
@@ -584,7 +593,11 @@ window.PaperTrading = (() => {
     _renderAll();
     _initialized = true;
     // Async: seed real prices from API (non-blocking)
-    _seedRealPrices().then(() => { if (_liveSeeded) _renderAll(); });
+    _setSimulationBadge();
+    _seedRealPrices().then(() => {
+      if (_liveSeeded) _renderAll();
+      _setSimulationBadge();
+    });
   }
 
   function setStrategy(id) {
@@ -632,7 +645,7 @@ window.PaperTrading = (() => {
     if (!ticker || !shares) return;
     await _fetchLivePrice(ticker);   // seed real price if available
     _tickPrices();
-    _execute(ticker, 'BUY', 'Manual buy · live price', shares);
+    _execute(ticker, 'BUY', 'Manual buy · paper simulation seeded from latest quote', shares);
     _renderAll();
   }
 
@@ -642,14 +655,14 @@ window.PaperTrading = (() => {
     if (!ticker) return;
     await _fetchLivePrice(ticker);   // refresh price before sell
     _tickPrices();
-    _execute(ticker, 'SELL', 'Manual sell · live price', shares);
+    _execute(ticker, 'SELL', 'Manual sell · paper simulation seeded from latest quote', shares);
     _renderAll();
   }
 
   async function watchlistBuy(ticker) {
     await _fetchLivePrice(ticker);
     _tickPrices();
-    _execute(ticker, 'BUY', `Watchlist quick-buy · live price — ${ticker}`, 5);
+    _execute(ticker, 'BUY', `Watchlist quick-buy · paper simulation — ${ticker}`, 5);
     _renderAll();
   }
 

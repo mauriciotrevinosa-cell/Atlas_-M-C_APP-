@@ -15,7 +15,7 @@ Output (AgentResult.result):
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List
+from typing import Dict, List
 
 from .base import BaseAgent
 from atlas.core.ai_assistant.task_schema import AgentTask, AgentResult

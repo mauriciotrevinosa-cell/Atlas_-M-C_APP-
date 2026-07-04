@@ -34,8 +34,11 @@ Prices are generated via GBM with optional regime-switching.
 
 from __future__ import annotations
 
-import numpy as np
 from typing import Dict, List, Optional, Tuple
+
+import numpy as np
+
+from .schemes import ActionScheme, RiskAdjustedRewardScheme
 
 
 class TradingEnvironment:
@@ -76,6 +79,8 @@ class TradingEnvironment:
         sigma: Optional[float]  = None,
         seed: Optional[int]     = None,
         regime_switch: bool     = True,
+        action_scheme: Optional[ActionScheme] = None,
+        reward_scheme: Optional[RiskAdjustedRewardScheme] = None,
     ):
         profile = self.TICKER_PROFILES.get(ticker, (0.08, 0.18, ticker))
         self.initial_capital = initial_capital
@@ -85,6 +90,8 @@ class TradingEnvironment:
         self.sigma           = sigma if sigma is not None else profile[1]
         self.regime_switch   = regime_switch
         self._rng = np.random.RandomState(seed)
+        self.action_scheme = action_scheme or ActionScheme.single_asset_default()
+        self.reward_scheme = reward_scheme or RiskAdjustedRewardScheme()
 
         # Episode state (initialized on reset)
         self._prices:  Optional[np.ndarray] = None
@@ -301,7 +308,7 @@ class TradingEnvironment:
         next_state, reward, done, info
         """
         assert not self._done, 'Episode finished. Call reset().'
-        assert 0 <= action < self.ACTION_DIM, f'Invalid action {action}'
+        action_spec = self.action_scheme.validate(action)
 
         idx   = self._warm + self._step
         price = self._prices[idx]
@@ -310,40 +317,26 @@ class TradingEnvironment:
         # ── Execute action ────────────────────────────────
         action_str = 'HOLD'
         cost       = 0.0
+        trade_value = 0.0
 
-        if action == 1:   # BUY_SMALL
-            spend = min(self._cash, 0.10 * self.initial_capital)
+        if action_spec.side == 'buy':
+            spend = min(self._cash, action_spec.size_pct * self.initial_capital)
             if spend >= price:
                 bought        = spend / price * (1 - self.TRADE_COST)
                 self._shares += bought
                 self._cash   -= spend
                 cost          = spend * self.TRADE_COST
-                action_str    = f'BUY_SM @{price:.2f}'
+                trade_value   = spend
+                action_str    = f'{action_spec.label} @{price:.2f}'
 
-        elif action == 2: # BUY_LARGE
-            spend = min(self._cash, 0.25 * self.initial_capital)
-            if spend >= price:
-                bought        = spend / price * (1 - self.TRADE_COST)
-                self._shares += bought
-                self._cash   -= spend
-                cost          = spend * self.TRADE_COST
-                action_str    = f'BUY_LG @{price:.2f}'
-
-        elif action == 3: # SELL_SMALL
-            sv = min(self._shares * price, 0.10 * self.initial_capital)
+        elif action_spec.side == 'sell':
+            sv = min(self._shares * price, action_spec.size_pct * self.initial_capital)
             if sv > 0:
                 self._shares -= sv / price
                 self._cash   += sv * (1 - self.TRADE_COST)
                 cost          = sv * self.TRADE_COST
-                action_str    = f'SELL_SM @{price:.2f}'
-
-        elif action == 4: # SELL_LARGE
-            sv = min(self._shares * price, 0.25 * self.initial_capital)
-            if sv > 0:
-                self._shares -= sv / price
-                self._cash   += sv * (1 - self.TRADE_COST)
-                cost          = sv * self.TRADE_COST
-                action_str    = f'SELL_LG @{price:.2f}'
+                trade_value   = sv
+                action_str    = f'{action_spec.label} @{price:.2f}'
 
         # ── Advance step ──────────────────────────────────
         self._step += 1
@@ -357,17 +350,16 @@ class TradingEnvironment:
         step_ret = (pv_after - pv_before) / self.initial_capital
         self._step_returns.append(step_ret)
 
-        # Sharpe shaping (running estimate over last 20 steps)
-        reward = step_ret
-        if len(self._step_returns) > 10:
-            arr    = np.array(self._step_returns[-20:])
-            sharpe = arr.mean() / (arr.std() + 1e-9) * np.sqrt(252)
-            reward += 0.001 * sharpe
-
-        # Drawdown penalty
         dd = (pv_after - self._peak) / (self._peak + 1e-9)
-        if dd < -0.05:
-            reward += 0.5 * dd
+        turnover = abs(trade_value) / (self.initial_capital + 1e-9)
+        reward_breakdown = self.reward_scheme.compute(
+            step_ret,
+            self._step_returns,
+            drawdown=dd,
+            turnover=turnover,
+            trade_cost=cost / (self.initial_capital + 1e-9),
+        )
+        reward = reward_breakdown.total
 
         # ── Termination ───────────────────────────────────
         self._done = (self._step >= self.episode_length)
@@ -381,6 +373,9 @@ class TradingEnvironment:
             'step':            self._step,
             'total_return':    float((pv_after - self.initial_capital) / self.initial_capital),
             'drawdown':        float(dd),
+            'turnover':         float(turnover),
+            'trade_cost':       float(cost),
+            'reward_components': reward_breakdown.to_dict(),
         }
 
         if action != 0:
@@ -401,7 +396,7 @@ class TradingEnvironment:
 
     @property
     def action_dim(self) -> int:
-        return self.ACTION_DIM
+        return self.action_scheme.action_dim
 
     @property
     def current_price(self) -> float:

@@ -16,8 +16,8 @@ High-risk tasks always use a stronger model.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Dict, Optional
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
 
 from .providers.base import BaseLLMProvider, LLMResponse
 from .providers.ollama_provider import OllamaProvider
@@ -30,6 +30,29 @@ from .providers.gemini_provider  import GeminiProvider
 class ModelRoute:
     provider: str
     model:    str
+
+    def to_dict(self) -> Dict[str, str]:
+        return {"provider": self.provider, "model": self.model}
+
+
+@dataclass
+class ModelProviderInfo:
+    """Auditable LLM provider catalog entry."""
+
+    provider: str
+    available: bool
+    default_model: str = ""
+    configured_models: List[str] = field(default_factory=list)
+    routed_agents: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, object]:
+        return {
+            "provider": self.provider,
+            "available": self.available,
+            "default_model": self.default_model,
+            "configured_models": self.configured_models,
+            "routed_agents": self.routed_agents,
+        }
 
 
 # Default routing table — maps agent_name → (provider, model)
@@ -182,6 +205,43 @@ class ModelRouter:
     def check_availability(self) -> Dict[str, bool]:
         """Return availability status of each provider."""
         return {name: p.is_available() for name, p in self._providers.items()}
+
+    def route_manifest(self) -> List[Dict[str, str]]:
+        """Return the configured agent/risk routing table."""
+        rows: List[Dict[str, str]] = []
+        for agent_name, risk_routes in sorted(self._routes.items()):
+            for risk_level, route in sorted(risk_routes.items()):
+                rows.append({
+                    "agent_name": agent_name,
+                    "risk_level": risk_level,
+                    "provider": route.provider,
+                    "model": route.model,
+                })
+        return rows
+
+    def provider_catalog(self, check_availability: bool = True) -> List[ModelProviderInfo]:
+        """
+        Return provider/model catalog from configured Atlas routes.
+
+        This is intentionally local metadata; it does not import third-party
+        model catalogs or trust "free API" lists without verification.
+        """
+        availability = self.check_availability() if check_availability else {}
+        route_rows = self.route_manifest()
+        catalog: List[ModelProviderInfo] = []
+
+        for name, provider in sorted(self._providers.items()):
+            routed = [row for row in route_rows if row["provider"] == name]
+            catalog.append(
+                ModelProviderInfo(
+                    provider=name,
+                    available=bool(availability.get(name, False)) if check_availability else False,
+                    default_model=getattr(provider, "default_model", ""),
+                    configured_models=sorted({row["model"] for row in routed}),
+                    routed_agents=sorted({row["agent_name"] for row in routed}),
+                )
+            )
+        return catalog
 
     def add_provider(self, name: str, provider: BaseLLMProvider) -> None:
         """Register a custom provider."""

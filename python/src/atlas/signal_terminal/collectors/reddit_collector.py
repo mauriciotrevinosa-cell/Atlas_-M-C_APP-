@@ -20,7 +20,6 @@ except ImportError:
     _REQUESTS_OK = False
 
 from .base import BaseCollector, RawItem
-from ..models import Source
 
 logger = logging.getLogger(__name__)
 

@@ -1,0 +1,328 @@
+import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ChevronRight,
+  Database,
+  Library,
+  LogOut,
+  MessageSquare,
+  Monitor,
+  Wallet,
+  X,
+} from 'lucide-react';
+import { MMORender } from './MMORender.jsx';
+import { ResearchWorkspace } from './ResearchWorkspace.jsx';
+
+const walletStats = [
+  { label: 'Cash', value: '$1.2M' },
+  { label: 'Debt', value: '$400K' },
+  { label: 'Invested', value: '$1.6M' },
+];
+
+const modules = [
+  'Market Finance',
+  'ARIA',
+  'MMO',
+  'Real Estate',
+  'Signals',
+  'RL Lab',
+  'Agents',
+  'Viz Lab',
+];
+
+const intakeApis = [
+  {
+    label: 'Macro',
+    href: '/api/macro/series/GDP_REAL_GROWTH?start=2024-01-01&end=2024-12-31',
+    detail: 'IMF / World Bank / BLS / Treasury',
+  },
+  {
+    label: 'Weather',
+    href: '/api/context/weather?latitude=25.76&longitude=-80.19',
+    detail: 'Open-Meteo commodity context',
+  },
+  {
+    label: 'Prediction',
+    href: '/api/prediction/markets?query=CPI&limit=5',
+    detail: 'Polymarket read-only probabilities',
+  },
+  {
+    label: 'MMO Quantum',
+    href: '/docs#/default/mmo_quantum_portfolio_api_mmo_quantum_portfolio_post',
+    detail: 'Mau Market Ontology portfolio state',
+  },
+];
+
+export const Dashboard = ({ onLogout }) => {
+  const [selectedApp, setSelectedApp] = useState(null);
+  const [health, setHealth] = useState('checking');
+  const [providerHealth, setProviderHealth] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadStatus = async () => {
+      try {
+        const healthResponse = await fetch('/api/health');
+        if (!healthResponse.ok) throw new Error(`HTTP ${healthResponse.status}`);
+        await healthResponse.json();
+        if (!cancelled) setHealth('online');
+
+        const providerResponse = await fetch('/api/providers/health?limit=5');
+        if (!providerResponse.ok) throw new Error(`HTTP ${providerResponse.status}`);
+        const providerPayload = await providerResponse.json();
+        if (!cancelled) setProviderHealth(providerPayload);
+      } catch (error) {
+        if (!cancelled) {
+          setHealth('offline');
+          setProviderHealth(null);
+        }
+      }
+    };
+
+    loadStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const providerStatus = providerHealth?.status ?? 'unknown';
+  const providerStatusClass = {
+    online: 'bg-emerald-500',
+    degraded: 'bg-amber-500',
+    critical: 'bg-rose-500',
+    unknown: 'bg-slate-400',
+  }[providerStatus] ?? 'bg-slate-400';
+
+  return (
+    <div className="min-h-screen bg-[#fcfcfc] p-6 text-slate-950 md:p-12">
+      <header className="mb-10 flex items-center justify-between gap-6">
+        <div>
+          <p className="text-xs uppercase tracking-widest text-slate-500">
+            System {health}
+          </p>
+          <h2 className="text-4xl font-light tracking-tight">
+            Bienvenido, <span className="font-normal italic">Mauricio</span>
+          </h2>
+        </div>
+        <div className="flex items-center gap-3">
+          <a
+            href="/desktop/index.html"
+            className="atlas-glass flex h-12 w-12 items-center justify-center rounded-2xl text-slate-700"
+            title="Open legacy desktop UI"
+          >
+            <Monitor size={22} />
+          </a>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="atlas-glass flex h-12 w-12 items-center justify-center rounded-2xl text-slate-700"
+            title="Lock"
+          >
+            <LogOut size={22} />
+          </button>
+        </div>
+      </header>
+
+      <main className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <motion.button
+          type="button"
+          layoutId="wallet"
+          onClick={() => setSelectedApp('wallet')}
+          className="atlas-glass atlas-zoom-card col-span-1 rounded-2xl p-8 text-left lg:col-span-8"
+        >
+          <div className="mb-10 flex items-start justify-between">
+            <span className="rounded-xl bg-blue-600 p-4 text-white shadow-lg shadow-blue-200">
+              <Wallet size={28} />
+            </span>
+            <ChevronRight className="text-slate-400" />
+          </div>
+          <p className="text-sm uppercase tracking-widest text-slate-500">
+            Total Net Worth
+          </p>
+          <h3 className="mt-2 text-5xl font-semibold tracking-tight">
+            $2,450,890.00 <span className="text-lg font-light text-slate-500">MXN</span>
+          </h3>
+        </motion.button>
+
+        <motion.button
+          type="button"
+          layoutId="library"
+          onClick={() => setSelectedApp('library')}
+          className="atlas-glass-dark atlas-zoom-card col-span-1 flex min-h-64 flex-col justify-between rounded-2xl p-8 text-left lg:col-span-4"
+        >
+          <Library size={32} className="text-blue-300" />
+          <div>
+            <h4 className="text-2xl font-light italic text-white">La Biblioteca</h4>
+            <p className="mt-1 text-xs uppercase tracking-widest text-slate-400">
+              Explore Modules
+            </p>
+          </div>
+        </motion.button>
+
+        <section className="atlas-glass col-span-1 rounded-lg p-6 lg:col-span-12">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+                <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-950 text-white">
+                <Database size={22} />
+              </span>
+              <div>
+                <p className="text-xs uppercase tracking-widest text-slate-500">
+                  Provider Registry
+                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className={`h-2.5 w-2.5 rounded-full ${providerStatusClass}`} />
+                  <h4 className="text-2xl font-semibold capitalize tracking-tight">
+                    {providerStatus}
+                  </h4>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 text-right">
+              <div>
+                <p className="text-xs uppercase tracking-widest text-slate-500">Channels</p>
+                <p className="text-2xl font-semibold">{providerHealth?.channels_total ?? '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-widest text-slate-500">Available</p>
+                <p className="text-2xl font-semibold">{providerHealth?.providers_available ?? '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-widest text-slate-500">Total</p>
+                <p className="text-2xl font-semibold">{providerHealth?.providers_total ?? '-'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-5">
+            {(providerHealth?.channels ?? []).map((channel) => (
+              <div key={channel.name} className="rounded-lg border border-white/60 bg-white/45 p-4">
+                <p className="text-xs uppercase tracking-widest text-slate-500">
+                  {channel.name.replace('_', ' ')}
+                </p>
+                <p className="mt-2 text-lg font-semibold">
+                  {channel.providers_available}/{channel.providers_total}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <ResearchWorkspace providerHealth={providerHealth} />
+
+        <section className="atlas-glass col-span-1 rounded-lg p-6 lg:col-span-12">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-slate-500">
+                Info Intake APIs
+              </p>
+              <h4 className="text-2xl font-semibold tracking-tight">
+                Rebuilt inside Atlas
+              </h4>
+            </div>
+            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-emerald-700">
+              Read-only
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            {intakeApis.map((api) => (
+              <a
+                key={api.label}
+                href={api.href}
+                className="rounded-lg border border-white/60 bg-white/45 p-4 transition hover:-translate-y-0.5 hover:bg-white/70"
+              >
+                <p className="text-lg font-semibold text-slate-950">{api.label}</p>
+                <p className="mt-1 text-sm text-slate-600">{api.detail}</p>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <section className="atlas-glass relative col-span-1 h-[420px] overflow-hidden rounded-lg p-4 lg:col-span-12">
+          <div className="pointer-events-none absolute left-8 top-8 z-10">
+            <h4 className="text-xl font-light tracking-widest text-white">
+              MAUS MARKET ONTOLOGY
+            </h4>
+            <span className="text-xs font-semibold uppercase tracking-widest text-blue-300">
+              Quantum Engine Preview
+            </span>
+          </div>
+          <MMORender />
+        </section>
+      </main>
+
+      <motion.a
+        href="/desktop/index.html#view-chat"
+        whileHover={{ scale: 1.06 }}
+        whileTap={{ scale: 0.96 }}
+        className="atlas-glass-dark fixed bottom-8 right-8 z-50 flex h-16 w-16 items-center justify-center rounded-2xl shadow-2xl"
+        aria-label="Open ARIA"
+      >
+        <MessageSquare size={28} className="text-blue-300" />
+      </motion.a>
+
+      <AnimatePresence>
+        {selectedApp && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="atlas-glass fixed inset-0 z-[100] overflow-auto p-8 backdrop-blur-3xl"
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedApp(null)}
+              className="absolute right-8 top-8 rounded-2xl bg-slate-950 p-4 text-white transition hover:bg-black"
+              aria-label="Close"
+            >
+              <X size={24} />
+            </button>
+
+            <div className="mx-auto flex min-h-full max-w-6xl flex-col justify-center">
+              {selectedApp === 'wallet' && (
+                <section>
+                  <h2 className="mb-4 text-6xl font-semibold tracking-tight">
+                    Mi Cartera
+                  </h2>
+                  <p className="mb-10 max-w-2xl text-xl italic text-slate-600">
+                    Detailed capital, debt, and investment breakdown. These
+                    placeholders are ready to be replaced with Atlas finance endpoints.
+                  </p>
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    {walletStats.map((stat) => (
+                      <div key={stat.label} className="atlas-glass rounded-2xl p-8">
+                        <p className="text-xs uppercase tracking-widest text-slate-500">
+                          {stat.label}
+                        </p>
+                        <p className="mt-4 text-3xl font-semibold">{stat.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {selectedApp === 'library' && (
+                <section>
+                  <h2 className="mb-8 text-6xl font-semibold tracking-tight">
+                    La Biblioteca
+                  </h2>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    {modules.map((module) => (
+                      <a
+                        key={module}
+                        href="/desktop/index.html"
+                        className="atlas-glass rounded-2xl p-6 text-slate-800 transition hover:-translate-y-0.5"
+                      >
+                        {module}
+                      </a>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};

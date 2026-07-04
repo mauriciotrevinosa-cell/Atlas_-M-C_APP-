@@ -29,7 +29,6 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-import numpy as np
 import pandas as pd
 
 from .risk_agent     import RiskAgent, RiskReport

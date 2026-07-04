@@ -8,7 +8,6 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional, Sequence
 
-import numpy as np
 import pandas as pd
 
 from atlas.data_layer.cache_store import CacheStore

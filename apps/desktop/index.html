@@ -1853,6 +1853,20 @@
       }
     }
 
+    function _viewNameFromHash() {
+      const raw = (window.location.hash || '').replace(/^#/, '');
+      if (!raw) return '';
+      return raw.startsWith('view-') ? raw.slice(5) : raw;
+    }
+
+    function _syncViewFromHash() {
+      const viewName = _viewNameFromHash();
+      if (viewName) switchView(viewName);
+    }
+
+    window.addEventListener('hashchange', _syncViewFromHash);
+    setTimeout(_syncViewFromHash, 0);
+
     function _startAriaClock() {
       const el = document.getElementById('aria-core-clock');
       if (!el || el.dataset.started) return;

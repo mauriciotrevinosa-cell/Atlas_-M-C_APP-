@@ -10,7 +10,7 @@ Copyright (c) 2026 M&C. All rights reserved.
 """
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class ToolParameter(BaseModel):

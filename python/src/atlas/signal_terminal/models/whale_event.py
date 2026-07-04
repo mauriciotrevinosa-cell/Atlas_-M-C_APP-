@@ -16,6 +16,7 @@ class WhaleEventType(str, Enum):
     DARK_POOL        = "dark_pool"         # off-exchange block trade
     INSIDER          = "insider"           # SEC Form 4 / insider transaction
     SHORT_SQUEEZE    = "short_squeeze"     # short interest spike
+    LIQUIDATION      = "liquidation"       # forced liquidations / cascade risk
     BLOCK_TRADE      = "block_trade"       # >$1M single trade
     UNKNOWN          = "unknown"
 

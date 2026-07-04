@@ -9,7 +9,7 @@ References:
     - Jäckel, P. (2002). Monte Carlo Methods in Finance
 """
 
-from typing import Optional, Tuple, Callable, Dict, List
+from typing import Optional, Dict
 from dataclasses import dataclass
 from enum import Enum
 import numpy as np

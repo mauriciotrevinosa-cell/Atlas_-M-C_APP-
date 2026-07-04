@@ -9,7 +9,7 @@ Copyright (c) 2026 M&C. All rights reserved.
 
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 logger = logging.getLogger("atlas.orchestration")
 

@@ -137,13 +137,13 @@
 
   function _flashAriaCore(state_name = 'ACTIVE') {
     if (typeof window._ariaSetCoreState !== 'function') return;
-    try { window._ariaSetCoreState(state_name); } catch (_) {}
+    try { window._ariaSetCoreState(state_name); } catch (err) { console.warn('[AgentSwarm] set ARIA core state failed:', err.message); }
 
     if (state.flashTimer) clearTimeout(state.flashTimer);
     state.flashTimer = setTimeout(() => {
       // Only revert if no other agents are running
       if (state.inFlight.size === 0) {
-        try { window._ariaSetCoreState('IDLE'); } catch (_) {}
+        try { window._ariaSetCoreState('IDLE'); } catch (err) { console.warn('[AgentSwarm] reset ARIA core state failed:', err.message); }
       }
     }, FLASH_HOLD_MS);
   }
@@ -173,7 +173,7 @@
   // ── WebSocket lifecycle ───────────────────────────────────────────────────
   function _connectWS() {
     if (state.ws) {
-      try { state.ws.close(); } catch (_) {}
+      try { state.ws.close(); } catch (err) { console.warn('[AgentSwarm] close existing websocket failed:', err.message); }
       state.ws = null;
     }
 
@@ -196,14 +196,14 @@
       if (state.pingTimer) clearInterval(state.pingTimer);
       state.pingTimer = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
-          try { ws.send(JSON.stringify({ type: 'ping' })); } catch (_) {}
+          try { ws.send(JSON.stringify({ type: 'ping' })); } catch (err) { console.warn('[AgentSwarm] websocket ping failed:', err.message); }
         }
       }, PING_INTERVAL_MS);
     });
 
     ws.addEventListener('message', (ev) => {
       let msg;
-      try { msg = JSON.parse(ev.data); } catch (_) { return; }
+      try { msg = JSON.parse(ev.data); } catch (err) { console.warn('[AgentSwarm] websocket message parse failed:', err.message); return; }
       _onEvent(msg);
     });
 
@@ -257,7 +257,7 @@
 
       // Notify agents.js so it can refresh its own history list
       if (typeof window.AtlasAgents?.refresh === 'function') {
-        try { window.AtlasAgents.refresh(); } catch (_) {}
+        try { window.AtlasAgents.refresh(); } catch (err) { console.warn('[AgentSwarm] refresh agents panel failed:', err.message); }
       }
       return;
     }
@@ -282,7 +282,7 @@
     if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; }
     if (state.pingTimer) { clearInterval(state.pingTimer); state.pingTimer = null; }
     if (state.ws) {
-      try { state.ws.close(); } catch (_) {}
+      try { state.ws.close(); } catch (err) { console.warn('[AgentSwarm] close websocket failed:', err.message); }
       state.ws = null;
     }
   }

@@ -7,7 +7,7 @@ Centralized so you can change provider preferences without touching agent code.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 
 @dataclass
